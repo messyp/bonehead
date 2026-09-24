@@ -1,0 +1,74 @@
+/* Bonehead identity. A dedicated start layout avoids inherited modal alignment. */
+.wordmark{gap:9px;align-items:center;flex-shrink:0}
+.wordmark img.brand-mark{width:29px;height:34px;object-fit:contain;filter:none;image-rendering:pixelated}
+.wordmark img.brand-type{width:158px;height:34px;object-fit:contain;filter:none;image-rendering:pixelated}
+.overlay:has(.brand-intro){background:#0a0e1ce8;backdrop-filter:blur(14px);padding:22px}
+.modal.intro.brand-intro{width:min(650px,100%);max-height:calc(100dvh - 44px);padding:36px 48px 27px;margin:0;overflow:auto;border:1px solid #f7e8cc26;border-radius:26px;background:radial-gradient(ellipse at 50% 2%,#7341613b,transparent 62%),linear-gradient(155deg,#272238,#181a2a);box-shadow:0 28px 90px #0005;text-align:center;outline:none;animation:start-arrive .3s ease-out}
+.start-screen{display:flex;flex-direction:column;align-items:stretch;width:100%;max-width:490px;margin-inline:auto}
+.start-kicker{color:#c9b5c1;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:2.2px;line-height:1.6;margin:0}
+.start-identity{display:flex;align-items:center;flex-direction:column;gap:14px;margin:24px 0 18px}
+.start-mark{display:block;width:96px;height:108px;object-fit:contain;image-rendering:pixelated}
+.brand-intro .start-identity h1{display:block;font-size:0;line-height:0;margin:0;width:100%;max-width:470px;padding:0;letter-spacing:0;transform:none}
+.start-wordmark{display:block;width:100%;height:auto;max-height:103px;object-fit:contain;image-rendering:pixelated}
+.brand-intro p.start-hook{color:#c5bcca;font-size:17px;line-height:1.6;margin:0;font-weight:400}
+.start-hook strong{color:#fff3dc;font-weight:700;font-size:21px}
+.start-facts{display:grid;grid-template-columns:1fr 1.3fr 1fr;align-items:center;margin:25px 0 23px;padding:15px 0;border-top:1px solid #d8bfe81c;border-bottom:1px solid #d8bfe81c;gap:9px;color:#c7b9d3;font-size:10px;letter-spacing:.7px;white-space:nowrap}
+.start-facts span{display:flex;align-items:center;justify-content:center;gap:7px}
+.start-facts b{font-family:'VT323',monospace;font-size:27px;line-height:1;font-weight:400;color:#ffebcb}
+.start-facts span:last-child b{color:#ff9b9d}
+.start-actions{display:grid;gap:10px;width:100%}
+.start-actions button{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:60px;padding:13px 23px;margin:0;border-radius:12px;text-align:left;font-family:'VT323',monospace;font-size:29px;line-height:1;letter-spacing:1px;font-weight:400;transition:transform .15s,background .15s;cursor:pointer}
+.start-actions .start-play{color:#172824;background:#a9f2d2;border:1px solid #cdfbe7;box-shadow:0 4px 0 #496f63}
+.start-actions .start-play:hover{background:#c2ffdf;transform:translateY(-2px)}
+.start-actions .start-play:active{transform:translateY(2px);box-shadow:0 2px 0 #496f63}
+.start-actions .start-new{background:#ffffff04;border:1px solid #e3cbed2b;color:#e6dcee;min-height:49px;font-size:23px;box-shadow:none}
+.start-actions .start-new:hover{background:#ffffff0b}
+.start-actions button>span{margin:0;font-family:'Space Mono',monospace;font-size:22px}
+.start-links{display:flex;justify-content:center;align-items:center;gap:18px;margin-top:24px;color:#d4c4dd}
+.start-links button{font-size:11px;font-weight:700;letter-spacing:.5px;padding:8px 0;text-decoration:none}
+.start-links button:hover{color:#b6f6d9;text-decoration:underline;text-underline-offset:5px}
+.start-links>span{opacity:.4}
+.brand-intro p.start-footnote{font-family:'Space Mono',monospace;color:#918397;font-size:10px;letter-spacing:.4px;line-height:1.5;margin:9px 0 0}
+.start-screen button:focus-visible{outline:2px solid #fff2d9;outline-offset:4px}
+.award-skull img,.lesson-heading img{image-rendering:pixelated}
+@keyframes start-arrive{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+@media(max-height:780px){.modal.intro.brand-intro{padding-block:25px 20px}.start-identity{gap:10px;margin:17px 0 12px}.start-mark{width:75px;height:85px}.brand-intro .start-identity h1{max-width:410px}.start-facts{margin:18px 0;padding:11px 0}.start-links{margin-top:17px}.start-actions button{min-height:54px}}
+@media(max-width:700px){.wordmark img.brand-mark{width:23px;height:28px}.wordmark img.brand-type{width:125px;height:28px}.wordmark{gap:7px}.overlay:has(.brand-intro){padding:14px}.modal.intro.brand-intro{padding:27px 24px 22px;max-height:calc(100dvh - 28px);border-radius:21px}.start-kicker{font-size:9px;letter-spacing:1.4px}.start-mark{width:78px;height:90px}.start-identity{margin:21px 0 15px}.start-facts{font-size:8px;letter-spacing:0;gap:3px;margin:21px 0}.start-facts span{gap:4px}.start-facts b{font-size:24px}.brand-intro p.start-hook{font-size:15px}.start-hook strong{font-size:18px}.start-actions button{font-size:27px;padding-inline:18px}.start-actions .start-new{font-size:22px}.start-links{gap:14px}.start-links button{font-size:10px}.brand-intro p.start-footnote{font-size:9px}}
+@media(max-height:560px){.modal.intro.brand-intro{padding-block:19px}.start-identity{margin:10px 0;gap:6px}.start-mark{width:48px;height:53px}.brand-intro .start-identity h1{max-width:290px}.brand-intro p.start-hook{font-size:12px;line-height:1.4}.start-hook strong{font-size:15px}.start-facts{margin:12px 0;padding:8px 0}.start-actions button{min-height:44px;font-size:24px}.start-actions .start-new{min-height:39px;font-size:21px}.start-links{margin-top:10px}.brand-intro p.start-footnote{display:none}}
+@media(prefers-reduced-motion:reduce){.modal.intro.brand-intro{animation:none}.start-actions button{transition:none}}
+/* Fit the supplied artwork's transparent margins without distorting its letters. */
+.wordmark img.brand-type{width:154px;height:46px;object-fit:contain}
+.brand-intro .start-identity h1{aspect-ratio:3.3}
+.start-wordmark{height:100%;max-height:none;object-fit:contain}
+@media(max-width:700px){.wordmark img.brand-type{width:119px;height:36px}}
+/* Use the transparent wordmark margins as breathing room, keeping letters large. */
+.wordmark img.brand-type,.start-wordmark{object-fit:cover}
+
+/* Restored original Bonehead pixel identity. */
+.wordmark{gap:8px;padding:0;line-height:1;letter-spacing:1px}.wordmark img{width:34px;height:34px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(2px 3px 0 #101330)}.wordmark span{display:block;font-family:'VT323',monospace;font-size:35px;font-weight:700;color:#f4edff;text-shadow:2px 3px #6447a4}.brand-intro .start-identity h1{display:flex;flex-direction:column;align-items:flex-start;font-family:'VT323',monospace;font-size:82px;line-height:.72;letter-spacing:0;margin:0;text-align:left;text-shadow:3px 4px #101330}.brand-intro .start-identity h1 span:first-child{color:#f4edff}.brand-intro .start-identity h1 span:last-child{color:#7cf4e5}.start-mark{image-rendering:pixelated;filter:drop-shadow(4px 4px 0 #101330)}.start-wordmark{display:none}
+@media(max-width:700px){.wordmark img{width:32px;height:32px}.wordmark span{font-size:28px}.brand-intro .start-identity h1{font-size:68px}.brand-intro .start-mark{width:88px;height:100px}}
+
+/* Supplied rubberhose logo: retain the artwork exactly as provided. */
+.brand-intro .start-identity{margin:16px 0 8px;gap:0}.brand-intro .start-identity h1.supplied-logo{display:block;width:min(280px,100%);max-width:none;aspect-ratio:1;margin:0 auto;padding:0;line-height:0;font-size:0;text-shadow:none}.supplied-logo img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}.start-actions{grid-template-columns:1fr 1.2fr;gap:14px;align-items:stretch}.start-actions button,.start-actions .start-new{min-height:60px;padding:14px 17px;margin:0;justify-content:center;font-size:27px;line-height:1.1}.start-actions .start-play{gap:16px;background:#7cf4e5;border-color:#b5fff2;box-shadow:0 4px #438c87}.start-actions .start-new{border-color:#a997cb70;background:#9270cb0d;color:#e5d9f4}.start-actions .start-new:hover{background:#9270cb22}.start-links{margin-top:22px}.wordmark .header-logo{position:relative;display:block;width:190px;height:49px;overflow:hidden;text-shadow:none;line-height:0}.wordmark .header-logo img{position:absolute;width:190px;height:190px;max-width:none;left:0;bottom:-9px;object-fit:contain;filter:none;image-rendering:pixelated}.header-middle{letter-spacing:3px}
+@media(max-height:780px){.brand-intro .start-identity h1.supplied-logo{width:230px}.brand-intro .start-identity{margin:10px 0 5px}.start-actions button,.start-actions .start-new{min-height:54px;font-size:25px}}
+@media(max-width:700px){.brand-intro .start-identity h1.supplied-logo{width:220px}.wordmark .header-logo{width:150px;height:39px}.wordmark .header-logo img{width:150px;height:150px;bottom:-7px}.start-actions{gap:10px;grid-template-columns:1fr 1.15fr}.start-actions button,.start-actions .start-new{font-size:23px;padding:12px 8px;min-height:54px}.start-actions .start-play{gap:7px}.start-actions button>span{font-size:17px}}
+@media(max-height:560px){.brand-intro .start-identity h1.supplied-logo{width:145px}.start-actions button,.start-actions .start-new{min-height:44px;font-size:23px}}
+/* Score detail, earned tricks and persistent achievements. */
+.header-controls .nav-button{border:1px solid #b8a1de55;border-radius:9px;padding:9px 12px;font-size:12px;white-space:nowrap}
+.sidebar .round-goals{margin-top:auto;padding-top:18px}.rightbar .tricks{margin-top:18px;overflow-y:auto;min-height:80px}.rightbar .combo-tip,.rightbar>footer{display:none}.rightbar .tricks>label{display:flex;justify-content:space-between;font-size:13px}.trick-card{display:block;width:100%;text-align:left;border:1px solid #b6a0e666;border-radius:10px;padding:12px;margin:10px 0;background:linear-gradient(135deg,#433662,#243a50)}.trick-card b{display:block;color:#c1ffe7;font-size:14px}.trick-card em{float:right;font-style:normal}.trick-card p,.owned-trick p{font-size:11px;line-height:1.5;margin:8px 0;color:#c3bed2}.trick-card small,.owned-trick small{font-size:9px;color:#b8a7d2}.trick-card:hover:not(:disabled){border-color:#a3f6da;transform:translateY(-2px)}.rightbar .owned-trick{border-radius:10px}.rightbar .empty-trick{padding:14px;border-radius:10px}.rightbar .empty-trick span{font-size:12px}
+.sidebar .scorebox .last-hand{position:relative;margin:12px -12px 0;padding:11px 12px 12px;min-height:115px;border-top:1px solid #c6b7e833;font-family:'Space Mono',monospace;letter-spacing:0;color:#f5e9cb}.last-hand>label{display:block;font-size:10px;color:#aea4c8}.last-hand>strong{display:block;font-family:'VT323',monospace;font-size:35px;margin:4px 0}.last-hand>small{display:block;font-size:10px;color:#cab9df}.scorebox.counting>#score,.scorebox.counting>label,.scorebox.counting>footer{visibility:visible}.scorebox.counting .last-hand>label,.scorebox.counting .last-hand>strong,.scorebox.counting .last-hand>small{visibility:hidden}.sidebar .scorebox #scoreburst{border-radius:0;box-shadow:none;padding:7px;inset:0}.sidebar .scorebox #scoreburst .tally-equation{font-size:34px}.sidebar .scorebox #scoreburst .tally-award{font-size:37px}.tally-bonuses{flex-wrap:wrap;gap:3px;font-size:10px}.burnzone>span{font-size:37px;line-height:1.2}.swap-choices{display:flex;flex-wrap:wrap;gap:12px}.swap-choices button{background:#fff0d8;color:#242337;border-radius:9px;padding:24px 14px;font-size:30px;min-width:75px}
+#trophytoast{position:fixed;top:78px;right:22px;z-index:150;width:min(350px,calc(100vw - 32px));display:flex;align-items:center;gap:14px;padding:17px 20px;background:linear-gradient(120deg,#222c45f5,#382d4ff5);border:1px solid #baa0df55;border-radius:16px;box-shadow:0 10px 35px #080d3055;backdrop-filter:blur(12px);pointer-events:none;opacity:0;transform:translateY(-25px);transition:opacity .25s,transform .3s}#trophytoast.visible{opacity:1;transform:none}#trophytoast>span{font-size:29px}#trophytoast small{display:block;color:#bea5df;font-size:10px;letter-spacing:1px;margin-bottom:6px}#trophytoast b{font-size:15px;color:#fff0ca}.trophy-list{display:grid;gap:12px}.trophy-entry{display:flex;align-items:center;gap:16px;padding:15px;border:1px solid #b1a3ce33;border-radius:12px;opacity:.6}.trophy-entry.unlocked{opacity:1;background:#abffd208;border-color:#abffd244}.trophy-entry>span{font-size:28px}.trophy-entry b{display:block;margin:5px 0}.trophy-entry small{font-size:10px;color:#c2a4ef}.trophy-entry p{font-size:12px;line-height:1.5;margin:0}.effect.goal{color:#c4ffe7;font-size:38px}
+@media(max-width:1150px){.header-middle{display:none}.header-controls{gap:12px}}
+@media(max-width:700px){.header-controls{gap:7px}.header-controls .nav-button{font-size:10px;padding:7px}.header-controls #trophies span{display:none}.sidebar .scorebox .last-hand{display:none}.wordmark span{font-size:23px}.wordmark img{width:25px;height:28px}.header-controls button{font-size:16px}#trophytoast{top:60px;right:16px}}
+@media(prefers-reduced-motion:reduce){#trophytoast{transition:none}.trick-card{transition:none}}
+
+.wordmark>img{width:38px;height:38px;filter:none}.wordmark>span:not(.header-logo){font-size:27px;letter-spacing:0}@media(max-width:700px){.wordmark>img{width:26px;height:26px}.wordmark>span:not(.header-logo){font-size:21px}}
+
+/* Isolated rubberhose skull: compact header and install icon. */
+.wordmark>img.header-skull{width:31px;height:31px;object-fit:contain;image-rendering:pixelated;filter:none}.wordmark>span:not(.header-logo){font-size:25px;letter-spacing:.2px}.wordmark{gap:7px}@media(max-width:700px){.wordmark>img.header-skull{width:25px;height:25px}.wordmark>span:not(.header-logo){font-size:20px}}
+
+/* Reduced game header: the isolated skull carries the identity alone. */
+.wordmark>img.header-skull{width:42px;height:42px}.header-middle:empty{display:block}@media(max-width:700px){.wordmark>img.header-skull{width:34px;height:34px}}
+
+/* Wordmark-only header trial from the supplied rubberhose logo. */
+.wordmark>img.header-wordmark-clean{display:block;width:170px;height:50px;object-fit:contain;image-rendering:pixelated;filter:none}@media(max-width:700px){.wordmark>img.header-wordmark-clean{width:132px;height:39px}}

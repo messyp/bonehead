@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {ART_STYLES,normalizeArtStyle,readArtStyle,storeArtStyle,brandMarkup} from './dist/appearance.js';
+assert.deepEqual(Object.keys(ART_STYLES),['v1']);
+for(const value of [null,undefined,'v2','v3','v4','<script>'])assert.equal(normalizeArtStyle(value),'v1');
+assert.equal(readArtStyle({getItem:()=> 'v4'}),'v1');
+assert.equal(storeArtStyle({setItem:()=>{throw Error('blocked')}},'v3'),'v1');
+assert.ok(brandMarkup('v1').includes('header-wordmark-text'));
+assert.ok(brandMarkup('v1').includes('bonehead-skull-reward.png'));
+assert.ok(brandMarkup('v1','title').includes('bonehead-rubberhose.png'));
+assert.ok(fs.existsSync('dist/assets/bonehead-rubberhose.png'));
+assert.ok(fs.existsSync('dist/assets/bonehead-skull-icon.png'));
+const index=fs.readFileSync('dist/index.html','utf8');
+assert.ok(index.includes('header-wordmark-text'));
+assert.ok(!index.includes('art-styles.css'));
+console.log('Appearance checks passed: V1-only branding and retired alternate art modes.');

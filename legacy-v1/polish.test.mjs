@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {deal,play,pickup} from './dist/engine.js';
+import {burnReward,roundGoals,goalReward} from './dist/scoring.js';
+const c=(r,s=0)=>({r,s,id:`${r}-${s}`});
+let g=deal();g.pile=[c(5)];g.player.hand=[c(6)];
+const before=structuredClone(g);assert.equal(pickup(g,'player'),false);assert.deepEqual(g,before);
+g.player.hand=[c(3)];assert.equal(pickup(g,'player'),true);assert.equal(g.playerPickups,1);
+g=deal();g.player.hand=[c(10)];g.pile=[c(7)];assert.equal(play(g,'player',['10-0']).burn,true);assert.equal(g.playerBurns,1);
+g.deck=[];g.player={hand:[],face:[],blind:[c(3)]};g.pile=[c(14)];play(g,'player',['3-0']);assert.equal(g.playerPickups,1);
+for(let n=2;n<=52;n++)assert.ok(burnReward(Array.from({length:n},()=>c(5))).points>burnReward(Array.from({length:n-1},()=>c(5))).points);
+assert.equal(burnReward([c(10)]).points,175);
+assert.equal(burnReward(Array.from({length:11},()=>c(5))).points,306);
+assert.equal(burnReward(Array.from({length:11},()=>c(5)),true).points,691);
+g=deal();g.ended=true;g.winner='player';g.playerBurns=2;assert.equal(goalReward(g),1250);
+g.playerPickups=1;assert.equal(goalReward(g),500);g.winner='house';assert.equal(goalReward(g),500);
+g.playerBurns=0;assert.equal(goalReward(g),0);g.ended=false;g.playerPickups=0;assert.equal(roundGoals(g)[1].complete,false);
+console.log('Polish rules verified: forced pickups, player burn/pickup tracking, growing fire bonus and round goals.');

@@ -1,0 +1,295 @@
+import { R } from '../core/render.js';
+import { TINY } from '../core/font.js';
+import { Input } from '../core/input.js';
+import { FX, CONFETTI } from '../core/fx.js';
+import { Post } from '../core/post.js';
+import { ease, clamp } from '../core/tween.js';
+import { P } from '../art/palette.js';
+import { Cards } from '../art/cards.js';
+import { Sprites, OPPONENTS, portrait } from '../art/sprites.js';
+import { Audio } from '../audio/sfx.js';
+import { Music } from '../audio/music.js';
+import { roundGoals } from '../../scoring.js';
+import { trophies } from '../../progression.js';
+import { UI } from './ui.js';
+import { UPGRADES, fmtTime, store } from './game.js';
+
+const T = { font: TINY };
+const card = (r, s) => Cards.face({ r, s }, Math.floor(R.t * 8));
+
+function bigLogo(cx, cy, size) {
+  const letters = 'BONEHEAD', widths = [...letters].map(ch => (ch === 'O' ? 9 : R.measure(ch) + 1) * size);
+  const total = widths.reduce((a, b) => a + b, 0);
+  let x = cx - total / 2;
+  const ctx = R.ctx;
+  for (let i = 0; i < letters.length; i++) {
+    const ch = letters[i], dy = Math.sin(R.t * 2.6 + i * 0.7) * size * 0.9, rot = Math.sin(R.t * 2 + i) * 0.03;
+    const col = [P.bone0, P.bone0, P.bone0, P.bone0, P.gold1, P.gold1, P.gold2, P.gold2][i];
+    ctx.save();
+    ctx.translate(x + widths[i] / 2, cy + dy); ctx.rotate(rot);
+    if (ch === 'O') {
+      const chomp = Math.sin(R.t * 4) > 0.7;
+      for (let k = 3; k >= 1; k--) R.spr(Sprites.skull, 0, 3.5 * size + k * size * 0.6, { sc: size * 0.78, alpha: 0.35 });
+      R.spr(Sprites.skull, 0, 3.5 * size + (chomp ? -size * 0.3 : 0), { sc: size * 0.78 });
+    } else {
+      for (let k = 3; k >= 1; k--) R.text(ch, 0, k * size * 0.6, { size, color: k === 1 ? P.red3 : P.red4, align: 'center', outline: P.ink0, shadow: null });
+      R.text(ch, 0, 0, { size, color: col, align: 'center' });
+    }
+    ctx.restore();
+    x += widths[i];
+  }
+}
+
+const floaters = Array.from({ length: 14 }, (_, i) => ({ x: Math.random(), y: Math.random(), sp: 0.015 + Math.random() * 0.03, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.6, c: { r: 2 + Math.floor(Math.random() * 13), s: i % 4 }, sc: 0.5 + Math.random() * 0.4, back: Math.random() < 0.35 }));
+
+export const Screens = {
+  title(game) {
+    const vw = R.vw, vh = R.vh, land = R.land, dt = UI.dt;
+    Music.set(0, 0);
+    // Drifting cards in the background.
+    for (const f of floaters) {
+      f.y -= f.sp * dt; f.r += f.vr * dt;
+      if (f.y < -0.2) { f.y = 1.2; f.x = Math.random(); }
+      R.spr(f.back ? Cards.back : card(f.c.r, f.c.s), f.x * vw, f.y * vh, { rot: f.r, sc: f.sc, alpha: 0.28 });
+    }
+    const logoY = land ? vh * 0.2 : vh * 0.17, size = land ? Math.min(7, Math.floor(vw / 80)) : 4;
+    bigLogo(vw / 2, logoY - 3.5 * size, size);
+    R.text('Lose your cards.  ^gDon\'t be the Bonehead.', vw / 2, logoY + 7 * size, { align: 'center', color: P.bone1 });
+    // Mascot with orbiting cards.
+    const tagBottom = logoY + 7 * size + 12, menuTop = land ? vh * 0.74 : vh * 0.66;
+    const ms = clamp((menuTop - tagBottom - 8) / 62, 1, 2.2), mx = vw / 2, my = (tagBottom + menuTop) / 2;
+    const orbit = [{ r: 14, s: 0 }, { r: 10, s: 1 }, { r: 8, s: 2 }, { r: 2, s: 3 }, { r: 13, s: 1 }];
+    const drawOrbit = front => orbit.forEach((c, i) => {
+      const a = R.t * 0.7 + i * Math.PI * 2 / orbit.length, depth = Math.sin(a);
+      if ((depth > 0) !== front) return;
+      const x = mx + Math.cos(a) * (land ? 110 : 90), y = my + depth * 10 - 2, sc = (0.6 + depth * 0.15) * clamp(ms / 1.6, 0.8, 1.25), sx = Math.cos(R.t * 1.3 + i);
+      R.spr(Cards.shadow, x + 3, y + 5, { sx: sc * Math.abs(sx), sy: sc, alpha: 0.3 });
+      R.spr(sx > 0 ? card(c.r, c.s) : Cards.back, x, y, { sx: sc * Math.max(0.05, Math.abs(sx)), sy: sc, rot: Math.sin(a) * 0.15, alpha: 0.75 + depth * 0.25 });
+    });
+    drawOrbit(false);
+    const wink = (R.t % 4) > 3.75, chomp = Math.sin(R.t * 3) > 0.85;
+    R.spr(Cards.shadow, mx, my + 34 * ms / 2 + 8, { sx: 1.1, sy: 0.18, alpha: 0.35 });
+    R.spr(wink ? Sprites.mascotWink : chomp ? Sprites.mascotChomp : Sprites.mascot, mx, my + Math.sin(R.t * 2) * 3, { sc: ms, rot: Math.sin(R.t * 1.3) * 0.04 });
+    drawOrbit(true);
+    // Menu
+    const hasSave = game.hasSave(), bw = land ? 118 : 150, bh = 28;
+    let by = land ? vh * 0.74 : vh * 0.66;
+    const bx = vw / 2 - bw / 2;
+    if (UI.button('t-play', bx, by, bw, bh, hasSave ? 'CONTINUE' : 'PLAY', { size: 2, pulse: true, color: 'gold' })) { if (hasSave) game.transition(() => game.continueRun()); else startFresh(game); }
+    by += bh + 8;
+    const sw = land ? 76 : 72, row = land ? [['t-new', 'NEW RUN'], ['t-rules', 'HOW TO PLAY'], ['t-opts', 'OPTIONS'], ['t-troph', 'TROPHIES']] : [['t-new', 'NEW RUN'], ['t-rules', 'RULES'], ['t-opts', 'OPTIONS'], ['t-troph', 'TROPHIES']];
+    const items = row.filter(([id]) => id !== 't-new' || hasSave);
+    const cols = land ? items.length : Math.min(2, items.length), gap = 6;
+    items.forEach(([id, label], i) => {
+      const inRow = land ? items.length : Math.min(cols, items.length - Math.floor(i / cols) * cols), rowW = inRow * sw + (inRow - 1) * gap;
+      const x = vw / 2 - rowW / 2 + (i % cols) * (sw + gap), y = by + Math.floor(i / cols) * 22;
+      if (UI.button(id, x, y, sw, 17, label, { color: 'ink' })) {
+        if (id === 't-new') game.openModal('confirm');
+        if (id === 't-rules') game.openModal('rules', { page: 0 });
+        if (id === 't-opts') game.openModal('options');
+        if (id === 't-troph') game.openModal('trophies');
+      }
+    });
+    R.text(`BEST RUN ${game.best.toLocaleString()}`, vw / 2, vh - 22, { color: P.gold2, align: 'center' });
+    R.text('A SHEDDING ROGUELITE · SOUND ON', vw / 2, vh - 11, { color: P.ink6, align: 'center', outline: null, ...T });
+  },
+
+  modal(game) {
+    const m = game.modal, fn = this[m.kind];
+    if (fn) fn.call(this, game, m);
+  },
+
+  key(game, k) {
+    const m = game.modal;
+    if (!m) return;
+    if (k.key === 'Escape' && !['reward', 'result'].includes(m.kind)) { game.closeModal(); return; }
+    if (m.kind === 'rules') {
+      if (k.key === 'ArrowRight' || k.key === 'Enter') { if (m.data.page < 4) { m.data.page++; m.data.pt = 0; Audio.play('ui'); } else finishRules(game); }
+      if (k.key === 'ArrowLeft' && m.data.page > 0) { m.data.page--; m.data.pt = 0; Audio.play('back'); }
+    }
+    if (m.kind === 'result' && k.key === 'Enter') resultAction(game);
+    if (m.kind === 'confirm' && k.key === 'Enter') startFresh(game);
+  },
+
+  pause(game, m) {
+    const w = 170, h = 206, b = UI.modal('pause', w, h, m.t);
+    UI.title('PAUSED', b.x + w / 2, b.y + 12, { size: 2 });
+    R.text('The house can wait.', b.x + w / 2, b.y + 32, { color: P.ink6, align: 'center' });
+    const items = [['RESUME', 'gold', () => game.closeModal()], ['HOW TO PLAY', 'ink', () => game.openModal('rules', { page: 0 })], ['SCORING', 'ink', () => game.openModal('scoring')], ['OPTIONS', 'ink', () => game.openModal('options')], ['TROPHIES', 'ink', () => game.openModal('trophies')], ['NEW RUN', 'red', () => game.openModal('confirm')], ['TITLE SCREEN', 'ink', () => { game.save(); game.modal = null; Audio.muffle(false); game.transition(() => { game.token++; game.scene = 'title'; Post.theme(THEMES_TITLE()); }); }]];
+    items.forEach(([label, color, act], i) => { if (UI.button('p-' + label, b.x + 20, b.y + 46 + i * 22, w - 40, 17, label, { color, ignoreBlock: true })) act(); });
+    b.restore();
+  },
+
+  options(game, m) {
+    const w = 210, h = 214, b = UI.modal('opts', w, h, m.t), s = game.settings;
+    UI.title('OPTIONS', b.x + w / 2, b.y + 12, { size: 2 });
+    UI.blocked = false;
+    const x = b.x + 16, iw = w - 32;
+    const mv = UI.slider('o-music', x, b.y + 50, iw, s.music, 'MUSIC');
+    const sv = UI.slider('o-sfx', x, b.y + 76, iw, s.sfx, 'SOUND FX');
+    if (mv !== s.music) { s.music = mv; game.applySettings(); }
+    if (sv !== s.sfx) { s.sfx = sv; game.applySettings(); }
+    const toggles = [['crt', 'CRT GLOW'], ['shake', 'SCREEN SHAKE'], ['reduced', 'REDUCED MOTION'], ['fast', 'FAST ANIMATIONS']];
+    toggles.forEach(([key, label], i) => { const v = UI.toggle('o-' + key, x, b.y + 94 + i * 17, iw, label, s[key]); if (v !== s[key]) { s[key] = v; game.applySettings(); } });
+    R.text('All music & sound is synthesised live.', b.x + w / 2, b.y + h - 42, { color: P.ink6, align: 'center', outline: null, ...T });
+    if (UI.button('o-back', b.x + w / 2 - 40, b.y + h - 30, 80, 20, 'BACK', { color: 'gold', ignoreBlock: true })) game.closeModal();
+    UI.blocked = true;
+    b.restore();
+  },
+
+  confirm(game, m) {
+    const w = 190, h = 110, b = UI.modal('confirm', w, h, m.t);
+    UI.title('NEW RUN?', b.x + w / 2, b.y + 12, { size: 2, color: P.red1 });
+    R.para('Your current run will be lost. Best score and trophies stay.', b.x + 14, b.y + 36, w - 28, { align: 'center', color: P.bone1 });
+    if (UI.button('c-no', b.x + 14, b.y + h - 32, 76, 20, 'KEEP GOING', { color: 'ink', ignoreBlock: true })) game.closeModal();
+    if (UI.button('c-yes', b.x + w - 90, b.y + h - 32, 76, 20, 'DEAL ME IN', { color: 'red', ignoreBlock: true })) startFresh(game);
+    b.restore();
+  },
+
+  scoring(game, m) {
+    const w = Math.min(R.vw - 16, 280), h = Math.min(R.vh - 16, 250), b = UI.modal('scoring', w, h, m.t);
+    UI.title('SCORING', b.x + w / 2, b.y + 10, { size: 2 });
+    const x = b.x + 14, iw = w - 28;
+    let y = b.y + 34;
+    y += R.para('^bCHIPS^0 × ^rMULT^0 + bonuses, every time you play.', x, y, iw, { color: P.bone0 }) + 4;
+    y += R.para('^bChips:^0 number cards are rank × 10. J 110 · Q 120 · K 130 · A 150. Magic: 2 = 200, 8 = 240, 9 = 260, 10 = 300.', x, y, iw, { color: P.bone1 }) + 4;
+    y += R.para('^rMult:^0 ×1 for one card, +0.5 per extra card in a run. Three of a kind +0.5, four of a kind +1.5.', x, y, iw, { color: P.bone1 }) + 4;
+    y += R.para('^oBurns^0 pay 100 + 25% of the pile\'s chips, boosted every 5 cards. ^tQuick^0 plays add a little extra. Picking up scores nothing.', x, y, iw, { color: P.bone1 }) + 4;
+    R.para('^gBonus goals^0 pay out the moment you hit them.', x, y, iw, { color: P.bone1 });
+    if (UI.button('s-back', b.x + w / 2 - 40, b.y + h - 28, 80, 20, 'GOT IT', { ignoreBlock: true })) game.closeModal();
+    b.restore();
+  },
+
+  trophies(game, m) {
+    const list = Object.entries(trophies), w = Math.min(R.vw - 16, 250), h = 60 + list.length * 28 + 28, b = UI.modal('trophies', w, h, m.t);
+    UI.title('TROPHIES', b.x + w / 2, b.y + 10, { size: 2 });
+    const got = list.filter(([id]) => game.unlocked[id]).length;
+    R.text(`${got} / ${list.length} UNLOCKED`, b.x + w / 2, b.y + 30, { color: P.ink6, align: 'center' });
+    list.forEach(([id, t], i) => {
+      const y = b.y + 44 + i * 28, on = !!game.unlocked[id];
+      R.panel(b.x + 10, y, w - 20, 24, { fill: on ? P.ink3 : P.ink1, hi: on ? P.ink4 : null, rim: P.ink0 });
+      R.spr(on ? Sprites.trophy : Sprites.trophyDim, b.x + 22, y + 12, { sc: on ? 1 + Math.sin(R.t * 4 + i) * 0.05 : 1 });
+      R.text(t.name, b.x + 34, y + 4, { color: on ? P.gold1 : P.ink6 });
+      R.text(`${t.rarity} · ${t.detail}`, b.x + 34, y + 14, { color: on ? P.bone1 : P.ink5, outline: null, ...T });
+    });
+    if (UI.button('tr-back', b.x + w / 2 - 40, b.y + h - 26, 80, 18, 'BACK', { ignoreBlock: true })) game.closeModal();
+    b.restore();
+  },
+
+  rules(game, m) {
+    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 12, 240), b = UI.modal('rules', w, h, m.t), d = m.data;
+    d.pt = (d.pt ?? 0) + UI.dt;
+    const pages = [
+      { title: 'Lose every card.', body: 'Take turns playing onto the pile. Match or beat the top card. First to run out wins.', art: 'run', cards: [[4, 1], [7, 0], [11, 2]] },
+      { title: `Keep ${game.config.minHand} in hand.`, body: 'After you play, you draw back up while the deck lasts. Can\'t beat the pile? You pick the whole thing up.', art: 'draw' },
+      { title: 'Four magic cards.', body: 'Magic cards play on anything. Four of the same rank in a row also burns the pile.', art: 'magic' },
+      { title: 'Make a run.', body: 'Play equal ranks, or climbing cards of one suit, together. More cards, bigger multiplier.', art: 'combo' },
+      { title: 'The last six.', body: 'Deck and hand gone? Play your face-up table cards, then flip the blind ones. A bad flip picks up the pile.', art: 'blind' },
+    ];
+    const p = pages[d.page];
+    R.text(`HOW TO PLAY · ${d.page + 1}/5`, b.x + w / 2, b.y + 8, { color: P.ink6, align: 'center' });
+    UI.title(p.title, b.x + w / 2, b.y + 20, { size: 2, color: P.gold1 });
+    const ax = b.x + w / 2, ay = b.y + 90, pt = d.pt;
+    const deal = (i, x, y, spr, o = {}) => { const k = ease.outBack(clamp((pt - i * 0.12) / 0.35), 1.6); if (k <= 0) return; R.spr(Cards.shadow, x + 2, y + 3, { sc: k * (o.sc ?? 1), alpha: 0.3 }); R.spr(spr, x, y - (1 - k) * 20, { sc: k * (o.sc ?? 1), rot: (o.rot ?? 0) * k }); };
+    if (p.art === 'run') p.cards.forEach(([r, s], i) => { deal(i, ax + (i - 1) * 56, ay, card(r, s), { rot: (i - 1) * 0.06 }); if (i < 2) R.text('→', ax + (i - 0.5) * 56, ay - 3, { color: P.ink6, align: 'center' }); });
+    if (p.art === 'draw') { deal(0, ax - 70, ay, Cards.back); R.text('→', ax - 38, ay - 3, { color: P.ink6, align: 'center' }); [[3, 1], [6, 0], [12, 3]].forEach(([r, s], i) => deal(i + 1, ax + (i - 0.2) * 30, ay, card(r, s), { rot: (i - 1) * 0.08 })); }
+    if (p.art === 'magic') [[2, 'RESET', 'teal'], [8, 'GHOST', 'vio'], [9, 'UNDER', 'vio'], [10, 'BURN!', 'fire']].forEach(([r], i) => deal(i, ax + (i - 1.5) * 50, ay - 4, card(r, i % 4), { sc: 0.95 }));
+    if (p.art === 'combo') { [[3, 1], [4, 1], [5, 1]].forEach(([r, s], i) => deal(i, ax + (i - 1) * 46, ay - 6, card(r, s))); if (pt > 0.6) R.text('^b120^0 × ^r2^0 = ^g240', ax, ay + 32, { align: 'center', size: 1 }); }
+    if (p.art === 'blind') [4, 7, 12].forEach((r, i) => { deal(i, ax + (i - 1) * 52, ay + 4, Cards.back, { sc: 0.9 }); deal(i + 0.5, ax + (i - 1) * 52 + 2, ay - 4, card(r, i), { sc: 0.9 }); });
+    R.para(p.body, b.x + 16, b.y + h - 76, w - 32, { align: 'center', color: P.bone1 });
+    for (let i = 0; i < 5; i++) R.box(b.x + w / 2 - 22 + i * 10, b.y + h - 38, 6, 6, i === d.page ? P.gold1 : P.ink4, 1);
+    if (UI.button('r-back', b.x + 12, b.y + h - 30, 60, 20, d.page ? 'BACK' : 'CLOSE', { color: 'ink', ignoreBlock: true })) { if (d.page) { d.page--; d.pt = 0; } else finishRules(game); }
+    if (UI.button('r-next', b.x + w - 72, b.y + h - 30, 60, 20, d.page < 4 ? 'NEXT' : 'DEAL!', { ignoreBlock: true })) { if (d.page < 4) { d.page++; d.pt = 0; } else finishRules(game); }
+    b.restore();
+  },
+
+  reward(game, m) {
+    const land = R.land, w = Math.min(R.vw - 12, land ? 330 : 240), h = land ? 200 : 330, b = UI.modal('reward', w, h, m.t, { fill: P.ink2 });
+    UI.title('THE HOUSE OWES YOU', b.x + w / 2, b.y + 12, { size: land ? 2 : 1, color: P.gold1 });
+    R.text('Claim one trick for the next table.', b.x + w / 2, b.y + (land ? 32 : 26), { color: P.bone1, align: 'center' });
+    const choices = game.rewardChoices, cw = land ? 92 : 200, ch = land ? 132 : 84;
+    choices.forEach((id, i) => {
+      const u = UPGRADES[id];
+      const x = land ? b.x + w / 2 + (i - 1) * (cw + 8) - cw / 2 : b.x + w / 2 - cw / 2, y = land ? b.y + 48 : b.y + 42 + i * (ch + 8);
+      const inT = ease.outBack(clamp((m.t - 0.2 - i * 0.12) / 0.4), 1.5);
+      if (inT <= 0) return;
+      const hot = Input.over(x, y, cw, ch) && m.t > 0.6;
+      const lift = hot ? -4 : Math.sin(R.t * 2 + i) * 1.5;
+      R.ctx.save(); R.ctx.translate(x + cw / 2, y + ch / 2 + lift); R.ctx.scale(inT * (hot ? 1.04 : 1), inT); R.ctx.rotate(hot ? Math.sin(R.t * 10) * 0.01 : 0); R.ctx.translate(-(x + cw / 2), -(y + ch / 2));
+      if (hot) R.box(x - 3, y - 3, cw + 6, ch + 6, u.color, 3, 0.6 + Math.sin(R.t * 8) * 0.3);
+      R.panel(x, y, cw, ch, { fill: P.ink1, rim: P.ink0, hi: P.ink3, depth: 3 });
+      R.box(x + 3, y + 3, cw - 6, ch - 6, u.color, 2, 0.12);
+      if (land) {
+        R.spr(Sprites.tricks[id], x + cw / 2, y + 22, { sc: 2 + (hot ? Math.sin(R.t * 6) * 0.1 : 0) });
+        R.text(u.kind, x + cw / 2, y + 42, { color: P.ink6, align: 'center', ...T });
+        R.para(u.name.toUpperCase(), x + 4, y + 51, cw - 8, { align: 'center', color: u.color, lineH: 9 });
+        R.para(u.desc, x + 6, y + 72, cw - 12, { align: 'center', color: P.bone1, ...T, lineH: 7 });
+      } else {
+        R.spr(Sprites.tricks[id], x + 22, y + 24, { sc: 2 });
+        R.text(u.name.toUpperCase(), x + 44, y + 8, { color: u.color });
+        R.text(u.kind, x + 44, y + 19, { color: P.ink6, ...T });
+        R.para(u.desc, x + 44, y + 29, cw - 50, { color: P.bone1, ...T, lineH: 7 });
+      }
+      R.ctx.restore();
+      if (Input.button('rw-' + id, x, y, cw, ch, m.t > 0.6 && !m.data.picked)) {
+        Audio.play('trophy'); Post.flash([1, 0.9, 0.6], 0.3);
+        FX.burst(x + cw / 2, y + ch / 2, 50, { colors: CONFETTI, speed: [60, 200], grav: 140, size: [1, 3], life: [0.6, 1.4], top: true });
+        game.modal.data.picked = id;
+        game.transition(() => game.chooseUpgrade(id));
+      }
+      if (hot && Input.hot !== 'rw-' + id) Input.cursor = 'pointer';
+    });
+    b.restore();
+  },
+
+  result(game, m) {
+    const g = game.g, win = g.winner === 'player', advance = win && g.round < 3, idx = clamp(g.round - 1, 0, 2), opp = OPPONENTS[idx];
+    const w = Math.min(R.vw - 12, 250), h = Math.min(R.vh - 10, 232), b = UI.modal('result', w, h, m.t, { fill: win ? P.ink2 : '#2a0f1f' });
+    const head = win ? (g.round === 3 ? 'YOU BEAT THE HOUSE' : 'ROUND CLEARED') : 'THE HOUSE WINS';
+    R.text(head, b.x + w / 2, b.y + 10, { color: win ? P.grn1 : P.red1, align: 'center' });
+    // The loser gets the title. Stamp slams in.
+    const px = b.x + w / 2, py = b.y + 62;
+    if (win) { R.panel(px - 28, py - 28, 56, 56, { fill: P.ink3, rim: opp.color }); R.spr(portrait(idx, m.t > 0.9 ? 'talk' : 'idle', Math.floor(R.t * 6)), px, py); }
+    else R.spr(Sprites.mascot, px, py, { sc: 0.9 });
+    R.text(win ? opp.name.toUpperCase() : 'YOU', px, py + 32, { color: P.bone0, align: 'center' });
+    R.text('IS OFFICIALLY A', px, py + 42, { color: P.ink6, align: 'center', ...T });
+    const st = m.t - 0.55;
+    if (st > 0) {
+      if (!m.data.stamped) { m.data.stamped = true; Audio.play('stamp'); R.shake(0.45); Post.impact(0.5); FX.burst(px, py + 66, 30, { colors: [P.red1, P.red2, P.bone0], speed: [60, 160], grav: 200, size: [1, 2], top: true }); }
+      const k = st < 0.18 ? 3 - 2 * ease.outCubic(st / 0.18) : 1;
+      R.ctx.save(); R.ctx.translate(px, py + 66); R.ctx.rotate(-0.08); R.ctx.scale(k, k);
+      R.box(-78, -13, 156, 26, P.red2, 2, 0.95); R.box(-76, -11, 152, 22, win ? P.ink2 : P.red4, 2);
+      R.text('BONEHEAD', 0, -7, { size: 2, color: P.red1, align: 'center' });
+      R.ctx.restore();
+    }
+    const goals = roundGoals(g).filter(x => x.complete);
+    let y = py + 88;
+    R.text(`RUN SCORE ^g${game.score.toLocaleString()}`, px, y, { align: 'center', color: P.bone1 }); y += 11;
+    R.text(`${g.playerBurns || 0} BURNS · ${fmtTime(game.elapsed)} · BEST ${game.best.toLocaleString()}`, px, y, { align: 'center', color: P.ink6, ...T }); y += 9;
+    if (goals.length) R.text(goals.map(x => `✓ ${x.name}`).join('  '), px, y, { align: 'center', color: P.grn1, ...T });
+    if (m.t > 0.8 && UI.button('res-go', b.x + 20, b.y + h - 30, w - 40, 22, advance ? 'CLAIM A TRICK' : win ? 'VICTORY LAP · NEW RUN' : 'ONE MORE RUN', { color: advance ? 'gold' : win ? 'green' : 'red', ignoreBlock: true, pulse: true })) resultAction(game);
+    if (win && g.round === 3 && m.t > 0.6 && Math.random() < 0.15) FX.burst(Math.random() * R.vw, -5, 3, { colors: CONFETTI, speed: [10, 40], angle: Math.PI / 2, spread: 0.5, grav: 60, life: [2, 3], size: [1, 2], top: true });
+    b.restore();
+  },
+};
+
+function THEMES_TITLE() { return { a: '#43195c', b: '#0e1230', c: '#b0305a' }; }
+
+function resultAction(game) {
+  const g = game.g, win = g.winner === 'player';
+  if (win && g.round < 3) { game.modal = null; game.claimTrick(); }
+  else { store.set('bh2-save', null); startFresh(game); }
+}
+
+function startFresh(game) {
+  game.modal = null; Audio.muffle(false);
+  if (!store.get('bh-tutorial-seen', false)) { game.openModal('rules', { page: 0, startsRun: true }); return; }
+  game.transition(() => game.newRun());
+}
+
+function finishRules(game) {
+  const starts = game.modal?.data?.startsRun;
+  store.set('bh-tutorial-seen', true);
+  game.modal = null; Audio.muffle(false);
+  if (starts) game.transition(() => game.newRun());
+}

@@ -1,0 +1,85 @@
+/* Card faces scale from their own width in every location, including flights. */
+.card{container-type:inline-size;--suit-image:url('assets/suit-detail-0.svg')}
+.card:has(.suit-1){--suit-image:url('assets/suit-detail-1.svg')}
+.card:has(.suit-2){--suit-image:url('assets/suit-detail-2.svg')}
+.card:has(.suit-3){--suit-image:url('assets/suit-detail-3.svg')}
+.card .corner{font-family:'Space Mono',monospace!important;font-size:clamp(8px,24cqw,36px)!important;font-weight:700!important;line-height:.85!important;left:7%!important;top:6%!important;gap:2cqw;text-shadow:none}
+.card .corner.bottom{left:auto!important;top:auto!important;right:7%!important;bottom:6%!important}
+.card .corner small{font-size:0!important;display:block;width:14cqw;height:14cqw;line-height:1;background:var(--suit-image) center/contain no-repeat}
+.card:not(.special) .pip{inset:23% 23%!important;background-image:var(--suit-image)!important;background-size:contain!important;background-repeat:no-repeat!important;background-position:center!important;font-size:0!important;color:transparent!important;text-shadow:none!important;image-rendering:auto!important;opacity:1}
+.card.special .pip{inset:20% 14% 18%!important;image-rendering:auto!important}
+.card .cardname{font-family:'VT323',monospace;font-size:clamp(5px,11cqw,16px)!important;line-height:1;bottom:5%!important;letter-spacing:.3px;left:3%;right:3%;overflow:hidden;white-space:nowrap;text-align:center}
+.card.back{image-rendering:auto}
+.card.selected:after{font-size:clamp(6px,11cqw,13px)!important;width:17cqw!important;height:17cqw!important;line-height:14cqw!important;top:4%!important;right:4%!important;border-width:1px!important}
+@container(max-width:48px){.card .cardname{display:none}.card.special .pip{inset:22% 8% 7%!important}.card .corner small{width:15cqw;height:15cqw}}
+/* Preserve the table's centre axis while preventing squat, height-limited piles. */
+.playzone{container-type:size}
+.playzone .pilezone #pile{width:min(var(--pile-w),calc((100cqh - 40px)/1.4))!important;height:min(var(--pile-h),calc(100cqh - 40px))!important;aspect-ratio:5/7}
+.playzone .drawzone{left:18%!important;width:clamp(42px,12cqw,76px)}
+.playzone .burnzone{left:82%!important;width:clamp(46px,13cqw,90px)!important}
+#drawstack{width:100%;height:auto;aspect-ratio:5/7;max-height:100%}
+.playzone .drawzone label,.playzone .burnzone label{white-space:normal;line-height:1.3}
+.sidebar,.rightbar{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.last-details{display:none}
+.score-receipt{text-align:center;padding:20px 8px}.score-receipt .tally-label{font-size:14px;line-height:1.7}.score-receipt .tally-values{font-size:14px;color:#bfb6d8;line-height:1.8}.score-receipt .tally-bonuses{display:flex;flex-direction:column;font-size:14px;line-height:1.8}.score-receipt .tally-fire-detail{font-size:13px}
+@media(min-width:901px){.table{min-height:480px}main{overflow-y:auto}.sidebar,.rightbar{min-height:480px}.handbar{gap:8px}.handbar>div{min-width:0}.handbar #handcount{white-space:nowrap}.handarea .actionbar{grid-template-columns:1fr 1.2fr}.handarea .actionbar>span{display:none}.sidebar .scorebox{flex-shrink:0}}
+@media(min-width:901px) and (max-width:1250px){.handbar #handcount{display:none}.table{padding-inline:16px}.handarea .actionbar .primary{font-size:16px;padding-inline:8px}.handarea .actionbar .pickup{font-size:11px;padding-inline:7px}}
+/* A compact board has dedicated rows for status, reserves, pile and hand.
+   When the viewport is too short it scrolls, rather than shrinking into overlaps. */
+@media(max-width:900px){
+ html,body{overflow:hidden}
+ #app{height:100dvh;grid-template-rows:52px minmax(0,1fr) 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+ header{padding:0 max(8px,env(safe-area-inset-left,0px));gap:6px;min-width:0}
+ .header-middle{display:none!important}.wordmark{padding:0;flex:none}.wordmark .header-wordmark-text{font-size:23px;gap:5px}.wordmark .header-wordmark-text img{width:24px;height:24px}
+ .header-controls{gap:2px;min-width:0}.header-controls button{min-width:30px;min-height:42px;padding:5px;font-size:18px}.header-controls .nav-button{font-size:10px;padding:5px}.header-controls button span{display:none}
+ .bottom-bar,.rightbar{display:none!important}
+ main{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(504px,1fr);overflow-y:auto;min-height:0;align-content:start;overscroll-behavior:contain}
+ .sidebar{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;padding:6px 12px;min-height:60px;align-items:center;border:0;border-bottom:1px solid var(--line);overflow:visible}
+ .sidebar>*{display:none}.sidebar .round-heading{display:block;margin:0;font-size:11px;white-space:normal}.round-heading span{font-size:26px;margin-left:3px}.round-heading small{font-size:10px}
+ .sidebar .scorebox{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) 24px;gap:3px 8px;align-items:center;width:100%;min-width:0;margin:0;padding:0;border:0;background:none;box-shadow:none}
+ .sidebar .scorebox>label{font-size:10px;white-space:nowrap}.sidebar .scorebox>#score{font:30px/1 'VT323',monospace;margin:0;text-align:right;letter-spacing:0;overflow-wrap:anywhere}
+ .sidebar .scorebox>.score-help{position:static;margin:0;width:24px;height:24px}
+ .sidebar .scorebox>footer{display:none}
+ .sidebar .scorebox .last-hand,.sidebar .scorebox .last-hand.has-breakdown{display:block;position:static;inset:auto;grid-row:2;grid-column:1/3;min-height:0!important;padding:0;margin:0;border:0;pointer-events:none}
+ .sidebar .scorebox .last-hand:not(.has-breakdown){display:none}
+ .sidebar .last-hand>label,.sidebar .last-hand>strong,.sidebar .last-hand>small{display:none}
+ .sidebar .scorebox .last-hand.has-breakdown #scoreburst{position:static;display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:2px 8px;min-height:0;padding:4px 7px;transform:none;border-radius:6px;background:#28314d}
+ .sidebar .scorebox #scoreburst .tally-label,.sidebar .scorebox #scoreburst .tally-values,.sidebar .scorebox #scoreburst .tally-fire-detail{display:none}
+ .sidebar .scorebox #scoreburst .tally-equation{font-size:22px;margin:0;gap:4px}.sidebar .scorebox #scoreburst .tally-equation>span{font-size:15px}.sidebar .scorebox #scoreburst .tally-award{font-size:25px}
+ .sidebar .scorebox #scoreburst .tally-bonuses{display:flex;gap:4px;font-size:9px}.sidebar .scorebox #scoreburst .tally-bonuses:empty{display:none}
+ .last-details:not([hidden]){display:block;grid-row:3;grid-column:1/-1;justify-self:end;padding:3px;font-size:10px;color:#c3b5dd;text-decoration:underline;text-underline-offset:2px}
+ :root{--pile-w:clamp(80px,23vw,112px);--pile-h:calc(var(--pile-w)*1.4);--hand-h:clamp(100px,19dvh,160px)}
+ .table{grid-template-columns:minmax(0,1fr);grid-template-rows:38px 62px minmax(134px,1fr) 42px minmax(200px,1.25fr);gap:0;min-height:504px;padding:8px 12px 12px;overflow:hidden}
+ .opponent{grid-column:1;grid-row:1;height:auto;align-self:center;gap:8px}.opponent .dealer-avatar{width:32px;height:32px;flex-shrink:0}.opponent h2{font-size:14px;margin:3px 0 0}.opponent label{display:block;font-size:9px}.house-count{gap:5px}.house-count b{font-size:26px}.house-count span{font-size:9px;max-width:44px}
+ .house-hand{grid-column:1!important;grid-row:2;padding:2px 96px!important;width:100%;margin:0;min-height:0}.house-hand .zone-label{display:none}.housecards{height:52px;max-height:52px;min-height:0;overflow:hidden;justify-content:center}.housecards .card{height:48px;max-height:48px;width:auto;min-width:0;margin-left:-15px;border-width:1px}
+ .house-reserve{grid-column:1!important;grid-row:2;justify-self:end;width:92px;height:60px;padding:0;border:0;gap:4px;min-height:0}.house-reserve .zone-label{font-size:9px}
+ .house-slot,#tablecards .slot{width:27px;min-width:27px;height:40px}.house-slot .card,#tablecards .card{width:27px;min-width:27px;height:37px}#housetable,#tablecards{gap:3px}
+ .playzone{grid-column:1;grid-row:3;padding:0;min-height:0}.playzone .drawzone{left:17%!important;width:clamp(42px,12cqw,64px)}.playzone .burnzone{left:83%!important;width:56px!important}.burnzone>span{font-size:28px}.burnzone>b{font-size:23px}.drawzone label,.burnzone label{font-size:9px}.drawzone b{font-size:12px;bottom:19px;right:-4px}
+ #announcement{grid-column:1;grid-row:4;height:auto;align-self:stretch;font-size:11px;line-height:1.4;padding:5px 7px;display:flex;align-items:center;justify-content:center;min-height:36px}
+ .handarea{grid-column:1;grid-row:5;padding:4px 0 0;grid-template-rows:50px minmax(100px,1fr) 46px;min-height:200px}
+ .handbar{border:0;padding:0 100px 0 0;display:flex;align-items:center;align-content:center;flex-wrap:wrap;gap:3px;min-height:0;font-size:10px}.handbar>div{gap:5px}.handbar #handcount{display:none}#sort{font-size:10px;padding:4px 0}
+ .player-table{grid-column:1!important;grid-row:5;justify-self:end;align-self:start;width:92px;margin:5px 0 0;height:48px;max-height:none;padding:0;border:0;display:flex;flex-direction:column;gap:3px;justify-content:start}.phase-caption{max-width:none}.phase-caption label{font-size:9px}.phase-caption span,.player-table .phase-steps{display:none}
+ .hand{grid-row:2;padding:18px 5px 6px;margin:0!important;max-width:100%!important;width:100%;gap:8px;min-height:0;overflow-x:auto;overflow-y:hidden;align-items:center}.hand .card,.hand .table-pair{height:min(var(--hand-h),100%);width:auto;aspect-ratio:5/7;min-width:0}.hand .card.selected{transform:translateY(-14px) rotate(0)!important}.hand.crowded{gap:7px;justify-content:flex-start}
+ .actionbar{grid-row:3;display:grid;grid-template-columns:1fr 1.2fr;grid-template-rows:1fr;gap:8px;padding:4px 0 2px;min-height:0}.actionbar>span{display:none!important}.actionbar .pickup,.actionbar .primary{grid-row:1;min-width:0;min-height:38px;padding:7px;font-size:12px}.actionbar .primary{font-family:'VT323',monospace;font-size:23px}.actionbar .primary span{margin-left:8px}
+ .effect{max-width:92vw;font-size:clamp(30px,8vw,48px);padding:8px 16px}.effect small{font-size:11px;line-height:1.5;letter-spacing:.3px}
+}
+@media(max-width:360px){header{padding-inline:6px}.wordmark .header-wordmark-text{font-size:20px;gap:3px}.wordmark .header-wordmark-text img{width:20px;height:20px}.header-controls button{min-width:27px;padding:4px}.header-controls .nav-button{font-size:9px}.table{padding-inline:9px}.sidebar{padding-inline:9px;gap:7px}.sidebar .scorebox #scoreburst .tally-bonuses{display:none}}
+@media(max-height:500px) and (min-width:601px){#app{grid-template-rows:46px minmax(0,1fr) 0}.bottom-bar{display:none!important}main{overflow-y:auto}.table{min-height:470px}.sidebar,.rightbar{min-height:0}.modal{max-height:calc(100dvh - 24px)}.opponent-intro-panel{padding:16px}.opponent-intro-panel>img{width:80px;height:80px;margin:10px auto}.opponent-intro-panel>h2{font-size:34px}}
+
+/* One contextual action: mint to play, amber when pickup is the only move. */
+.handarea .actionbar{grid-template-columns:minmax(0,1fr)!important}
+.handarea .actionbar #play{grid-column:1/-1;width:min(100%,250px);justify-self:center;position:relative;z-index:2;opacity:1;background:linear-gradient(120deg,#b2fff3,#69e9ec);color:#182b52;border-color:#c4fff7}
+.handarea .actionbar #play:disabled{opacity:1;background:linear-gradient(120deg,#94cbc4,#71afb4);color:#243e56;border-color:#a1d3d0;box-shadow:0 2px #456c86;filter:none;transform:none}
+.handarea .actionbar #play.pickup-action{background:linear-gradient(120deg,#ffce8a,#f69b56);border-color:#ffe2b8;color:#492b21;box-shadow:0 4px #ad693e,0 0 20px #ef9b4426}
+.handarea .actionbar #play.pickup-action:hover:not(:disabled){box-shadow:0 4px #ad693e,0 0 26px #ef9b4440}
+/* The PNG owns the silhouette; no second painted border or opaque corner fill. */
+.card.back,.housecards .card.back,.house-slot .card.back,#tablecards .card.back,.draw-layer .card.back,.draw-layer:not(:last-child) .card.back{
+ background:transparent url('assets/card-back-red.png') center/contain no-repeat!important;
+ border:0!important;border-radius:0!important;outline:none!important;box-shadow:none!important;
+ filter:drop-shadow(0 1px 1px #070d2c66);overflow:visible;image-rendering:auto;padding:0
+}
+.card.back:before,.card.back:after{display:none!important}
+.card.back.selected{filter:drop-shadow(0 0 2px #83fff1) drop-shadow(0 0 4px #83fff1)}
+
+/* Quiet paper tones let the magic illustrations carry the colour. */
+.card:not(.special):not(.back){background:linear-gradient(145deg,#f5f0e8,#eae5e4)!important;border-color:#c7bdcc!important}

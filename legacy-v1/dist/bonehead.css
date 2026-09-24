@@ -1,0 +1,201 @@
+/* Bonehead: deadpan mascot, real printed backs, readable arcade UI. */
+.wordmark{display:flex;align-items:center;gap:10px;padding:0;line-height:1;letter-spacing:1px}.wordmark img{width:43px;height:43px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(2px 3px 0 #101330)}.wordmark span{display:block;font-family:'VT323',monospace;font-size:35px;font-weight:700;color:#f4edff;text-shadow:2px 3px #6447a4}.header-middle{font-size:12px;letter-spacing:2px}.header-controls{font-size:13px;font-weight:700}.title-logo{display:flex;align-items:center;gap:10px}.title-logo>img{width:135px;height:135px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(5px 5px 0 #10122d)}.intro .title-logo h1{font-size:84px;line-height:.73;letter-spacing:0;margin:20px 0}.intro .intro-inner{gap:20px}.intro .intro-art{width:172px;height:240px;flex-shrink:0;object-fit:cover}.intro .intro-copy{font-size:19px;font-weight:700;color:#f2eaff;margin-top:20px}.intro p{font-size:15px}.intro-footer{font-size:12px}.center-mark{font-size:clamp(30px,4vw,62px);font-family:'VT323',monospace;letter-spacing:8px;color:#d0b7ff0b}.center-mark span{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:3px}
+.card.back{background:#163973 url('assets/card-back.png') center/100% 100% no-repeat!important;border:1px solid #dfd7bd!important;outline:1px solid #1b2655;border-radius:5px;box-shadow:0 3px #ada7ac,0 6px 10px #060f2860;padding:0;image-rendering:auto}.card.back:before{display:none}.card.back .back-emblem{position:absolute;left:32%;top:37%;width:36%;height:26%;background:url('assets/bonehead.png') center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(1px 1px 0 #091230)}.card.back>span:not(.back-emblem){display:none}
+/* Clean suit glyphs restore the classic, instantly readable faces. */
+.card:not(.special) .pip{background-image:none!important;font-size:54px!important;font-family:Georgia,'Times New Roman',serif;color:var(--c)!important;text-shadow:1px 2px #ffffff90;image-rendering:auto;line-height:1}.hand .card:not(.special) .pip{font-size:clamp(40px,4vw,70px)!important}.pile .card:not(.special) .pip{font-size:clamp(44px,4.5vw,78px)!important}.housecards .card:not(.special) .pip{font-size:28px!important}.house-slot .card:not(.special) .pip,#tablecards .card:not(.special) .pip{font-size:23px!important}.card .corner small{font-family:Georgia,'Times New Roman',serif}.hand .card .corner{font-weight:700}.card .cardname{letter-spacing:1px;font-weight:700}
+.hand .table-pair{position:relative;height:min(var(--hand-h),100%);aspect-ratio:5/7;flex:0 0 auto;min-width:0}.hand .table-pair>.card{position:absolute;left:0;top:0;height:calc(100% - 10px);width:100%;min-width:0;z-index:2}.locked-blind{position:absolute;inset:10px -4px 0 4px;pointer-events:none;user-select:none;z-index:1}.hand .locked-blind .card{position:absolute;inset:0;width:100%;height:100%;min-width:0;opacity:1!important;transform:rotate(2deg);pointer-events:none}.blind-lock{position:absolute;left:0;right:0;bottom:1px;background:#172751de;color:#e5dafb;font-size:9px;text-align:center;letter-spacing:1px;line-height:12px;z-index:2}.housecards .table-pair{position:relative;height:min(90px,100%);aspect-ratio:5/7;flex:0 0 auto;margin:0 5px}.housecards .table-pair>.card{position:absolute;left:0;top:0;width:100%;min-width:0;height:calc(100% - 7px);margin:0;transform:none;z-index:2}.housecards .locked-blind{inset:7px -3px 0 3px}.housecards .locked-blind .card{position:absolute;inset:0;width:100%;height:100%;min-width:0;margin:0;transform:rotate(2deg)}.housecards .blind-lock{font-size:7px;line-height:9px}.housecards .table-pair .special .pip{inset:16px 6px 10px}.table-pair .card.magic-8{backdrop-filter:none}.table-pair .locked-blind:only-child{opacity:.78}
+.fire-canvas{position:absolute;z-index:25;left:-40%;top:-32%;width:180%;height:135%;pointer-events:none;image-rendering:pixelated;filter:drop-shadow(0 0 13px #ff682333);mix-blend-mode:screen}.reduced-burn{filter:sepia(1) brightness(.4)}.effect.ash{font-size:54px;color:#ead7cd;text-shadow:3px 4px #42394f}.effect.ash small{font-size:13px}.scorebox.counting{border-color:#b6fff0;box-shadow:0 0 0 1px #86f6dc,0 0 28px #42dac744;transition:box-shadow .15s}.scorebox.counting>div{color:#effff9;text-shadow:0 0 20px #74f9db88}#scoreburst{position:absolute;left:50%;top:43%;transform:translate(-50%,-50%) scale(.9);z-index:24;min-width:230px;padding:18px 24px;border:2px solid #b99ee5;background:linear-gradient(145deg,#1b3156f5,#402959f5);box-shadow:5px 6px #0b1433,0 0 45px #c0a0ff24;border-radius:6px;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s,transform .18s;text-align:center}#scoreburst.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.tally-label{font-size:13px;letter-spacing:2px;font-weight:700;color:#e1cafa}.tally-equation{display:flex;gap:15px;justify-content:center;align-items:center;font-family:'VT323',monospace;font-size:52px;line-height:1.2;margin:3px 0}.tally-equation b{color:#83f6ed}.tally-equation strong{color:#ffc1ed}.tally-equation>span{font-size:30px;color:#dad5f0}.tally-bonuses{display:flex;gap:12px;justify-content:center;font-size:12px;color:#ffce9e}.tally-award{font-family:'VT323',monospace;font-size:66px;color:#fdeda8;line-height:1.15;text-shadow:3px 3px #644332}
+/* The walkthrough is an actual card lesson, one concept per screen. */
+.modal:has(.lesson-heading){width:740px;padding:28px 34px;max-height:94dvh}.lesson-heading{display:flex;align-items:center;gap:12px}.lesson-heading img{width:45px;height:45px;object-fit:contain;image-rendering:pixelated}.lesson-heading .eyebrow{font-size:13px;font-weight:700;letter-spacing:2px}.modal:has(.lesson-heading) h2{font-size:47px;margin:13px 0 10px;line-height:1}.lesson-copy{font-size:16px!important;line-height:1.75!important;min-height:56px;margin:0 0 20px}.lesson-cards{display:flex;justify-content:center;align-items:center;gap:14px;min-height:184px;margin:8px 0 20px;padding:10px}.lesson-cards .card,.lesson-magic .card{width:110px;min-width:110px;height:154px;pointer-events:none;flex-shrink:0}.lesson-cards .card .corner,.lesson-magic .card .corner{font-size:30px;left:9px;top:10px}.lesson-cards .card .corner small,.lesson-magic .card .corner small{font-size:19px}.lesson-cards .card .corner.bottom,.lesson-magic .card .corner.bottom{left:auto;top:auto;right:9px;bottom:10px}.lesson-arrow{font-family:'VT323',monospace;font-size:37px;color:#8df8df}.lesson-hand{display:flex;gap:8px}.lesson-hand .card{margin-left:-29px;transform:rotate(4deg)}.lesson-hand .card:first-child{margin-left:0;transform:rotate(-7deg)}.lesson-hand .card:nth-child(2){transform:rotate(-1deg)}.lesson-magic{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0}.lesson-magic>div{display:flex;flex-direction:column;align-items:center;text-align:center}.lesson-magic b{display:block;font-size:13px;margin-top:15px;letter-spacing:1px}.lesson-magic p{font-size:13px;line-height:1.5;margin:6px 0 0}.lesson-magic .cardname{display:none}.lesson-magic .special .pip{inset:33px 15px 18px}.lesson-magic .magic-8 .pip{font-size:53px!important}.lesson-note{font-size:14px!important;line-height:1.7!important;background:#a383f312;padding:13px 16px;border-left:3px solid #b99cfd;color:#ded8f1!important;margin:15px 0}.lesson-controls{display:flex;gap:20px;align-items:center;margin-top:18px}.lesson-controls .secondary{width:auto;font-size:13px;padding:14px 20px}.lesson-controls .primary{margin-top:0;font-size:15px;padding:16px 24px}.lesson-dots{display:flex;justify-content:center;gap:9px;flex:1}.lesson-dots i{width:7px;height:7px;border-radius:2px;background:#665481}.lesson-dots i.active{background:#8bffe8;box-shadow:0 0 10px #84ffe84a}.lesson-footer{display:flex;justify-content:space-between;margin-top:20px;font-size:11px;color:#b6b2d0}.lesson-footer button{text-decoration:underline;text-underline-offset:4px;padding:4px 0}.lesson-formula{display:flex;gap:10px;justify-content:center;align-items:center;font-size:18px;margin:-2px 0 15px}.lesson-formula b{font-family:'VT323',monospace;font-size:32px;color:#8bffee}.lesson-formula strong{color:#ffeab9;font-size:16px}.lesson-pair{position:relative;width:112px;height:169px;margin:0 9px}.lesson-pair .card{position:absolute;top:0;left:0}.lesson-pair .card.back{top:14px;left:5px;transform:rotate(3deg)}.lesson-pair>span{position:absolute;left:4px;right:-4px;bottom:-17px;text-align:center;color:#d5c3f0;font-size:10px;letter-spacing:.3px}.final-six{margin-bottom:30px}
+/* Increase frequently read labels; leave fine print secondary. */
+.run-label,.sidebar .run-label,.sidebar .tricks>label,.magic-heading,.rightbar .magic-heading,.rightbar .magic-item b{font-size:14px;font-weight:700;letter-spacing:1px}.sidebar .venue{font-size:15px}.sidebar .statline{font-size:14px}.sidebar .stake{font-size:13px}.scorebox>div{font-size:51px}.scorebox label{font-size:13px}.scorebox footer{font-size:12px}.rightbar .magic-item p{font-size:13px;line-height:1.5}.aside-sub,.combo-tip p,.rightbar .combo-tip p{font-size:13px}.rightbar .magic-item{margin-bottom:15px}.magic-heading{letter-spacing:.3px}.rightbar .log-title{font-size:12px}.rightbar #log p{font-size:12px}.handbar{font-size:15px}.handbar #handcount,#sort{font-size:12px}#announcement{font-size:14px}.actionbar>span{font-size:13px}.actionbar .pickup{font-size:13px}.actionbar .primary{font-size:19px;font-weight:700}.house-reserve .zone-label{font-size:11px}.house-hand .zone-label{font-size:12px}.phase-caption label{font-size:12px}.phase-caption span{font-size:11px}.phase-steps{font-size:10px}.opponent label{font-size:11px}.opponent h2{font-size:18px}.opponent p{font-size:11px}.house-count span{font-size:11px}#pilelabel{font-size:14px}.drawzone label,.burnzone label{font-size:12px}.modal .eyebrow{font-weight:700}.modal .rules-row p{font-size:14px}.modal>p{font-size:15px}.modal .dev-row{font-size:14px}.modal .upgrade p{font-size:13px}
+@media(min-width:701px) and (max-height:850px){.sidebar .run-label{font-size:12px}.sidebar .statline{font-size:13px}.sidebar .tricks>label{font-size:12px}.scorebox>div{font-size:44px}.rightbar .magic-item{margin-bottom:12px}.rightbar .magic-item p{font-size:12px}.rightbar .aside-sub{margin-bottom:12px}.rightbar .combo-tip{display:none}.handbar{font-size:13px}.actionbar .primary{font-size:17px}.actionbar .pickup{font-size:12px}.actionbar>span{font-size:12px}#announcement{font-size:13px}.hand .card:not(.special) .pip{font-size:43px!important}.pile .card:not(.special) .pip{font-size:48px!important}.housecards .table-pair{height:min(68px,100%)}.housecards .table-pair .pip{font-size:23px!important}.hand .table-pair{height:min(var(--hand-h),100%)}.hand .table-pair>.card{height:calc(100% - 8px)}.blind-lock{font-size:8px;line-height:10px}.modal:has(.lesson-heading){padding:22px 30px}.lesson-copy{margin-bottom:12px}.lesson-cards{margin:0 0 12px;min-height:167px}.lesson-magic{margin:10px 0}.lesson-note{margin:10px 0}.lesson-footer{margin-top:12px}}
+@media(max-width:1150px){.header-middle{font-size:10px}.wordmark span{font-size:32px}.handbar #handcount{font-size:11px}.house-reserve .zone-label{font-size:10px}.actionbar .primary{font-size:17px}.actionbar .pickup{font-size:12px}.actionbar>span{font-size:12px}}
+@media(max-width:700px){.wordmark{gap:6px}.wordmark img{width:32px;height:32px}.wordmark span{font-size:28px;letter-spacing:0}.header-controls{gap:15px}.intro .title-logo{gap:4px}.intro .title-logo>img{width:88px;height:100px}.intro .title-logo h1{font-size:68px}.intro .intro-art{width:110px;height:168px}.intro .intro-copy{font-size:16px}.intro p{font-size:13px}.intro-footer{font-size:10px}.sidebar .scorebox>div{font-size:27px}.sidebar .scorebox label{font-size:10px}.opponent h2{font-size:15px}.opponent label{font-size:10px}.house-count span{font-size:10px}.house-hand .zone-label{font-size:10px}.house-reserve .zone-label{font-size:9px}.handbar{font-size:11px}.handbar #handcount,#sort{font-size:9px}#announcement{font-size:12px}.actionbar>span{font-size:11px}.actionbar .primary{font-size:16px}.actionbar .pickup{font-size:11px}#pilelabel{font-size:11px}.drawzone label,.burnzone label{font-size:9px}.phase-caption label{font-size:10px}.phase-steps{font-size:8px}.hand .table-pair{height:min(131px,100%)}.housecards .table-pair{height:min(65px,100%);margin:0 3px}.housecards .table-pair .pip{font-size:21px!important}.housecards .blind-lock{font-size:6px}.hand .table-pair>.card{height:calc(100% - 8px)}.locked-blind{inset:8px -3px 0 3px}.blind-lock{font-size:7px;line-height:9px}.hand .card:not(.special) .pip{font-size:41px!important}.pile .card:not(.special) .pip{font-size:45px!important}.house-slot .card:not(.special) .pip,#tablecards .card:not(.special) .pip{font-size:16px!important}.modal:has(.lesson-heading){padding:21px 20px;width:100%}.lesson-heading{gap:9px}.lesson-heading img{width:36px;height:36px}.lesson-heading .eyebrow{font-size:11px;letter-spacing:1px}.modal:has(.lesson-heading) h2{font-size:35px;margin:12px 0}.lesson-copy{font-size:14px!important;line-height:1.6!important;min-height:0}.lesson-cards{gap:8px;padding:8px 0;min-height:139px;margin:5px 0 15px}.lesson-cards .card{width:70px;min-width:70px;height:98px}.lesson-cards .card .corner{font-size:24px;left:5px;top:7px}.lesson-cards .card .corner small{font-size:14px}.lesson-cards .card .pip{font-size:38px!important}.lesson-arrow{font-size:25px}.lesson-hand .card{margin-left:-30px}.lesson-note{font-size:12px!important;padding:10px 12px;line-height:1.6!important}.lesson-controls{gap:9px;margin-top:14px}.lesson-controls .secondary{font-size:11px;padding:12px}.lesson-controls .primary{font-size:13px;padding:13px}.lesson-controls .primary span{margin-left:9px}.lesson-dots{gap:6px}.lesson-dots i{width:6px;height:6px}.lesson-footer{font-size:10px;margin-top:13px}.lesson-magic{grid-template-columns:repeat(2,1fr);gap:12px 18px}.lesson-magic .card{width:68px;min-width:68px;height:95px}.lesson-magic .card .corner{font-size:23px;left:5px;top:7px}.lesson-magic .card .corner small{font-size:14px}.lesson-magic .special .pip{inset:22px 9px 13px}.lesson-magic b{font-size:11px;margin-top:9px}.lesson-magic p{font-size:11px;margin-top:4px}.lesson-magic .magic-8 .pip{font-size:31px!important}.lesson-formula{gap:7px;font-size:15px}.lesson-formula b{font-size:27px}.lesson-formula strong{font-size:12px}.lesson-pair{width:70px;height:112px;margin:0 4px}.lesson-pair>span{font-size:8px;bottom:-11px}.final-six{margin-bottom:23px}#scoreburst{min-width:190px;padding:14px 18px;top:42%}.tally-label{font-size:11px}.tally-equation{font-size:44px}.tally-award{font-size:55px}.tally-bonuses{font-size:10px}.effect.ash{font-size:44px}.effect.ash small{font-size:10px}}
+@media(prefers-reduced-motion:reduce){#scoreburst{transition:none}.scorebox.counting{transition:none}}
+#announcement{line-height:1.25;padding:3px 9px}@media(max-width:700px){#announcement{line-height:1.3;padding:3px 7px}}
+#hand [data-card]{touch-action:none;cursor:grab}#hand [data-card]:active{cursor:grabbing}.drag-card{box-shadow:0 16px 38px #070c2866,0 0 0 2px #b7fff3!important;border-radius:5px}.drag-count{position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);white-space:nowrap;padding:5px 9px;background:#a1fff0;color:#182746;border:2px solid #182746;font:700 11px 'Space Mono',monospace;border-radius:4px}.pile:after{content:'';position:absolute;inset:-16px;border:2px dashed transparent;border-radius:12px;pointer-events:none;transition:border-color .14s,box-shadow .14s,background .14s}.pile.drag-ready:after{border-color:#98fce680;box-shadow:0 0 24px #78ffdb20}.pile.drag-over:after{border-color:#b8fff0;box-shadow:0 0 35px #76fbd766;background:#8afbdd15}.pile.drag-invalid:after{border-color:#ff9faa;box-shadow:0 0 24px #ff788a33}
+
+/* Table polish: generous cards, a quieter centre, and a dedicated score stage. */
+.card,.card.back{border-radius:9px!important}
+.empty-pile{border-radius:10px}
+.playzone{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(64px,1fr);gap:clamp(12px,2vw,36px)}
+.drawzone{justify-self:center;flex-shrink:0}
+.pilezone{justify-self:center;min-width:0;max-width:100%}
+.burnzone{justify-self:end;width:90px;padding-left:12px}
+.burnzone label{white-space:normal;line-height:1.5;max-width:90px}
+.house-slot,#tablecards .slot{width:44px;min-width:44px;height:66px}
+.house-slot .card,#tablecards .card{width:44px;min-width:44px;height:61px}
+#tablecards{gap:8px}
+.card.magic-8 .pip,.lesson-magic .card.magic-8 .pip,.lesson-cards .card.magic-8 .pip{background-image:url('assets/magic.png')!important;background-size:400% 100%!important;background-position:33.333% 0!important;background-repeat:no-repeat!important;font-size:0!important;color:transparent!important;text-shadow:none!important;opacity:.8;mix-blend-mode:screen;mask-image:radial-gradient(ellipse at center,#000 40%,transparent 74%)}
+.sidebar .scorebox{position:relative}
+.scorebox.counting>#score,.scorebox.counting>label,.scorebox.counting>footer{visibility:hidden}
+.sidebar .scorebox #scoreburst{inset:0;min-width:0;margin:0;padding:9px 7px;border:0;border-radius:4px;transform:scale(.94);display:flex;flex-direction:column;justify-content:center;gap:1px;letter-spacing:0;box-shadow:0 0 24px #a2a0ff33}
+.sidebar .scorebox #scoreburst.visible{transform:scale(1)}
+#scoreburst .tally-label{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px}
+#scoreburst .tally-equation{font-size:36px;gap:10px;line-height:1;margin:2px 0}
+#scoreburst .tally-equation>span{font-size:23px}
+#scoreburst .tally-bonuses{font-family:'Space Mono',monospace;font-size:10px;gap:8px;flex-wrap:wrap}
+#scoreburst .tally-bonuses:empty{display:none}
+#scoreburst .tally-award{font-size:43px;line-height:1}
+@media(min-width:701px) and (max-height:800px){
+ .house-slot,#tablecards .slot{width:38px;min-width:38px;height:56px}
+ .house-slot .card,#tablecards .card{width:38px;min-width:38px;height:53px}
+ #scoreburst .tally-equation{font-size:31px}
+ #scoreburst .tally-award{font-size:37px}
+}
+@media(max-width:700px){
+ .playzone{gap:10px;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 58px}
+ .burnzone{width:58px;padding-left:7px}
+ .burnzone label{font-size:8px;max-width:58px;line-height:1.4}
+ .burnzone>span{font-size:27px}
+ .house-slot,#tablecards .slot{width:29px;min-width:29px;height:44px}
+ .house-slot .card,#tablecards .card{width:29px;min-width:29px;height:40px}
+ #tablecards{gap:0}
+ .sidebar .scorebox.counting{box-shadow:none}
+ .sidebar .scorebox #scoreburst{inset:0 -3px;padding:2px 4px;display:grid;grid-template-columns:1fr 1fr;gap:5px;background:linear-gradient(110deg,#253951,#49305a);border-radius:5px}
+ #scoreburst .tally-label,#scoreburst .tally-bonuses{display:none}
+ #scoreburst .tally-equation{font-size:24px;gap:3px;margin:0}
+ #scoreburst .tally-equation>span{font-size:16px}
+ #scoreburst .tally-award{font-size:29px}
+}
+
+/* Temporary rule callouts get a quiet translucent halo for separation. */
+.effect{padding:8px 16px 10px;border-radius:12px;background:linear-gradient(180deg,#1219349c,#12193452 72%,transparent);}
+.effect small{background:#12193466;padding:4px 9px;border-radius:6px;}
+
+/* Soft focus veil for temporary effects: feathered glass, no panel edge. */
+.effect{
+  padding:12px 28px 14px;
+  border-radius:999px;
+  background:radial-gradient(ellipse at center,#11172f9c 0%,#11172f55 42%,transparent 78%);
+  -webkit-backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);
+  text-shadow:none;
+}
+.effect small{background:transparent;padding:0;border-radius:0}
+.card.back .back-emblem{display:none!important}
+
+/* Keep the mascot mark subordinate to the BONEHEAD wordmark. */
+.wordmark{gap:8px}
+.wordmark img{width:34px;height:34px}
+.wordmark .header-wordmark-text{display:flex;align-items:center;gap:8px;font-family:'VT323',monospace;font-size:35px;font-weight:700;color:#f4edff;text-shadow:2px 3px #6447a4}
+.wordmark .header-wordmark-text img{width:30px;height:30px;object-fit:contain;image-rendering:pixelated;filter:none}
+.effect{position:relative;isolation:isolate;background:transparent!important;border-radius:0;padding-inline:34px}
+.effect:before{content:'';position:absolute;z-index:-1;inset:-34px -76px;background:radial-gradient(ellipse at center,#11172fc9 0%,#11172f85 35%,#11172f32 59%,transparent 79%);filter:blur(12px);pointer-events:none}
+.upgrade-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.upgrade{position:relative;min-width:0;min-height:230px;padding:18px 14px 14px;background:#1a2850;border:1px solid #a98ee76e;border-radius:8px;text-align:left;display:flex;flex-direction:column;align-items:center;transition:transform .16s,border-color .16s,background .16s}
+.upgrade:hover{transform:translateY(-5px);border-color:#8cffee;background:#263761}
+.upgrade-icon{width:94px;height:94px;margin-bottom:13px;background-image:url('assets/magic.png');background-size:400% 100%;background-repeat:no-repeat;image-rendering:pixelated;border-radius:12px;box-shadow:0 0 20px #7cf4e522}
+.upgrade-reshuffle .upgrade-icon{background-position:0 0}.upgrade-swap .upgrade-icon{background-position:33.333% 0}.upgrade-wild .upgrade-icon{background-position:66.666% 0}.upgrade-chain .upgrade-icon{background-position:0 0}.upgrade-insurance .upgrade-icon{background-position:33.333% 0}.upgrade-embers .upgrade-icon{background-position:100% 0}
+.upgrade>b{font-size:15px;color:#fff2c7;text-align:center}.upgrade p{font-size:12px;line-height:1.5;color:#c4c9e2;text-align:center;margin:8px 0}.upgrade small{margin-top:auto;font-size:10px;letter-spacing:1px;color:#8cffee}
+@media(max-width:700px){.wordmark .header-wordmark-text{font-size:22px;gap:5px}.wordmark .header-wordmark-text img{width:24px;height:24px}.upgrade-list{grid-template-columns:1fr;gap:8px}.upgrade{min-height:0;display:grid;grid-template-columns:66px 1fr;grid-template-rows:auto auto;column-gap:10px;padding:10px}.upgrade-icon{grid-row:1/-1;width:66px;height:66px;margin:0}.upgrade>b,.upgrade p,.upgrade small{text-align:left}.upgrade p{margin:4px 0}}
+
+/* Mirror the player lane: centre the house hand over the main play field,
+   while the reserve cards remain parked in the right dock. */
+.house-hand{grid-column:1/-1!important;padding-right:174px;z-index:1}
+.house-hand .zone-label{align-self:center}
+.housecards{justify-content:center}
+.house-reserve{z-index:3}
+.playzone{padding-right:194px}
+@media(max-width:1150px) and (min-width:701px){.house-hand{padding-right:157px}}
+@media(max-width:700px){
+  .wordmark img{width:29px;height:29px}
+  .house-hand{padding-right:86px}
+  .playzone{padding-right:86px}
+}
+@media(max-width:1150px) and (min-width:701px){.playzone{padding-right:157px}}
+
+/* The right reserve dock is an overlay; it must not steal width from the
+   shared centre line used by the hands, pile, and announcement. */
+.table{grid-template-columns:minmax(0,1fr)!important}
+.house-hand{grid-column:1!important;padding-right:0!important}
+.handarea{grid-column:1!important}
+.hand{margin-right:0!important;max-width:100%!important}
+.house-reserve{grid-column:1!important;width:174px;justify-self:end;z-index:3}
+.player-table{grid-column:1!important;width:194px;justify-self:end;margin-right:0}
+.playzone{padding-right:0!important}
+.pilezone{position:absolute;left:50%;top:50%;height:100%;transform:translate(-50%,-50%)}
+@media(max-width:1150px) and (min-width:701px){
+  .house-reserve{width:145px}
+  .player-table{width:157px}
+}
+@media(max-width:700px){
+  .house-reserve{width:78px}
+  .player-table{width:86px}
+}
+
+/* The stack cards are absolute children, so the pile needs a real box to
+   centre them against rather than an auto-sized zero-width flex item. */
+.playzone .pile{width:var(--pile-w)!important;height:min(var(--pile-h),calc(100% - 24px))!important}
+@media(max-width:700px){.playzone .pile{height:min(var(--pile-h),calc(100% - 23px))!important}}
+
+/* The drop target hugs the pile and opens out only while the card is over it. */
+.pile.drag-ready:after{inset:-20px}
+.pile.drag-over:after{inset:-30px}
+
+/* Lock the play lane to the table's true centre axis.  The pile, label and
+   side counters are independently positioned so reserve docks can never
+   change the landing point or make a played card appear to drift right. */
+.playzone{display:block!important;position:relative!important}
+.playzone .pilezone{position:absolute!important;inset:0!important;width:auto!important;min-width:0!important;max-width:none!important;transform:none!important;display:block!important;pointer-events:none}
+.playzone .pilezone #pile{position:absolute!important;left:50%!important;top:50%!important;margin:0!important;transform:translate(-50%,-50%)!important;pointer-events:auto!important}
+.playzone .pilezone #pilelabel{position:absolute!important;left:50%!important;top:calc(50% + var(--pile-h) / 2 + 18px)!important;margin:0!important;transform:translateX(-50%)!important;width:max-content!important;text-align:center!important}
+.playzone .drawzone{position:absolute!important;left:calc(50% - clamp(180px,24vw,230px))!important;top:50%!important;margin:0!important;transform:translate(-50%,-50%)!important}
+.playzone .burnzone{position:absolute!important;left:calc(50% + clamp(180px,24vw,230px))!important;top:50%!important;margin:0!important;transform:translate(-50%,-50%)!important;width:90px!important;padding-left:0!important}
+.playzone .stack-card{position:absolute!important;left:0!important;top:0!important;right:auto!important;bottom:auto!important;width:100%!important;height:100%!important;transform:translate(calc(var(--depth)*.9px),calc(var(--depth)*1.35px)) rotate(var(--tilt))!important}
+.playzone .stack-card>.card{position:absolute!important;left:0!important;top:0!important;width:100%!important;height:100%!important;transform:none!important}
+@media(max-width:700px){
+  /* Keep the draw stack clearly in its own lane; its layered cards extend
+     slightly toward the centre, so give it a generous visual gutter. */
+  .playzone .drawzone{left:calc(50% - 180px)!important}
+  .playzone .burnzone{left:calc(50% + 180px)!important;width:58px!important}
+  .playzone .pilezone #pilelabel{top:calc(50% + var(--pile-h) / 2 + 17px)!important}
+}
+
+/* The centre watermark competes with the actual play state on small tables. */
+.center-mark{display:none!important}
+
+/* Final-act polish: preserve the established table geometry. */
+.sidebar .scorebox,.sidebar .scorebox #scoreburst,.sidebar .empty-trick,.sidebar .owned-trick,.sidebar .secondary{border-radius:12px}
+.sidebar .scorebox{box-shadow:0 6px 20px #080c2526}
+.sidebar .secondary{padding:14px 16px}
+.hand .card.selected{transform:translateY(-22px) rotate(0deg)!important;z-index:8}
+.hand .card.selected:after{top:5px;right:5px;width:21px;height:21px;line-height:17px;font-size:11px}
+.hand.needs-nudge .card.playable{animation:card-nudge 1.3s ease-in-out 2!important}
+@keyframes card-nudge{50%{filter:brightness(1.15);box-shadow:0 0 0 2px #91f7df,0 0 20px #91f7df44}}
+.intro.modal{text-align:center;background:radial-gradient(ellipse at 50% 22%,#51416c88,transparent 62%),linear-gradient(145deg,#1d2849,#201b37);padding:42px 40px;width:min(620px,94vw)}
+.intro .intro-inner{display:flex;justify-content:center;min-height:0;margin:22px 0 12px}
+.intro .title-logo{justify-content:center;gap:18px}
+.intro .title-logo>img{width:105px;height:125px;filter:none}
+.intro .title-logo h1{font-size:110px;text-align:left}
+.intro .primary,.intro .secondary,.award-scene .primary{font-family:'VT323',monospace;font-size:27px;letter-spacing:1px;min-height:58px;border-radius:12px;width:100%;margin:16px 0 0!important;text-align:center}
+.intro .intro-copy{font-size:21px;margin-bottom:10px}
+.intro-footer{display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:26px}
+.intro-footer button{font-size:14px;padding:8px}
+.round-goals{border-top:1px solid var(--line);padding-top:16px;margin-top:8px}
+.goals-note{font-size:11px;color:var(--muted);margin:7px 0 12px}
+.round-goal{margin:12px 0;padding-left:10px;border-left:2px solid #998abb55}
+.round-goal b{font-size:12px;color:#e1d4fa;letter-spacing:.3px}
+.round-goal p{font-size:12px;line-height:1.4;margin:5px 0;color:var(--muted)}
+.round-goal>span{font-size:10px;color:#e8c29d;letter-spacing:.4px}
+.round-goal.complete{border-color:#9df3c9}.round-goal.complete b{color:#9df3c9}
+.modal:has(.award-scene){width:min(610px,94vw);padding:30px 36px;background:radial-gradient(ellipse at 50% 22%,#67518780,transparent 64%),#201f3a;overflow:hidden auto}
+.award-scene{text-align:center;position:relative}.award-scene .eyebrow{font-size:12px;line-height:1.6;letter-spacing:1px}
+.award-skull{position:relative;width:145px;margin:14px auto 0;animation:skull-award .65s cubic-bezier(.2,.8,.3,1) both}
+.award-skull img{display:block;width:100%;height:145px;object-fit:contain}
+.award-skull span{display:block;color:#cfbedf;font-size:12px;letter-spacing:5px;margin-top:6px}
+.award-name{font-family:'VT323',monospace;font-size:35px;color:#faead3;margin:5px 0}
+.award-scene .bonehead-stamp{font-family:'VT323',monospace;font-size:clamp(65px,10vw,92px);line-height:.9;letter-spacing:5px;color:#ffadbb;margin:8px 0 18px;animation:bonehead-stamp .32s .55s cubic-bezier(.2,.7,.3,1) both}
+.award-scene.victory .bonehead-stamp{color:#a5f6d9}
+.award-scene>p{font-size:14px;line-height:1.6;margin:10px 0}
+.award-scene .result-score{font-size:57px;line-height:1;margin:18px 0 12px;color:#f6dda8}
+.result-score small{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;margin-top:8px;color:#c4b7d6}
+.award-scene .result-stats{font-size:11px;color:#b6a9ca;line-height:1.8}
+.goal-receipt{border:1px solid #bdecd92b;border-radius:10px;padding:9px 12px;background:#9fffd108;display:grid;gap:8px}
+.goal-receipt span{display:flex;justify-content:space-between;font-size:11px;color:#bdf1dc;gap:15px}
+@keyframes skull-award{from{opacity:0;transform:translateY(-60px) rotate(-12deg) scale(.65)}to{opacity:1;transform:none}}
+@keyframes bonehead-stamp{from{opacity:0;transform:scale(1.75) rotate(-8deg)}to{opacity:1;transform:scale(1) rotate(-3deg)}}
+@media(max-height:780px){.round-goals{padding-top:10px}.round-goal{margin:8px 0}.rightbar>footer{display:none}.award-skull{width:105px;margin-top:10px}.award-skull img{height:100px}.award-scene .bonehead-stamp{font-size:68px;margin:6px 0 12px}.award-scene .result-score{font-size:43px;margin:12px 0}.award-scene .primary{min-height:48px;font-size:24px}.modal:has(.award-scene){padding:22px 30px}}
+@media(max-width:700px){.intro.modal{padding:28px 23px}.intro .title-logo h1{font-size:86px}.intro .title-logo>img{width:80px;height:100px}.intro .title-logo{gap:12px}.intro .eyebrow{font-size:10px;line-height:1.7}.intro .primary,.intro .secondary{font-size:25px}.intro-footer{font-size:10px}.hand .card.selected{transform:translateY(-16px)!important}.award-scene .eyebrow{font-size:10px}.goal-receipt span{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.award-skull,.award-scene .bonehead-stamp,.hand.needs-nudge .card.playable{animation:none!important}}
