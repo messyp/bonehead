@@ -291,11 +291,14 @@ export const Game = {
     if (tense && total(g.house) <= 3 && !this.saidLow) { this.saidLow = true; this.say('low', 0.8); }
   },
 
+  noteRun(n) { if (n > 1) { this.runsPlayed = store.get('bh-runs-played', 0) + 1; store.set('bh-runs-played', this.runsPlayed); } },
+
   playerPlay() {
     if (!this.myTurn() || this.drag?.active) return;
     if (this.mustPickUp()) { this.selected = []; this.animatePickup('player'); return; }
     if (!this.selected.length) { this.tell('Pick a card first.', true); Audio.play('bad'); return; }
     this.submittedAt = Clock.t;
+    this.noteRun(this.selected.length);
     this.animatePlay('player', [...this.selected]);
   },
 
@@ -402,9 +405,9 @@ export const Game = {
   magicCue(c) {
     if (!c) return;
     const L = this.L, x = L.pile.x, y = L.pile.y;
-    if (c.r === 2) { FX.ring(x, y, { color: P.teal1, r1: 80, life: 0.6, w: 3 }); FX.ring(x, y, { color: P.teal0, r1: 50, life: 0.45 }); FX.burst(x, y, 30, { colors: [P.teal0, P.teal1, P.teal2], speed: [40, 140], grav: 0, drag: 3, size: [1, 2] }); FX.pop('RESET', x, y - 42, { color: P.white, box: P.teal2, size: 2 }); Audio.play('reset'); Post.flash([0.4, 1, 0.85], 0.12); }
-    if (c.r === 8) { FX.burst(x, y, 24, { colors: [P.white, P.vio0, P.vio1], speed: [10, 50], grav: -60, drag: 1, life: [0.6, 1.2], w: 16, h: 20, size: [1, 2] }); FX.pop('GHOST', x, y - 42, { color: P.white, box: P.vio2, size: 2 }); Audio.play('ghost'); }
-    if (c.r === 9) { FX.burst(x, y - 20, 16, { glyphs: ['↓'], gcol: P.vio1, colors: [P.vio1], speed: [40, 90], angle: Math.PI / 2, spread: 0.6, grav: 120, life: [0.5, 0.9] }); FX.pop('UNDERCUT', x, y - 42, { color: P.white, box: P.vio3, size: 2 }); Audio.play('undercut'); R.shake(0.15); this.rulePop = 1; }
+    if (c.r === 2) { FX.ring(x, y, { color: P.teal1, r1: 80, life: 0.6, w: 3 }); FX.ring(x, y, { color: P.teal0, r1: 50, life: 0.45 }); FX.burst(x, y, 30, { colors: [P.teal0, P.teal1, P.teal2], speed: [40, 140], grav: 0, drag: 3, size: [1, 2] }); FX.pop('RESET', x, y - 42, { color: P.white, box: P.teal2, size: 2 }); FX.pop('ANY CARD CAN FOLLOW', x, y - 22, { color: P.white, box: P.teal3, delay: 0.2, life: 1.8, vy: -10 }); Audio.play('reset'); Post.flash([0.4, 1, 0.85], 0.12); }
+    if (c.r === 8) { FX.burst(x, y, 24, { colors: [P.white, P.vio0, P.vio1], speed: [10, 50], grav: -60, drag: 1, life: [0.6, 1.2], w: 16, h: 20, size: [1, 2] }); FX.pop('GHOST', x, y - 42, { color: P.white, box: P.vio2, size: 2 }); FX.pop('SEE-THROUGH! CARD BELOW RULES', x, y - 22, { color: P.white, box: P.vio3, delay: 0.2, life: 2, vy: -10 }); Audio.play('ghost'); }
+    if (c.r === 9) { FX.burst(x, y - 20, 16, { glyphs: ['↓'], gcol: P.vio1, colors: [P.vio1], speed: [40, 90], angle: Math.PI / 2, spread: 0.6, grav: 120, life: [0.5, 0.9] }); FX.pop('UNDERCUT', x, y - 42, { color: P.white, box: P.vio3, size: 2 }); FX.pop('NEXT CARD: 9 OR LOWER', x, y - 22, { color: P.white, box: P.vio2, delay: 0.2, life: 2, vy: -10 }); Audio.play('undercut'); R.shake(0.15); this.rulePop = 1; }
   },
 
   async burnPile(who, cards) {
@@ -657,7 +660,7 @@ export const Game = {
       let v = this.views.get(c.id);
       if (!v) { v = new View(c, deckTop.x, deckTop.y); v.r = -0.05; v.fly = true; this.views.set(c.id, v); if (snap) { v.x = x; v.y = y; v.r = r; v.s = s; v.flip = face ? 1 : 0; v.fly = false; } }
       if (v.zone !== zone) { v.zone = zone; v.fly = true; }
-      v.c = c; v.tx = x; v.ty = y; v.tr = r; v.ts = s; v.face = face; v.z = z; v.interactive = interactive;
+      v.c = c; v.tx = x; v.ty = y; v.tr = r; v.ts = s; v.face = face; v.z = z; v.interactive = interactive; v.dim = 0; v.link = false;
       seen.add(c.id);
       return v;
     };
@@ -679,29 +682,32 @@ export const Game = {
       this.handOrder = cards.map(c => c.id);
       const hs = L.handSc, cw = CW * hs, m = cards.length, sp = m > 1 ? Math.min(cw + 4, (L.hand.w - cw) / (m - 1)) : 0, k = sp / 40;
       cards.forEach((c, i) => {
-        const t = i - (m - 1) / 2, sel = this.selected.includes(c.id), hov = this.hoverId === c.id && !this.drag?.active;
+        const t = i - (m - 1) / 2, sel = this.selected.includes(c.id), hov = this.hoverId === c.id && !this.drag?.active && !sel;
         let x = L.hand.cx + t * sp, y = hy + (t * k) * (t * k) * 0.9 - (sel ? 14 * hs : 0) - (hov ? 6 : 0);
         let r = t * k * 2.2 * DEG;
         if (this.focus === i && myTurn) y -= 3;
         const v = put(c, x, y, sel || hov ? r * 0.4 : r, (hov ? 1.1 : 1) * hs, true, 300 + i + (hov ? 60 : 0), 'hand', true);
-        v.dim = myTurn && !sel && !this.swapMode && !this.canPlay(c) ? 1 : 0;
+        const ok = this.canPlay(c);
+        v.dim = myTurn && !sel && !this.swapMode && !ok ? 1 : 0;
+        v.link = myTurn && !sel && !this.swapMode && ok && this.selected.length > 0;
       });
       // Reserve cards on the table.
-      for (const c of vis(g.player.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, L.playerTable.x + i * L.playerTable.gap, L.playerTable.y, 0, L.tableSc, false, 200 + i * 2, 'ptable'); }
-      for (const c of vis(g.player.face)) { const i = this.slot.get(c.id) ?? 0; put(c, L.playerTable.x + i * L.playerTable.gap + 2, L.playerTable.y - 6, -2 * DEG, L.tableSc, true, 201 + i * 2, 'ptable'); }
+      for (const c of vis(g.player.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, L.playerTable.x + i * L.playerTable.gap, L.playerTable.y, 0, L.tableSc, false, 200 + i * 2, 'ptable').dim = 0.8; }
+      for (const c of vis(g.player.face)) { const i = this.slot.get(c.id) ?? 0; put(c, L.playerTable.x + i * L.playerTable.gap + 2, L.playerTable.y - 6, -2 * DEG, L.tableSc, true, 201 + i * 2, 'ptable').dim = 0.8; }
     } else {
       this.handOrder = [];
       const slotX = i => L.slots.cx + (i - 1) * L.slots.gap;
       for (const c of g.player.blind) {
-        const i = this.slot.get(c.id) ?? 0, active = pPhase === 'blind', sel = this.selected.includes(c.id), hov = this.hoverId === c.id;
+        const i = this.slot.get(c.id) ?? 0, active = pPhase === 'blind', sel = this.selected.includes(c.id), hov = this.hoverId === c.id && !sel;
         const v = put(c, slotX(i), hy + 6 - (sel ? 14 : 0) - (hov && active ? 6 : 0), 0, (hov && active ? 1.08 : 1) * L.handSc, false, 300 + i * 2, 'pslot', active);
-        v.dim = 0;
         if (active) this.handOrder.push(c.id);
       }
       for (const c of g.player.face) {
-        const i = this.slot.get(c.id) ?? 0, sel = this.selected.includes(c.id), hov = this.hoverId === c.id;
+        const i = this.slot.get(c.id) ?? 0, sel = this.selected.includes(c.id), hov = this.hoverId === c.id && !sel;
         const v = put(c, slotX(i), hy - 6 - (sel ? 14 : 0) - (hov ? 6 : 0), (i - 1) * 2 * DEG, (hov ? 1.08 : 1) * L.handSc, true, 301 + i * 2 + (hov ? 60 : 0), 'pslot', true);
-        v.dim = myTurn && !sel && !this.canPlay(c) ? 1 : 0;
+        const ok = this.canPlay(c);
+        v.dim = myTurn && !sel && !ok ? 1 : 0;
+        v.link = myTurn && !sel && ok && this.selected.length > 0;
         this.handOrder.push(c.id);
       }
     }
@@ -724,8 +730,8 @@ export const Game = {
         const t = i - (m - 1) / 2;
         put(c, L.houseHand.x + t * sp, L.houseHand.y - (t * k) * (t * k) * 0.6 + (this.thinking && i % 2 ? Math.sin(R.t * 8 + i) : 0), -t * k * 1.8 * DEG, hsc, false, 20 + i, 'hhand');
       });
-      for (const c of vis(g.house.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, L.houseTable.x + i * L.houseTable.gap, L.houseTable.y, 0, hsc, false, 10 + i * 2, 'htable'); }
-      for (const c of vis(g.house.face)) { const i = this.slot.get(c.id) ?? 0; put(c, L.houseTable.x + i * L.houseTable.gap - 2, L.houseTable.y + 5, 2 * DEG, hsc, true, 11 + i * 2, 'htable'); }
+      for (const c of vis(g.house.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, L.houseTable.x + i * L.houseTable.gap, L.houseTable.y, 0, hsc, false, 10 + i * 2, 'htable').dim = 0.6; }
+      for (const c of vis(g.house.face)) { const i = this.slot.get(c.id) ?? 0; put(c, L.houseTable.x + i * L.houseTable.gap - 2, L.houseTable.y + 5, 2 * DEG, hsc, true, 11 + i * 2, 'htable').dim = 0.6; }
     } else {
       const slotX = i => L.houseSlots.cx + (i - 1) * L.houseSlots.gap;
       for (const c of g.house.blind) { const i = this.slot.get(c.id) ?? 0; put(c, slotX(i), L.houseHand.y - 4, 0, hsc, false, 20 + i * 2, 'hslot'); }
@@ -814,7 +820,7 @@ export const Game = {
         if (this.overPile(Input.x, Input.y) || flick) {
           const src = source(this.g.player), cards = d.ids.map(id => this.g.player[src].find(c => c.id === id));
           const ok = cards.every(Boolean) && (src === 'blind' ? cards.length === 1 : valid(cards, this.g.pile));
-          if (ok) { this.selected = d.ids; if (flick) Audio.play('swoosh'); this.submittedAt = Clock.t; this.animatePlay('player', d.ids); }
+          if (ok) { this.selected = d.ids; if (flick) Audio.play('swoosh'); this.submittedAt = Clock.t; this.noteRun(d.ids.length); this.animatePlay('player', d.ids); }
           else { this.tell('That card can\'t beat the pile.', true); Audio.play('bad'); d.ids.forEach(id => { const v = this.views.get(id); if (v) v.wig = 1; }); }
         } else Audio.play('deselect');
       }
@@ -944,13 +950,20 @@ export const Game = {
     this.drawDeck();
     FX.draw();
     rest.forEach(v => this.drawCard(v));
+    // Run-extension badges sit above every card so neighbours never hide them.
+    for (const v of rest) if (v.link && v.flip > 0.5) {
+      const bx = v.x - CW * 0.28 * v.s, by = v.y - CH * 0.5 * v.s - 3 + Math.sin(R.t * 6 + v.phase);
+      R.box(bx - 5, by - 5, 11, 11, P.ink0, 2); R.box(bx - 4, by - 4, 9, 9, P.teal2, 2);
+      R.text('+', bx + 0.5, by - 3, { color: P.white, align: 'center', outline: null });
+    }
+    this.drawTableTag();
     this.drawSpeech();
     if (L.land) this.drawSidebar(); else this.drawTopBar();
     this.drawControls();
     this.drawGuide();
     // Tooltip for hovered card
     const hv = this.hoverId && this.views.get(this.hoverId);
-    if (hv && this.hoverT > 0.45 && !this.drag?.active && hv.face) {
+    if (hv && this.hoverT > 0.45 && !this.drag?.active && hv.face && !this.selected.includes(hv.id)) {
       const c = hv.c, m = MAGIC[c.r];
       UI.tooltip(`${rankLabel(c.r)} of ${SUIT_NAMES[c.s]}`, (m ? `^${c.r === 10 ? 'o' : c.r === 2 ? 't' : 'v'}${m.name}^0 · ${m.desc} ` : '') + `^b${cardPoints(c)} chips`, hv.x, hv.y - CH * 0.55, { color: m ? P.gold1 : P.bone0, w: m ? 140 : 100 });
     }
@@ -974,14 +987,17 @@ export const Game = {
     }
     // Rule badge (face-down blind flips don't count until revealed)
     const r = rule(this.visiblePile()), low = r.low, any = !r.r;
-    const txt = any ? 'ANY CARD' : low ? `${rankLabel(r.r)} OR LOWER` : `${rankLabel(r.r)} OR HIGHER`;
+    const txt = any ? 'ANY CARD' : low ? `${rankLabel(r.r)} OR LOWER ↓` : `${rankLabel(r.r)} OR HIGHER ↑`;
     const col = any ? P.teal2 : low ? P.vio2 : P.gold3, sc = 1 + this.rulePop * 0.25;
     const bw = R.measure(txt) + 14, by = py + ph / 2 + 5;
     R.ctx.save(); R.ctx.translate(px, by + 6); R.ctx.scale(sc, sc);
     R.panel(-bw / 2, -6, bw, 13, { fill: col, rim: P.ink0, hi: any ? P.teal1 : low ? P.vio1 : P.gold2 });
     R.text(txt, 0, -3, { color: P.white, align: 'center' });
     R.ctx.restore();
-    if (g.pile.length) R.text(`${g.pile.length} IN PILE`, px, by + 16, { color: P.ink6, align: 'center', outline: null });
+    const vis = this.visiblePile(), top = vis.at(-1);
+    if (top?.r === 8 && vis.length > 1) R.text('8 IS SEE-THROUGH: RULE FROM BELOW', px, by + 16, { color: P.vio0, align: 'center', font: TINY, alpha: 0.75 + Math.sin(R.t * 4) * 0.25 });
+    else if (top?.r === 9) R.text('UNDERCUT: GO LOWER', px, by + 16, { color: P.vio0, align: 'center', font: TINY });
+    else if (g.pile.length) R.text(`${g.pile.length} IN PILE`, px, by + 16, { color: P.ink6, align: 'center', outline: null });
     // Deck & ash labels
     R.text(String(this.deckCount()), L.deck.x, L.deck.y + CH / 2 + 5, { color: P.bone1, align: 'center' });
     R.text('DECK', L.deck.x, L.deck.y + CH / 2 + 15, { color: P.ink6, align: 'center', outline: null });
@@ -1020,6 +1036,7 @@ export const Game = {
     R.spr(Cards.shadow, x + 1 + elev * 0.5, y + 2 + elev * 0.8, { rot: r, sx, sy: s, alpha: 0.32 });
     // Selection glow
     if (this.selected.includes(v.id)) R.spr(Cards.glow, x, y, { rot: r, sx: sx * 1.0, sy: s, alpha: 0.7 + Math.sin(t * 8) * 0.3 });
+    else if (v.link) R.spr(Cards.glowTeal, x, y, { rot: r, sx, sy: s, alpha: 0.45 + Math.sin(t * 6 + v.phase) * 0.35 });
     else if (this.swapMode && inHand) R.spr(Cards.glowTeal, x, y, { rot: r, sx, sy: s, alpha: 0.5 + Math.sin(t * 8) * 0.3 });
     const spr = showFace ? this.faceSpr(v.c) : Cards.back;
     const ghost = showFace && v.c.r === 8 && v.zone === 'pile';
@@ -1029,7 +1046,7 @@ export const Game = {
       const cyc = (t * 0.55 + v.phase * 0.3) % 2.2, f = Math.floor(cyc / 1.1 * Cards.shine.length);
       if (f < Cards.shine.length) R.spr(Cards.shine[f], x, y, { rot: r, sx, sy: s, skx });
     }
-    if (v.dim) R.spr(Cards.dim, x, y, { rot: r, sx, sy: s, skx, alpha: 0.5 });
+    if (v.dim) R.spr(Cards.dim, x, y, { rot: r, sx, sy: s, skx, alpha: 0.5 * Math.min(1, v.dim) + (v.dim < 1 ? 0.1 : 0) });
     if (v.flash > 0) R.spr(Cards.flash, x, y, { rot: r, sx, sy: s, skx, alpha: v.flash * 0.8 });
     // Run order badge
     const order = this.selected.indexOf(v.id);
@@ -1058,6 +1075,21 @@ export const Game = {
     R.box(pr.x + pr.w - 12, pr.y - 4, 16, 11, P.ink0, 2); R.box(pr.x + pr.w - 11, pr.y - 3, 14, 9, n <= 3 ? P.red2 : P.ink4, 2);
     R.text(String(n), pr.x + pr.w - 4, pr.y - 2, { color: P.white, align: 'center', outline: null });
     if (active && this.thinking) { const dots = '.'.repeat(1 + Math.floor(R.t * 3) % 3); R.text(dots, pr.x + pr.w / 2, pr.y + pr.h + 2, { color: P.bone1, align: 'center' }); }
+  },
+
+  // Table cards wait until the deck and hand are gone; say so on the cards.
+  drawTableTag() {
+    const L = this.L, g = this.g;
+    if (this.playerPhase() !== 'hand' || !(g.player.face.length + g.player.blind.length) || this.hidden.size) return;
+    const x = L.playerTable.x + L.playerTable.gap, y = L.playerTable.y + 4, label = 'FOR LATER';
+    const w = R.measure(label, { font: TINY }) + 18;
+    R.box(x - w / 2 - 1, y - 6, w + 2, 13, P.ink0, 2, 0.9);
+    R.box(x - w / 2, y - 5, w, 11, P.ink3, 2);
+    R.spr(Sprites.lock, x - w / 2 + 7, y, { sc: 0.8 });
+    R.text(label, x + 5, y - 2, { font: TINY, color: P.bone1, align: 'center', outline: null });
+    const half = CW * L.tableSc / 2 + 2;
+    if (Input.over(L.playerTable.x - half, L.playerTable.y - CH * L.tableSc / 2 - 6, L.playerTable.gap * 2 + half * 2, CH * L.tableSc + 8) && !UI.blocked)
+      UI.tooltip('Saved for later', 'Your table cards. Play the face-up ones once the deck and your hand are empty, then flip the blind ones.', x, L.playerTable.y - CH * L.tableSc / 2, { color: P.gold1, w: 150 });
   },
 
   drawSpeech() {
@@ -1239,10 +1271,27 @@ export const Game = {
       else if (this.mustPickUp()) { msg = 'Nothing beats the pile. Pick it up.'; bad = true; }
       else if (this.myTurn()) msg = guidance(g, this.selected);
     }
+    this.drawRunTip(!!msg && this.tellT > 0);
     if (!msg) return;
     const a = this.tellT > 0 ? clamp(this.tellT / 0.3) : 1;
     const shake = bad && this.tellT > 2.3 ? Math.sin(R.t * 50) * 2 : 0;
     R.text(msg, L.guide.x + shake, L.guide.y, { color: bad ? P.red0 : P.bone1, align: 'center', alpha: a, ...(R.measure(msg) > (L.land ? L.hand.w + 60 : R.vw - 12) ? TINY_OPTS : {}) });
+  },
+
+  // Nudge players toward multi-card runs until they've played a few themselves.
+  drawRunTip(telling) {
+    const L = this.L, g = this.g;
+    if (telling || !this.myTurn() || this.swapMode || this.mustPickUp() || source(g.player) === 'blind') return;
+    let tip = '';
+    if (this.selected.length) { if ([...this.views.values()].some(v => v.link)) tip = 'Tap a ^t+^0 card to add it to your run, or hit PLAY.'; }
+    else if ((this.runsPlayed ??= store.get('bh-runs-played', 0)) < 3) {
+      const key = g.moves + ':' + g.player.hand.length + ':' + g.pile.length;
+      if (this.runKey !== key) { this.runKey = key; this.runAvail = options(g, 'player').some(o => o.length > 1); }
+      if (this.runAvail) tip = '^tTIP:^0 play several cards at once. Pairs, or a climb like 4♥ 5♥ 6♥.';
+    }
+    if (!tip) return;
+    const y = L.land ? L.guide.y - 11 : L.guide.y + 10, big = R.measure(tip) > (L.land ? L.hand.w + 60 : R.vw - 12);
+    R.text(tip, L.guide.x, y, { color: P.bone2, align: 'center', alpha: 0.8 + Math.sin(R.t * 3) * 0.2, ...(big ? TINY_OPTS : {}) });
   },
 
   drawLogo(x, y, size = 1) {

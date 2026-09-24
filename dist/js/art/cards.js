@@ -1,14 +1,14 @@
 import { Pix } from '../core/pixel.js';
 import { FONT, TINY, glyph } from '../core/font.js';
-import { P } from './palette.js';
+import { P, rgba } from './palette.js';
 
 export const CW = 41, CH = 57;
 const RANK = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 export const rankLabel = r => RANK[r] || String(r);
 export const MAGIC = {
-  2: { name: 'RESET', color: P.teal2, light: P.teal0, dark: P.teal4, tint: '#e3fff6', desc: 'Plays on anything. Wipes the pile rule clean.' },
-  8: { name: 'GHOST', color: P.vio1, light: P.vio0, dark: P.vio4, tint: '#f4ebff', desc: 'Plays on anything. See-through: the card beneath still rules.' },
-  9: { name: 'UNDERCUT', color: P.vio2, light: P.vio1, dark: P.vio4, tint: '#efe6ff', desc: 'Plays on anything. The next card must be 9 or lower.' },
+  2: { name: 'RESET', color: P.teal2, light: P.teal0, dark: P.teal4, tint: '#e3fff6', desc: 'Plays on anything. Resets the pile, so any card can follow.' },
+  8: { name: 'GHOST', color: P.vio1, light: P.vio0, dark: P.vio4, tint: '#f4ebff', desc: 'See-through! Plays on anything, and the card beneath it still sets the rule.' },
+  9: { name: 'UNDERCUT', color: P.vio2, light: P.vio1, dark: P.vio4, tint: '#efe6ff', desc: 'Plays on anything. Flips the rule: the next card must be 9 or LOWER.' },
   10: { name: 'INFERNO', color: P.fire3, light: P.fire1, dark: P.fire4, tint: '#fff0dc', desc: 'Plays on anything. Burns the pile. You go again.' },
 };
 const red = s => s % 2 === 1;
@@ -200,6 +200,11 @@ function magicArt(r, t = 0) {
   return p;
 }
 
+function mix(a, b, t) {
+  const A = rgba(a), B = rgba(b), h = v => Math.round(v).toString(16).padStart(2, '0');
+  return '#' + [0, 1, 2].map(i => h(A[i] * (1 - t) + B[i] * t)).join('');
+}
+
 // ---------- Faces ----------
 function numberFace(r, s) {
   const p = base(P.bone0);
@@ -250,8 +255,21 @@ function magicFace(r, s, frame = 0) {
     const d = Math.hypot((x - 20) / ww, (y - 27) / wh);
     if (d >= 0.38 && ((x * 3 + y * 5) % 11 === 0)) p.set(x, y, m.light);
   }
-  const art = magicArt(r, frame);
-  p.paste(art, Math.round(20.5 - art.w / 2), Math.round(27.5 - art.h / 2));
+  const art = magicArt(r, frame), ax = Math.round(20.5 - art.w / 2), ay = Math.round(27.5 - art.h / 2);
+  if (r === 8) {
+    // A little card seen through the ghost makes "see-through" literal.
+    const mc = new Pix(13, 17);
+    mc.rect(0, 0, 13, 17, P.ink1); mc.rect(1, 1, 11, 15, P.bone0);
+    mc.map(PIP7[1], 3, 7, { '#': P.red1, '+': P.red0 }); stampGlyph(mc, TINY, '7', 2, 1, P.red2);
+    const mx = 20, my = 25;
+    p.paste(mc, mx, my);
+    for (let y = 0; y < art.h; y++) for (let x = 0; x < art.w; x++) {
+      const gc = art.get(x, y); if (!gc) continue;
+      const under = mc.get(ax + x - mx, ay + y - my);
+      p.set(ax + x, ay + y, under ? mix(gc, under, 0.68) : gc);
+    }
+  } else p.paste(art, ax, ay);
+  if (r === 9) for (const x of [9, 28]) p.map(['..#..', '..#..', '#.#.#', '.###.', '..#..'], x, 31, { '#': P.vio2 });
   const c = corner(r, s, suitCol(s));
   p.paste(c, 4, 4);
   // Suit pip top-right keeps the suit readable for runs.

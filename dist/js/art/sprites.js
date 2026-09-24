@@ -177,11 +177,6 @@ export function portrait(i, state = 'idle', frame = 0) {
 // ---------- Title mascot: a grinning skull chomping an Ace of Spades ----------
 export function mascot(wink = false, chomp = 0) {
   const p = new Pix(64, 60);
-  // Card in teeth (behind jaw)
-  p.poly([[34, 36 + chomp], [58, 30 + chomp], [62, 50 + chomp], [38, 56 + chomp]], P.bone0);
-  p.poly([[36, 38 + chomp], [57, 32 + chomp], [58, 34 + chomp], [37, 40 + chomp]], P.white);
-  p.poly([[50, 38 + chomp], [53, 43 + chomp], [48, 46 + chomp]], P.ink3);
-  p.set(51, 46 + chomp, P.ink3); p.set(52, 47 + chomp, P.ink3);
   // Cranium
   const bone = P.bone0, lo = P.bone2, dark = P.ink0;
   p.ell(30, 24, 22, 20, bone);

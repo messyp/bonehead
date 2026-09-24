@@ -56,10 +56,10 @@ export const Music = {
     const w = ctx.createOscillator(), wg = ctx.createGain(); w.frequency.value = 0.35; wg.gain.value = 7; w.connect(wg); w.start(); this.wob = wg;
     // Vinyl crackle bed.
     const len = ctx.sampleRate * 3, buf = ctx.createBuffer(1, len, ctx.sampleRate), dd = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) dd[i] = (Math.random() * 2 - 1) * 0.015 + (Math.random() < 0.0009 ? (Math.random() * 2 - 1) * 0.7 : 0);
+    for (let i = 0; i < len; i++) dd[i] = (Math.random() * 2 - 1) * 0.015 + (Math.random() < 0.0006 ? (Math.random() * 2 - 1) * 0.35 : 0);
     const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
     const cf = ctx.createBiquadFilter(); cf.type = 'bandpass'; cf.frequency.value = 2500; cf.Q.value = 0.4;
-    this.crackle = ctx.createGain(); this.crackle.gain.value = 0.25;
+    this.crackle = ctx.createGain(); this.crackle.gain.value = 0.09;
     src.connect(cf); cf.connect(this.crackle); this.crackle.connect(this.bus); src.start();
   },
 

@@ -182,7 +182,7 @@ export const Screens = {
     const pages = [
       { title: 'Lose every card.', body: 'Take turns playing onto the pile. Match or beat the top card. First to run out wins.', art: 'run', cards: [[4, 1], [7, 0], [11, 2]] },
       { title: `Keep ${game.config.minHand} in hand.`, body: 'After you play, you draw back up while the deck lasts. Can\'t beat the pile? You pick the whole thing up.', art: 'draw' },
-      { title: 'Four magic cards.', body: 'Magic cards play on anything. Four of the same rank in a row also burns the pile.', art: 'magic' },
+      { title: 'Four magic cards.', body: 'All four play on anything. The ghost 8 is see-through, so the card under it still sets the rule. Four of a kind in a row burns the pile too.', art: 'magic' },
       { title: 'Make a run.', body: 'Play equal ranks, or climbing cards of one suit, together. More cards, bigger multiplier.', art: 'combo' },
       { title: 'The last six.', body: 'Deck and hand gone? Play your face-up table cards, then flip the blind ones. A bad flip picks up the pile.', art: 'blind' },
     ];
@@ -193,7 +193,11 @@ export const Screens = {
     const deal = (i, x, y, spr, o = {}) => { const k = ease.outBack(clamp((pt - i * 0.12) / 0.35), 1.6); if (k <= 0) return; R.spr(Cards.shadow, x + 2, y + 3, { sc: k * (o.sc ?? 1), alpha: 0.3 }); R.spr(spr, x, y - (1 - k) * 20, { sc: k * (o.sc ?? 1), rot: (o.rot ?? 0) * k }); };
     if (p.art === 'run') p.cards.forEach(([r, s], i) => { deal(i, ax + (i - 1) * 56, ay, card(r, s), { rot: (i - 1) * 0.06 }); if (i < 2) R.text('→', ax + (i - 0.5) * 56, ay - 3, { color: P.ink6, align: 'center' }); });
     if (p.art === 'draw') { deal(0, ax - 70, ay, Cards.back); R.text('→', ax - 38, ay - 3, { color: P.ink6, align: 'center' }); [[3, 1], [6, 0], [12, 3]].forEach(([r, s], i) => deal(i + 1, ax + (i - 0.2) * 30, ay, card(r, s), { rot: (i - 1) * 0.08 })); }
-    if (p.art === 'magic') [[2, 'RESET', 'teal'], [8, 'GHOST', 'vio'], [9, 'UNDER', 'vio'], [10, 'BURN!', 'fire']].forEach(([r], i) => deal(i, ax + (i - 1.5) * 50, ay - 4, card(r, i % 4), { sc: 0.95 }));
+    if (p.art === 'magic') [[2, 'ANYTHING', 'NEXT', P.teal1], [8, 'SEE-THROUGH', 'RULE BELOW', P.vio1], [9, 'NEXT CARD', '9 OR LOWER', P.vio1], [10, 'BURNS PILE', 'GO AGAIN', P.fire2]].forEach(([r, a, b2, col], i) => {
+      const cx = ax + (i - 1.5) * 50;
+      deal(i, cx, ay - 8, card(r, i % 4), { sc: 0.9 });
+      if (pt > 0.3 + i * 0.12) { R.text(a, cx, ay + 20, { font: TINY, color: col, align: 'center' }); R.text(b2, cx, ay + 27, { font: TINY, color: P.bone1, align: 'center' }); }
+    });
     if (p.art === 'combo') { [[3, 1], [4, 1], [5, 1]].forEach(([r, s], i) => deal(i, ax + (i - 1) * 46, ay - 6, card(r, s))); if (pt > 0.6) R.text('^b120^0 × ^r2^0 = ^g240', ax, ay + 32, { align: 'center', size: 1 }); }
     if (p.art === 'blind') [4, 7, 12].forEach((r, i) => { deal(i, ax + (i - 1) * 52, ay + 4, Cards.back, { sc: 0.9 }); deal(i + 0.5, ax + (i - 1) * 52 + 2, ay - 4, card(r, i), { sc: 0.9 }); });
     R.para(p.body, b.x + 16, b.y + h - 76, w - 32, { align: 'center', color: P.bone1 });
