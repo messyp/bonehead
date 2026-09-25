@@ -283,33 +283,16 @@ export function backPix(theme = 'crimson') {
   p.poly([[20.5, 15], [31, 28.5], [20.5, 42], [10, 28.5]], t.frame);
   p.poly([[20.5, 17], [29, 28.5], [20.5, 40], [12, 28.5]], P.ink1);
   const sk = skullIcon(t.emblem);
-  p.paste(sk, 15, 22);
+  p.paste(sk, 20 - 5, 23);
   return p;
 }
 
-// The Bonehead skull from the logo at emblem size: domed top, square sockets with
-// inward red pupils, a little nose, gapped teeth and a narrower jaw.
-const SKULL_ICON = [
-  '...#####...',
-  '.#########.',
-  '###########',
-  '###########',
-  '#kkk###kkk#',
-  '#kkr###rkk#',
-  '#kkk###kkk#',
-  '#####k#####',
-  '.###kkk###.',
-  '..#######..',
-  '..#k#k#k#..',
-  '...#####...',
-];
 export function skullIcon(c = P.bone0, eye = P.ink0) {
-  const p = new Pix(11, 12), shaded = c === P.bone0;
-  SKULL_ICON.forEach((r, y) => [...r].forEach((ch, x) => {
-    if (ch === '#') p.set(x, y, !shaded ? c : y < 2 ? P.white : y < 7 ? P.bone0 : y < 10 ? P.bone1 : P.bone2);
-    else if (ch === 'k') p.set(x, y, eye);
-    else if (ch === 'r') p.set(x, y, P.red1);
-  }));
+  const p = new Pix(11, 11);
+  p.ell(5.5, 4.6, 5, 4.6, c); p.rect(3, 7, 5, 3, c);
+  p.rect(2, 4, 3, 2, eye); p.rect(6, 4, 3, 2, eye); p.set(5, 7, eye);
+  p.set(4, 9, eye); p.set(6, 9, eye);
+  p.set(3, 4, P.red1); p.set(7, 4, P.red1);
   return p;
 }
 
