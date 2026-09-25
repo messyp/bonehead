@@ -15,6 +15,7 @@ import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
 import { ROUNDS, RULES, ROUND_LOCKS } from './rounds.js';
 import { mapRoom, crownIcon } from '../art/map.js';
+import * as Titles from './titles.js';
 import { cardsLeft } from '../../engine.js';
 
 const T = { font: TINY };
@@ -75,6 +76,9 @@ export const Screens = {
   title(game) {
     const vw = R.vw, vh = R.vh, land = R.land, dt = UI.dt;
     Music.set(0, 0);
+    const style = game.titleStyle();
+    if (style === 'crypt') return Titles.crypt(game, id => titleAct(game, id));
+    if (style === 'sketch') return Titles.sketch(game, id => titleAct(game, id));
     // Drifting cards in the background.
     for (const f of floaters) {
       f.y -= f.sp * dt; f.r += f.vr * dt;
@@ -233,6 +237,14 @@ export const Screens = {
     if (fn) fn.call(this, game, m);
   },
 
+  // Keyboard for the new title menus: up/down to move, Enter to go.
+  titleKey(game, k) {
+    if (game.titleStyle() === 'classic') return;
+    const n = Titles.menuItems(game).length;
+    if (k.key === 'ArrowDown' || k.key === 'ArrowUp') { game.titleSel = ((game.titleSel ?? 0) + (k.key === 'ArrowDown' ? 1 : n - 1)) % n; Audio.play('hover', game.titleSel + 2); }
+    if (k.key === 'Enter' || k.key === ' ') { Audio.play('ui'); titleAct(game, Titles.menuItems(game)[game.titleSel ?? 0][0]); }
+  },
+
   key(game, k) {
     const m = game.modal;
     if (!m) return;
@@ -322,14 +334,10 @@ export const Screens = {
       if (tile('m-' + st, x, y, tw, th, game.dev.mascot === st, (cx, cy) => R.spr(spr, cx, cy + Math.sin(R.t * 2 + i) * 1.5, { sc: Math.min((tw - 8) / 64, (th - 14) / 60) }), st.toUpperCase())) game.setDev('mascot', st);
     });
     y += th + 10;
-    R.text('LOGO SKULL', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
-    ['classic', 'brand'].forEach((st, i) => {
-      const lw = Math.floor((w - 24 - 8) / 2), x = b.x + 12 + i * (lw + 8), sk = Sprites.logoSkulls[st];
-      if (tile('l-' + st, x, y, lw, 40, game.dev.logo === st, (cx, cy) => {
-        R.text('B', cx - 22, cy - 7, { size: 2, color: P.bone0 }); R.spr(sk, cx, cy, { sc: 17 / sk.h }); R.text('NE', cx + 10, cy - 7, { size: 2, color: P.bone0 });
-      }, st.toUpperCase())) game.setDev('logo', st);
-    });
-    y += 50;
+    R.text('TITLE SCREEN', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    const styles2 = ['classic', 'crypt', 'sketch'], sw2 = Math.floor((w - 24 - 8) / 3);
+    styles2.forEach((st, i) => { if (UI.button('dts-' + st, b.x + 12 + i * (sw2 + 4), y, sw2, 20, st.toUpperCase(), { color: game.titleStyle() === st ? 'gold' : 'ink', ignoreBlock: true })) { game.setDev('title', st); game.closeModal(); game.transition(() => { game.scene = 'title'; }); } });
+    y += 30;
     R.text('TEST TABLES' + (game.started && game.scene === 'table' ? '' : ' · START A RUN FIRST'), b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const tests = [['KeyB', 'BURN'], ['KeyQ', 'QUADS'], ['KeyR', 'RUN'], ['KeyL', 'BLIND'], ['KeyW', 'WIN']];
     const bw = Math.floor((w - 24 - 4 * 4) / 5), can = game.started && game.scene === 'table' && !game.moving;
@@ -340,7 +348,9 @@ export const Screens = {
     R.text('JUMP TO ROUND', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const rw = Math.floor((w - 24 - (ROUNDS.length - 1) * 4) / ROUNDS.length);
     ROUNDS.forEach((rd, i) => {
-      const label = `${i + 1} ${(rd.name || OPPONENTS[oppIndex(rd.opps[0])].name).replace('The ', '').toUpperCase()}`;
+      // Last word of the name (LUCKY BONES -> BONES) so four buttons fit; drop to the number if still too wide
+      const name = (rd.name || OPPONENTS[oppIndex(rd.opps[0])].name).toUpperCase().split(' ').pop();
+      const label = R.measure(`${i + 1} ${name}`) <= rw - 6 ? `${i + 1} ${name}` : `${i + 1}`;
       if (UI.button('dr-' + i, b.x + 12 + i * (rw + 4), y, rw, 16, label, { color: game.started && game.g?.round === i + 1 ? 'teal' : 'ink', ignoreBlock: true, size: 1 })) { Audio.muffle(false); game.jumpToRound(i + 1); }
     });
     y += 24;
@@ -512,6 +522,15 @@ function resultAction(game) {
   const g = game.g, win = g.winner === 'player';
   if (win && !game.allCleared()) { game.modal = null; game.claimTrick(); }
   else { store.set('bh2-save', null); startFresh(game); }
+}
+
+function titleAct(game, id) {
+  if (id === 'continue') game.transition(() => game.continueRun());
+  if (id === 'play') startFresh(game);
+  if (id === 'new') game.openModal('confirm');
+  if (id === 'rules') game.openModal('rules', { page: 0 });
+  if (id === 'options') game.openModal('options');
+  if (id === 'trophies') game.openModal('trophies');
 }
 
 function startFresh(game) {

@@ -40,6 +40,7 @@ export const UI = {
     const ctx = R.ctx;
     ctx.save();
     ctx.translate(x + w / 2, y + h / 2); ctx.scale(sc, sc); ctx.translate(-(x + w / 2), -(y + h / 2));
+    if (pulse || (o.pulse && enabled)) R.box(x - 3, y - 3 + top, w + 6, h + 6 - top, c.hi, 3, 0.2 + pulse * 0.4);
     R.box(x, y + 3, w, h, P.ink0, 2, 0.4);
     R.box(x - 1, y + top - 1, w + 2, h - top + 2, P.ink0, 2);
     R.box(x, y + top, w, h - top, c.lip, 2);

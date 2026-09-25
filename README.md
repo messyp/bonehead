@@ -39,10 +39,12 @@ dist/
   js/art/cards.js       card faces, skeleton court cards, magic cards, back, foil
   js/art/sprites.js     opponents (animated), title mascot, icons, dialogue
   js/art/map.js         the top-down crypt room for the progression map
+  js/art/titles.js      title-concept art: the shared Bonehead skull, crypt wall, sketchbook page
   js/audio/sfx.js       synthesized sound effects and mix bus
   js/audio/music.js     generative lo-fi soundtrack with intensity layers
   js/game/game.js       table layout, card physics, turn flow, scoring, AI
   js/game/screens.js    title, tutorial, options, trophies, reward and result screens
+  js/game/titles.js     the CRYPT and SKETCHBOOK title-screen concepts
   js/game/ui.js         pixel buttons, sliders, toggles, tooltips, modals
   js/game/rounds.js     the run: opponents, rule changes, themes and music key per round
 tools/devserver.py      no-cache static server for development
@@ -60,6 +62,17 @@ A run is four tables, defined in `js/game/rounds.js`:
 
 Between rounds, the **Midnight Circuit** map shows a crypt from above (in the spirit of The Binding of Isaac's rooms), with the four opponents as cards on a candle-lit card table, joined by a chalk path. Beaten tables are stamped BONEHEAD. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal.
 
+## Title screen concepts
+
+Two new title screens are on trial beside the original (CLASSIC, still the default for players):
+
+- **CRYPT**: a crypt wall. The logo is carved into a chained stone plaque, with the Bonehead skull as its O. The same skull sits in a lit niche as a melting candle, over a brass HERE LIES {best run} nameplate. The menu is engraved on a tombstone with a bony finger pointing at the choice, beside torches, a spider and a drip.
+- **SKETCHBOOK**: the whole screen is a page from a doodled-in notebook. It has an inked, boiling logo that drips red, a hatched candle skull, a handwritten menu with a scribbled ring and arrow, a coffee ring, and "best:" in the corner.
+
+The logo and the hero skull share one design (`skullFace` in `js/art/titles.js`). Both menus use a single type size and five plain items (CONTINUE or PLAY, NEW RUN, RULES, OPTIONS, TROPHIES). They respond to the mouse, taps and the arrow keys.
+
+To preview a concept, add `?title=crypt`, `?title=sketch` or `?title=classic` to the URL, or pick one under TITLE SCREEN in the dev panel (stored per browser).
+
 ## Bonus goals and trophies
 
 Round 1 always shows Double Cremation and Clean Getaway. Later rounds draw three goals from a pool of 11 (`GOALS` in `scoring.js`), such as Hat Trick, Long Run, Bonfire, Quad Squad, Conjurer, Old School, Blind Luck, Comeback Kid and Speed Run. Hover a goal for what it asks, your progress, and whether it pays immediately or on a win. The engine keeps per-round player stats (`pstats`) that drive both goals and the 16 trophies. The engine supports any number of seats (`deal(round, extra, min, { seats, choose })`), and two-seat behaviour is unchanged.
@@ -68,7 +81,7 @@ All art is generated in code at startup from the palette in `js/art/palette.js`.
 
 ## Rendering
 
-The game lays out in virtual pixels (a 480×300 minimum in landscape, 250×440 in portrait) and scales to the device. Sprites are upscaled by an integer factor and then drawn with smoothing, so pixels stay crisp at any zoom while cards still move and rotate smoothly. The 2D scene is composited in WebGL over a pixelated, dithered paint-swirl background that changes palette per opponent, with optional CRT scanlines, bloom and impact aberration. Without WebGL2 it falls back to a plain 2D gradient.
+The game lays out in virtual pixels (a 480×300 minimum in landscape, 250×440 in portrait) and scales to the device. Sprites are upscaled by an integer factor and then drawn with smoothing, so pixels stay crisp at any zoom while cards still move and rotate smoothly. The 2D scene is composited in WebGL over a pixelated, dithered paint-swirl background that changes palette per opponent, with optional CRT scanlines, bloom and impact aberration. The vignette darkens only the background; cards and buttons stay at full brightness to the corners, and call-to-action buttons get a pulsing halo when it's your move. Without WebGL2 it falls back to a plain 2D gradient.
 
 If frames run slow for a few seconds, the render resolution steps down automatically.
 
@@ -95,7 +108,7 @@ Scoring is Chips × Mult: card chips times a run multiplier, plus burn and quick
 
 ## Debug
 
-Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has side-by-side art trials for the title mascot and logo skull (classic, or brand: a pixel take on the original rubber-hose Bonehead), test-table shortcuts, a round skipper, and renderer info. Art choices are stored per browser in `bh2-dev`. Players see the classic art unless they change it there.
+Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has a title-screen picker (see above), side-by-side trials for the classic title mascot (classic, or brand: a pixel take on the original rubber-hose Bonehead), test-table shortcuts, a round skipper, and renderer info. Art choices are stored per browser in `bh2-dev`. Players see the classic art unless they change it there.
 
 `window.__bonehead` exposes the game objects. `window.__timeScale = 0.2` slows everything down. With a run in progress, Ctrl+Shift+B sets up a 10 burn, Ctrl+Shift+Q a four-of-a-kind, Ctrl+Shift+L the blind-card stage, Ctrl+Shift+R a suited run, and Ctrl+Shift+W wins the round.
 

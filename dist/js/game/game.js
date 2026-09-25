@@ -997,6 +997,7 @@ export const Game = {
       if (k.ctrl && k.shift) { this.devKey(k.code); continue; }
       if (this.cine && (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape')) { this.cine.skip = true; continue; }
       if (this.modal) { Screens.key?.(this, k); continue; }
+      if (this.scene === 'title') { Screens.titleKey(this, k); continue; }
       if (this.scene === 'map') {
         if ((k.key === 'ArrowRight' || k.key === 'ArrowLeft') && this.map) { this.map.sel = clamp(this.map.sel + (k.key === 'ArrowRight' ? 1 : -1), 1, ROUNDS.length); Audio.play('select', this.map.sel * 2); }
         if (k.key === 'Enter' || k.key === ' ') this.startMapRound(); if (k.key === 'Escape') this.transition(() => { this.scene = 'title'; }); continue; }
@@ -1014,6 +1015,11 @@ export const Game = {
   // Dev-mode art trials. Players only ever see 'classic' unless they open the dev panel.
   setDev(key, value) { this.dev[key] = value; store.set('bh2-dev', this.dev); Audio.play('ui'); },
   mascotSpr(state = 'idle') { const m = Sprites.mascots[this.dev.mascot] || Sprites.mascots.classic; return m[state]; },
+  // Title concept: ?title=crypt|sketch|classic in the URL wins, then the dev panel choice.
+  titleStyle() {
+    const q = new URLSearchParams(location.search).get('title');
+    return ['classic', 'crypt', 'sketch'].includes(q) ? q : ['classic', 'crypt', 'sketch'].includes(this.dev.title) ? this.dev.title : 'classic';
+  },
   logoSkull() { return Sprites.logoSkulls[this.dev.logo] || Sprites.logoSkulls.classic; },
 
   devKey(code) {
