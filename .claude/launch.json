@@ -4,7 +4,10 @@
     {
       "name": "bonehead",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8420", "--directory", "dist"],
+      "runtimeArgs": [
+        "tools/devserver.py",
+        "8420"
+      ],
       "port": 8420
     }
   ]

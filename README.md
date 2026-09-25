@@ -1,6 +1,6 @@
 # Bonehead
 
-A pixel-art shedding roguelite inspired by Shithead. Beat three house opponents, claim tricks between rounds, and don't be the Bonehead.
+A pixel-art shedding roguelite inspired by Shithead. Beat four tables of house opponents, claim tricks between rounds, and don't be the Bonehead.
 
 Version 2 is a ground-up presentation rework: everything is drawn to a canvas, with modern pixel art, spring-driven card motion, shader post-processing and a synthesized soundtrack. The tested rules engine, scoring and progression from v1 are unchanged.
 
@@ -9,8 +9,10 @@ Version 2 is a ground-up presentation rework: everything is drawn to a canvas, w
 Serve `dist/` with any static HTTP server (ES modules need `http://`, not `file://`):
 
 ```
-python3 -m http.server 8420 --directory dist
+python3 tools/devserver.py 8420
 ```
+
+The dev server sends no-cache headers so edited modules always reload. Any static server works too.
 
 No build step, no dependencies, no external requests. The whole game is about 850 KB.
 
@@ -20,7 +22,7 @@ No build step, no dependencies, no external requests. The whole game is about 85
 for t in *.test.mjs; do node $t; done
 ```
 
-`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
+`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
 
 ## Structure
 
@@ -41,7 +43,21 @@ dist/
   js/game/game.js       table layout, card physics, turn flow, scoring, AI
   js/game/screens.js    title, tutorial, options, trophies, reward and result screens
   js/game/ui.js         pixel buttons, sliders, toggles, tooltips, modals
+  js/game/rounds.js     the run: opponents, rule changes, themes and music key per round
+tools/devserver.py      no-cache static server for development
+tools/stamp.mjs         deploy step: content-hash every module via an import map
 ```
+
+## Rounds
+
+A run is four tables, defined in `js/game/rounds.js`:
+
+1. Lucky Bones, classic rules.
+2. The Velvet Reaper, **Pick Your Table**: everyone gets 6 cards and chooses 3 to lay face-up for later.
+3. **The Twins** (Tibia and Fibula), two opponents at once. Go out first to win. If a twin goes out, beat the other. The last one holding cards is the Bonehead.
+4. The Pit Boss, Pick Your Table again.
+
+A rule-change card explains each twist before the deal. The engine supports any number of seats (`deal(round, extra, min, { seats, choose })`), and two-seat behaviour is unchanged.
 
 All art is generated in code at startup from the palette in `js/art/palette.js`. There are no image files apart from the favicon.
 
@@ -61,6 +77,7 @@ Everything is synthesized with Web Audio. The music is a generative lo-fi jazz l
 
 - Click or tap a card to select it; select more to build a run, in any order. The game arranges the play order, and if a run isn't finished yet it tells you which card is missing. Press PLAY, or drag the card onto the pile, or flick it upward.
 - Double-tap a card to auto-select the best run through it.
+- When nothing beats the pile, your cards shake, then the pile lights up with a PICK UP button and says what beats you. Tap the pile or the button.
 - Keyboard: ←/→ move focus, Space selects, Enter plays, S sorts, Esc pauses.
 - Hover a card for its value and, for magic cards, what it does.
 
@@ -72,9 +89,13 @@ Scoring is Chips × Mult: card chips times a run multiplier, plus burn and quick
 
 ## Debug
 
-Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has side-by-side art trials for the title mascot (classic, grin, chibi) and the logo skull (classic, cute), test-table shortcuts, and renderer info. Art choices are stored per browser in `bh2-dev`. Players see the classic art unless they change it there.
+Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has side-by-side art trials for the title mascot and logo skull (classic, or brand: a pixel take on the original rubber-hose Bonehead), test-table shortcuts, a round skipper, and renderer info. Art choices are stored per browser in `bh2-dev`. Players see the classic art unless they change it there.
 
 `window.__bonehead` exposes the game objects. `window.__timeScale = 0.2` slows everything down. With a run in progress, Ctrl+Shift+B sets up a 10 burn, Ctrl+Shift+Q a four-of-a-kind, Ctrl+Shift+L the blind-card stage, Ctrl+Shift+R a suited run, and Ctrl+Shift+W wins the round.
+
+## Deploying
+
+Pushing to `main` runs the tests, stamps every module URL with a content hash (so a deploy is never mixed with cached old modules), and publishes `dist/` to GitHub Pages.
 
 ## Legacy
 

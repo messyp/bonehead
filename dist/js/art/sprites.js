@@ -115,6 +115,29 @@ function pitBoss(state = 'idle', frame = 0) {
   return p;
 }
 
+
+// Tibia and Fibula: mirror-image kid skeletons in beanies. Fibula is Tibia flipped.
+function twin(variant, state = 'idle') {
+  const p = new Pix(44, 44), hat = variant ? [P.gold1, P.gold2, P.gold3] : [P.teal1, P.teal2, P.teal3];
+  p.rect(0, 0, 44, 44, variant ? '#3a2014' : '#0f3a33');
+  for (let y = 0; y < 44; y++) for (let x = 0; x < 44; x++) if ((x + y) % 10 < 3) p.set(x, y, variant ? '#4a2a18' : '#134540');
+  // Striped tee
+  p.poly([[3, 44], [7, 35], [15, 32], [29, 32], [37, 35], [41, 44]], hat[2]);
+  for (let y = 35; y < 44; y += 3) for (let x = 4; x < 41; x++) if (p.get(x, y)) p.set(x, y, P.bone1);
+  skull(p, 22, 23, 10, 10, { jaw: state === 'talk' ? 2 : 0, goldTooth: !!variant });
+  eyes(p, 22, 23, 4.5, { w: 4, h: 5, glow: hat[0], glow2: P.white, blink: state === 'blink' });
+  // Beanie with a band, plus a propeller on top
+  p.ell(22, 14, 12, 7, hat[1], (x, y) => y <= 15);
+  p.rect(10, 13, 24, 3, hat[2]);
+  for (let x = 11; x < 34; x += 3) p.set(x, 14, hat[0]);
+  p.vline(22, 3, 7, P.ink3);
+  p.rect(15, 2, 7, 2, P.red1); p.rect(23, 2, 7, 2, P.blue1); p.set(22, 2, P.gold1);
+  // A sticking plaster on one cheek
+  p.rect(28, 25, 4, 2, '#f6cfa4'); p.set(29, 25, P.bone3);
+  p.outline(P.ink0);
+  return variant ? p.flipX() : p;
+}
+
 export const OPPONENTS = [
   {
     id: 'lucky', name: 'Lucky Bones', venue: 'THE BACK ROOM', stake: 'A friendly game. Allegedly.', voice: 190, color: P.teal1,
@@ -164,9 +187,42 @@ export const OPPONENTS = [
       low: ['Last hand, kid. Say your prayers.'],
     },
   },
+  {
+    id: 'tibia', name: 'Tibia', venue: 'THE HALL OF MIRRORS', stake: 'Two of them. One of you.', voice: 260, color: P.teal1,
+    paint: st => twin(0, st),
+    lines: {
+      intro: ['Two against one? Sounds fair!', 'Double trouble, bone-y!'],
+      think: ['Hmm hmm.', 'Ooh, ooh, pick me!'],
+      houseBurn: ['Whoosh!', 'Sizzle sizzle!'],
+      playerBurn: ['Not fair!', 'I\'m telling!'],
+      playerPickup: ['Ha! Gotcha!', 'Heavy, heavy!'],
+      housePickup: ['Aww, bones.', 'Did not want that.'],
+      magic: ['Show-off.', 'Teach us that!'],
+      houseWin: ['Last one holding cards is a Bonehead!'],
+      playerWin: ['No fair! Rematch!'],
+      low: ['Almost out! Almost out!'],
+    },
+  },
+  {
+    id: 'fibula', name: 'Fibula', venue: 'THE HALL OF MIRRORS', stake: 'Two of them. One of you.', voice: 290, color: P.gold1,
+    paint: st => twin(1, st),
+    lines: {
+      intro: ['...sounds fair!', '...trouble, bone-y!'],
+      think: ['My turn? My turn!', 'Hmm!'],
+      houseBurn: ['Hot hot hot!', 'Toasty!'],
+      playerBurn: ['Rude!', 'Hey!'],
+      playerPickup: ['Gotcha gotcha!', 'Ha ha!'],
+      housePickup: ['Oops.', 'Nooo.'],
+      magic: ['Again! Again!', 'Ooh!'],
+      houseWin: ['Bonehead! Bonehead!'],
+      playerWin: ['Rematch! Rematch!'],
+      low: ['Me too! Me too!'],
+    },
+  },
 ];
 
 const portraitCache = new Map();
+export const oppIndex = id => OPPONENTS.findIndex(o => o.id === id);
 export function portrait(i, state = 'idle', frame = 0) {
   const key = `${i}-${state}-${i === 2 ? frame % 6 : 0}`;
   let s = portraitCache.get(key);
@@ -212,70 +268,62 @@ function shadeSkull(p, cx, cy, rx, ry) {
   p.each((x, y, c) => (c === P.bone1 && Math.hypot((x - cx + rx * 0.33) / rx, (y - cy + ry * 0.3) / ry) > 1.08 ? P.bone2 : undefined));
 }
 
-// Round, symmetric cartoon skull: big friendly eyes, wide grin, tongue out on the wink.
-export function mascotGrin(wink = false, chomp = 0) {
-  const p = new Pix(64, 60), cx = 32, bone = P.bone0, dark = P.ink0;
-  p.ell(cx, 25, 24, 22, bone);
-  p.ell(cx, 40, 17, 12, bone);
-  shadeSkull(p, cx, 25, 24, 22);
-  p.ell(21, 11, 5, 2.6, P.white);
-  const eye = (ex, closed) => {
-    if (closed) { for (let i = -5; i <= 5; i++) { const y = 27 - Math.round(Math.sqrt(25 - i * i) * 0.6); p.set(ex + i, y, dark); p.set(ex + i, y + 1, dark); } return; }
-    p.ell(ex, 26, 7, 7.5, dark); p.rect(ex - 4, 21, 4, 4, P.white); p.rect(ex + 2, 29, 2, 2, P.teal1);
+// The original Bonehead: a rubber-hose cartoon skull with one pie-cut eye, a wink,
+// tongue out and a white-gloved finger gun. 'wink' is its double-take (both eyes open).
+export function mascotBrand(wink = false, chomp = 0) {
+  const p = new Pix(64, 60), cx = 37, bone = P.bone0, dark = P.ink0;
+  p.ell(cx, 23, 20, 19, bone);
+  p.ell(cx + 1, 39, 14, 9, bone);
+  shadeSkull(p, cx, 23, 20, 19);
+  p.ell(28, 10, 5, 2.4, P.white);
+  const pie = ex => {
+    p.ell(ex, 24, 5.5, 7.5, dark);
+    p.ell(ex + 0.5, 26, 3, 4.5, P.white);
+    p.ell(ex + 1.3, 26.5, 1.8, 3, dark);
+    p.set(ex + 2, 24, dark);
   };
-  eye(21, false); eye(43, wink);
-  p.map(['##.##', '#####', '.###.', '..#..'], cx - 2, 33, { '#': dark });
-  for (let x = cx - 13; x <= cx + 13; x++) {
-    const t = (x - cx) / 13, y = Math.round(40 + (1 - t * t) * 3), h = 3 + chomp;
-    p.vline(x, y, y + h, dark);
-    if (Math.abs(x - cx) < 13 && (x - cx + 13) % 3 !== 0) { p.set(x, y + 1, bone); p.set(x, y + 2, P.bone1); }
+  pie(30);
+  p.line(25, 14, 29, 12, dark); p.line(29, 12, 34, 13, dark);
+  if (wink) { pie(45); p.line(41, 13, 45, 12, dark); p.line(45, 12, 50, 14, dark); }
+  else {
+    for (let i = -5; i <= 5; i++) { const y = 25 - Math.round(Math.sqrt(25 - i * i) * 0.7); p.set(45 + i, y, dark); p.set(45 + i, y + 1, dark); }
+    p.line(39, 26, 37, 28, dark); p.line(51, 26, 53, 28, dark);
+    p.line(41, 17, 45, 16, dark); p.line(45, 16, 50, 18, dark);
+    p.hline(42, 47, 30, P.bone2);
   }
-  p.rect(cx + 4, 45, 2, 2, P.gold1);
-  if (wink) { p.ell(cx + 6, 49 + chomp, 3.5, 4, P.red1); p.vline(cx + 6, 47 + chomp, 51 + chomp, P.red2); p.set(cx + 5, 48 + chomp, P.red0); }
-  p.line(44, 6, 47, 11, P.bone2); p.line(47, 11, 45, 15, P.bone2); p.line(47, 11, 50, 13, P.bone2);
+  p.map(['##.##', '#####', '.###.', '..#..'], cx - 2, 31, { '#': dark });
+  // Open grin; closes to a smile on the chomp frame.
+  if (chomp) { for (let x = 28; x <= 48; x++) p.set(x, 40 + Math.round(Math.abs(x - 38) * -0.15 + 1.5), dark); }
+  else {
+    p.poly([[27, 37.5], [49, 36.5], [46, 44.5], [31, 45.5]], dark);
+    for (let x = 30; x <= 46; x += 3) p.rect(x, 38, 2, 2, bone);
+    p.ell(43, 46, 4, 5, P.red1); p.vline(43, 43, 50, P.red2); p.set(42, 45, P.red0); p.set(41, 46, P.red0);
+  }
+  // White-gloved finger gun, on a rubber-hose arm.
+  p.line(19, 49, 27, 46, dark); p.line(19, 50, 27, 47, dark);
+  p.ell(12, 42, 6, 5.5, bone);
+  p.rect(1, 38, 10, 4, bone);
+  p.rect(9, 33, 4, 6, bone);
+  p.rect(15, 44, 5, 7, P.bone1); p.hline(15, 19, 46, P.bone3);
+  p.hline(8, 16, 44, P.bone2); p.hline(8, 15, 46, P.bone2);
   p.outline(dark); p.outline(P.ink2);
+  // Cartoon action marks.
+  for (const [x, y, c] of [[9, 8, P.fire2], [6, 14, P.red1], [58, 9, P.red1], [60, 15, P.fire2]]) { p.line(x, y, x + 2, y + 2, c); p.set(x + 1, y, c); }
   return p;
 }
 
-// Chibi skull: oversized cranium, tiny jaw, huge sparkly eyes, a plaster on the head.
-export function mascotChibi(wink = false, chomp = 0) {
-  const p = new Pix(64, 60), cx = 32, bone = P.bone0, dark = P.ink0;
-  p.ell(cx, 25, 26, 22, bone);
-  p.ell(cx, 44, 13, 9, bone);
-  shadeSkull(p, cx, 25, 26, 22);
-  p.ell(19, 10, 6, 2.6, P.white);
-  const eye = (ex, closed) => {
-    if (closed) { p.line(ex - 6, 29, ex, 25, dark); p.line(ex, 25, ex + 6, 29, dark); p.line(ex - 6, 30, ex, 26, dark); p.line(ex, 26, ex + 6, 30, dark); return; }
-    p.ell(ex, 28, 8, 9, dark);
-    p.ell(ex + 1, 31, 4.5, 4.5, P.teal4, (x, y) => y > 29);
-    p.rect(ex - 5, 22, 4, 4, P.white); p.rect(ex + 3, 32, 2, 2, P.white); p.set(ex - 1, 27, P.teal0);
-  };
-  eye(19, false); eye(45, wink);
-  p.rect(9, 38, 5, 2, P.red0); p.rect(50, 38, 5, 2, P.red0);
-  p.rect(cx - 1, 38, 3, 2, dark);
-  const my = 44;
-  p.hline(cx - 7, cx + 7, my, dark);
-  for (let x = cx - 7; x <= cx + 7; x++) { p.set(x, my + 1, (x - cx + 7) % 3 ? bone : dark); p.set(x, my + 2, (x - cx + 7) % 3 ? P.bone1 : dark); }
-  p.rect(cx - 7, my + 3, 15, 1 + chomp, dark);
-  const tape = '#f6cfa4';
-  p.rect(41, 8, 12, 4, tape); p.rect(45, 4, 4, 12, tape); p.set(43, 9, P.bone3); p.set(50, 10, P.bone3); p.set(46, 6, P.bone3); p.set(47, 13, P.bone3);
-  p.outline(dark); p.outline(P.ink2);
-  return p;
-}
-
-// A friendlier O for the logo, matching the cartoon mascots.
-export function cuteSkull() {
+// The skull-faced O from the original wordmark.
+export function brandSkull() {
   const p = new Pix(13, 13), bone = P.bone0, dark = P.ink0;
-  p.ell(6.5, 5.5, 6.2, 5.5, bone); p.ell(6.5, 9.5, 4.5, 3, bone);
-  p.rect(2, 4, 4, 4, dark); p.rect(7, 4, 4, 4, dark);
-  p.set(2, 4, P.white); p.set(3, 4, P.white); p.set(7, 4, P.white); p.set(8, 4, P.white);
-  p.set(6, 8, dark);
-  p.hline(4, 8, 11, dark); p.set(4, 10, dark); p.set(6, 10, dark); p.set(8, 10, dark); p.set(7, 10, P.gold1);
+  p.ell(6.5, 6.3, 6.3, 6.3, bone);
+  p.ell(4.3, 6, 1.7, 2.7, dark); p.ell(8.7, 6, 1.7, 2.7, dark);
+  p.set(4, 5, P.white); p.set(8, 5, P.white);
+  p.set(6, 9, dark); p.set(5, 10, dark); p.set(7, 10, dark);
   p.outline(dark);
   return p;
 }
 
-const MASCOTS = { classic: mascot, grin: mascotGrin, chibi: mascotChibi };
+const MASCOTS = { classic: mascot, brand: mascotBrand };
 
 // ---------- Icons ----------
 export function flameIcon(f = 0) {
@@ -353,7 +401,7 @@ export const Sprites = {
     this.lock = lockIcon().spr(); this.check = checkIcon(true).spr(); this.uncheck = checkIcon(false).spr();
     for (const id of ['reshuffle', 'swap', 'wild', 'chain', 'insurance', 'embers']) this.tricks[id] = trickIcon(id).spr();
     const sk = skullIconFn(); sk.outline(P.ink0); this.skull = sk.spr();
-    this.logoSkulls = { classic: this.skull, cute: cuteSkull().spr() };
-    for (let i = 0; i < 3; i++) for (const st of ['idle', 'blink', 'talk']) portrait(i, st, 0);
+    this.logoSkulls = { classic: this.skull, brand: brandSkull().spr() };
+    for (let i = 0; i < OPPONENTS.length; i++) for (const st of ['idle', 'blink', 'talk']) portrait(i, st, 0);
   },
 };

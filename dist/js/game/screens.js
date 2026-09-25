@@ -6,13 +6,15 @@ import { Post } from '../core/post.js';
 import { ease, clamp } from '../core/tween.js';
 import { P } from '../art/palette.js';
 import { Cards } from '../art/cards.js';
-import { Sprites, OPPONENTS, portrait } from '../art/sprites.js';
+import { Sprites, OPPONENTS, portrait, oppIndex } from '../art/sprites.js';
 import { Audio } from '../audio/sfx.js';
 import { Music } from '../audio/music.js';
 import { roundGoals } from '../../scoring.js';
 import { trophies } from '../../progression.js';
 import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
+import { ROUNDS, RULES } from './rounds.js';
+import { cardsLeft } from '../../engine.js';
 
 const T = { font: TINY };
 const card = (r, s) => Cards.face({ r, s }, Math.floor(R.t * 8));
@@ -111,12 +113,13 @@ export const Screens = {
   key(game, k) {
     const m = game.modal;
     if (!m) return;
-    if (k.key === 'Escape' && !['reward', 'result'].includes(m.kind)) { game.closeModal(); return; }
+    if (k.key === 'Escape' && !['reward', 'result', 'rule'].includes(m.kind)) { game.closeModal(); return; }
     if (m.kind === 'rules') {
       if (k.key === 'ArrowRight' || k.key === 'Enter') { if (m.data.page < 4) { m.data.page++; m.data.pt = 0; Audio.play('ui'); } else finishRules(game); }
       if (k.key === 'ArrowLeft' && m.data.page > 0) { m.data.page--; m.data.pt = 0; Audio.play('back'); }
     }
     if (m.kind === 'result' && k.key === 'Enter') resultAction(game);
+    if (m.kind === 'rule' && (k.key === 'Enter' || k.key === ' ') && m.t > 0.6) { const r = m.data.resolve; game.modal = null; Audio.muffle(false); r?.(); }
     if (m.kind === 'confirm' && k.key === 'Enter') startFresh(game);
   },
 
@@ -150,9 +153,34 @@ export const Screens = {
     b.restore();
   },
 
+  // Rule-change card shown before a round's deal.
+  rule(game, m) {
+    const rl = RULES[m.data.rule], w = Math.min(R.vw - 16, 250), h = Math.min(R.vh - 12, 214), b = UI.modal('rule', w, h, m.t, { fill: P.ink1 });
+    const stamp = m.t < 0.25 ? 2.2 - 1.2 * ease.outCubic(m.t / 0.25) : 1;
+    R.ctx.save(); R.ctx.translate(b.x + w / 2, b.y + 18); R.ctx.rotate(-0.05); R.ctx.scale(stamp, stamp);
+    R.box(-54, -9, 108, 18, P.red2, 2); R.box(-52, -7, 104, 14, P.red4, 2);
+    R.text('RULE CHANGE', 0, -4, { color: P.red1, align: 'center' });
+    R.ctx.restore();
+    UI.title(rl.title, b.x + w / 2, b.y + 36, { size: 2, color: rl.color });
+    const ax = b.x + w / 2, ay = b.y + 82, t = m.t;
+    if (m.data.rule === 'choose') {
+      // Six cards; three hop up onto the table.
+      [3, 10, 7, 2, 12, 5].forEach((r, i) => {
+        const up = [1, 3, 4].includes(i), k = up ? ease.inOutCubic(clamp((t - 0.6 - i * 0.08) / 0.4)) : 0, x = ax + (i - 2.5) * 22;
+        R.spr(Cards.face({ r, s: i % 4 }), x, ay + 8 - k * 26, { sc: 0.5, rot: (i - 2.5) * 0.05 * (1 - k) });
+      });
+      R.text('LATER', ax, ay - 44, { font: TINY, color: P.gold1, align: 'center', alpha: clamp((t - 1) * 3) });
+    } else {
+      game.cpuSeats().forEach((seat, i) => R.spr(portrait(game.oppIdx(seat), (R.t + i) % 3 < 0.15 ? 'blink' : 'idle', 0), ax + (i - 0.5) * 50, ay, { sc: 0.9 }));
+    }
+    rl.lines.forEach((l, i) => R.text(l, b.x + w / 2, b.y + 118 + i * 11, { color: P.bone1, align: 'center', reveal: Math.floor((t - 0.4 - i * 0.2) * 60) }));
+    if (m.t > 0.6 && UI.button('rule-go', b.x + w / 2 - 50, b.y + h - 30, 100, 22, "LET'S GO", { ignoreBlock: true, pulse: true })) { const r = m.data.resolve; game.modal = null; Audio.muffle(false); r?.(); }
+    b.restore();
+  },
+
   // Hidden dev panel: compare art trials live and jump to test tables.
   dev(game, m) {
-    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 262), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
+    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 294), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
     UI.title('DEV MODE', b.x + w / 2, b.y + 8, { size: 2, color: P.teal1, wave: 0.5 });
     const tile = (id, x, y, tw, th, selected, draw, label) => {
       const hot = Input.over(x, y, tw, th);
@@ -164,7 +192,7 @@ export const Screens = {
     };
     let y = b.y + 30;
     R.text('TITLE MASCOT', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
-    const styles = ['classic', 'grin', 'chibi'], tw = Math.floor((w - 24 - 16) / 3), th = 64;
+    const styles = ['classic', 'brand'], tw = Math.floor((w - 24 - 8) / 2), th = 64;
     styles.forEach((st, i) => {
       const x = b.x + 12 + i * (tw + 8), wink = (R.t + i) % 4 > 3.7;
       const spr = Sprites.mascots[st][wink ? 'wink' : 'idle'];
@@ -172,7 +200,7 @@ export const Screens = {
     });
     y += th + 10;
     R.text('LOGO SKULL', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
-    ['classic', 'cute'].forEach((st, i) => {
+    ['classic', 'brand'].forEach((st, i) => {
       const lw = Math.floor((w - 24 - 8) / 2), x = b.x + 12 + i * (lw + 8), sk = Sprites.logoSkulls[st];
       if (tile('l-' + st, x, y, lw, 40, game.dev.logo === st, (cx, cy) => {
         R.text('B', cx - 22, cy - 7, { size: 2, color: P.bone0 }); R.spr(sk, cx, cy, { sc: 17 / sk.h }); R.text('NE', cx + 10, cy - 7, { size: 2, color: P.bone0 });
@@ -184,6 +212,13 @@ export const Screens = {
     const bw = Math.floor((w - 24 - 4 * 4) / 5), can = game.started && game.scene === 'table' && !game.moving;
     tests.forEach(([code, label], i) => {
       if (UI.button('dt-' + code, b.x + 12 + i * (bw + 4), y, bw, 16, label, { color: 'ink', enabled: can, ignoreBlock: true })) { game.modal = null; Audio.muffle(false); game.devKey(code); }
+    });
+    y += 22;
+    R.text('JUMP TO ROUND', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    const rw = Math.floor((w - 24 - (ROUNDS.length - 1) * 4) / ROUNDS.length);
+    ROUNDS.forEach((rd, i) => {
+      const label = `${i + 1} ${(rd.name || OPPONENTS[oppIndex(rd.opps[0])].name).replace('The ', '').toUpperCase()}`;
+      if (UI.button('dr-' + i, b.x + 12 + i * (rw + 4), y, rw, 16, label, { color: game.started && game.g?.round === i + 1 ? 'teal' : 'ink', ignoreBlock: true, size: 1 })) { Audio.muffle(false); game.jumpToRound(i + 1); }
     });
     y += 24;
     R.text(`${R.soft ? 'SOFTWARE' : 'GPU'} CANVAS · WEBGL ${Post.ok ? 'ON' : 'OFF'} · ${R.W}×${R.H} · ×${R.S.toFixed(2)}`, b.x + w / 2, y, { font: TINY, color: P.ink6, align: 'center' });
@@ -301,9 +336,12 @@ export const Screens = {
   },
 
   result(game, m) {
-    const g = game.g, win = g.winner === 'player', advance = win && g.round < 3, idx = clamp(g.round - 1, 0, 2), opp = OPPONENTS[idx];
+    // With two opponents, the one left holding the most cards takes the title.
+    const g = game.g, win = g.winner === 'player', last = g.round >= ROUNDS.length, advance = win && !last;
+    const seats = game.cpuSeats(), loserSeat = seats.reduce((a, s2) => (cardsLeft(g[s2]) > cardsLeft(g[a]) ? s2 : a), seats[0]);
+    const idx = game.oppIdx(loserSeat), opp = OPPONENTS[idx];
     const w = Math.min(R.vw - 12, 250), h = Math.min(R.vh - 10, 232), b = UI.modal('result', w, h, m.t, { fill: win ? P.ink2 : '#2a0f1f' });
-    const head = win ? (g.round === 3 ? 'YOU BEAT THE HOUSE' : 'ROUND CLEARED') : 'THE HOUSE WINS';
+    const head = win ? (last ? 'YOU BEAT THE HOUSE' : 'ROUND CLEARED') : seats.length > 1 ? 'LAST ONE HOLDING CARDS' : 'THE HOUSE WINS';
     R.text(head, b.x + w / 2, b.y + 10, { color: win ? P.grn1 : P.red1, align: 'center' });
     // The loser gets the title. Stamp slams in.
     const px = b.x + w / 2, py = b.y + 62;
@@ -326,7 +364,7 @@ export const Screens = {
     R.text(`${g.playerBurns || 0} BURNS · ${fmtTime(game.elapsed)} · BEST ${game.best.toLocaleString()}`, px, y, { align: 'center', color: P.ink6, ...T }); y += 9;
     if (goals.length) R.text(goals.map(x => `✓ ${x.name}`).join('  '), px, y, { align: 'center', color: P.grn1, ...T });
     if (m.t > 0.8 && UI.button('res-go', b.x + 20, b.y + h - 30, w - 40, 22, advance ? 'CLAIM A TRICK' : win ? 'VICTORY LAP · NEW RUN' : 'ONE MORE RUN', { color: advance ? 'gold' : win ? 'green' : 'red', ignoreBlock: true, pulse: true })) resultAction(game);
-    if (win && g.round === 3 && m.t > 0.6 && Math.random() < 0.15) FX.burst(Math.random() * R.vw, -5, 3, { colors: CONFETTI, speed: [10, 40], angle: Math.PI / 2, spread: 0.5, grav: 60, life: [2, 3], size: [1, 2], top: true });
+    if (win && last && m.t > 0.6 && Math.random() < 0.15) FX.burst(Math.random() * R.vw, -5, 3, { colors: CONFETTI, speed: [10, 40], angle: Math.PI / 2, spread: 0.5, grav: 60, life: [2, 3], size: [1, 2], top: true });
     b.restore();
   },
 };
@@ -335,7 +373,7 @@ function THEMES_TITLE() { return { a: '#43195c', b: '#0e1230', c: '#b0305a' }; }
 
 function resultAction(game) {
   const g = game.g, win = g.winner === 'player';
-  if (win && g.round < 3) { game.modal = null; game.claimTrick(); }
+  if (win && g.round < ROUNDS.length) { game.modal = null; game.claimTrick(); }
   else { store.set('bh2-save', null); startFresh(game); }
 }
 

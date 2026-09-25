@@ -24,6 +24,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run tests
         run: for t in *.test.mjs; do node "$t"; done
+      - name: Cache-bust modules
+        run: node tools/stamp.mjs dist
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
