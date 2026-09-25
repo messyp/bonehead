@@ -13,8 +13,8 @@ import { roundGoals } from '../../scoring.js';
 import { trophies } from '../../progression.js';
 import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
-import { ROUNDS, RULES } from './rounds.js';
-import { mapBackdrop, crownIcon } from '../art/map.js';
+import { ROUNDS, RULES, ROUND_LOCKS } from './rounds.js';
+import { mapRoom, crownIcon } from '../art/map.js';
 import { cardsLeft } from '../../engine.js';
 
 const T = { font: TINY };
@@ -47,29 +47,26 @@ function bigLogo(cx, cy, size, skull = Sprites.skull) {
 let devTaps = 0, devTapT = 0;
 
 // Progression map state that only matters for drawing.
-const mapCache = { key: '', spr: null, crown: null };
-const fireflies = Array.from({ length: 26 }, () => ({ x: Math.random(), y: 0.35 + Math.random() * 0.6, ph: Math.random() * 6, sp: 0.2 + Math.random() * 0.5, c: Math.random() < 0.7 ? P.gold0 : P.teal0 }));
+const mapCache = { key: '', room: null, spr: null, crown: null };
+const motes = Array.from({ length: 22 }, () => ({ x: Math.random(), y: Math.random(), ph: Math.random() * 6, sp: 0.15 + Math.random() * 0.3 }));
 
-function mapNodes(vw, vh, land) {
-  if (land) return ROUNDS.map((_, i) => ({ x: vw * (0.17 + i * 0.22), y: vh * (i % 2 ? 0.46 : 0.7) }));
-  return ROUNDS.map((_, i) => ({ x: vw * (i % 2 ? 0.72 : 0.28), y: vh * (0.8 - i * 0.155) }));
+// The four opponent cards sit on the table in a gentle zig-zag.
+function mapCards(t, land) {
+  const n = ROUNDS.length;
+  if (land) return ROUNDS.map((_, i) => ({ x: t.cx + (i - (n - 1) / 2) * 62, y: t.cy + (i % 2 ? -1 : 1) * 15 }));
+  return ROUNDS.map((_, i) => ({ x: t.cx + (i % 2 ? 1 : -1) * 24, y: t.cy + ((n - 1) / 2 - i) * 60 }));
 }
-// S-shaped path between two nodes: out of the side (landscape) or the top (portrait).
-const elbow = (a, b, land) => {
-  if (land) { const mx = (a.x + b.x) / 2; return [a, { x: mx, y: a.y }, { x: mx, y: b.y }, b]; }
-  const my = (a.y + b.y) / 2; return [a, { x: a.x, y: my }, { x: b.x, y: my }, b];
-};
-// Where the skull token stands: on the path just outside a table.
-const spot = (n, land, tw, th) => (land ? { x: n.x - tw / 2 - 11, y: n.y + 2 } : { x: n.x - tw / 2 - 11, y: n.y + 6 });
-function along(pts, t) {
-  const segs = []; let total = 0;
-  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); segs.push(l); total += l; }
-  let d = t * total;
-  for (let i = 0; i < segs.length; i++) {
-    if (d <= segs[i] || i === segs.length - 1) { const k = segs[i] ? Math.min(1, d / segs[i]) : 0; return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * k, y: pts[i].y + (pts[i + 1].y - pts[i].y) * k }; }
-    d -= segs[i];
+// A snaking chalk line through the cards (Catmull-Rom through their centres).
+function snake(pts) {
+  const out = [], ext = [pts[0], ...pts, pts.at(-1)];
+  for (let i = 1; i < ext.length - 2; i++) {
+    const [p0, p1, p2, p3] = [ext[i - 1], ext[i], ext[i + 1], ext[i + 2]];
+    for (let k = 0; k < 24; k++) {
+      const t = k / 24, t2 = t * t, t3 = t2 * t;
+      out.push({ seg: i - 1, x: 0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3), y: 0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3) + Math.sin(k / 24 * Math.PI) * 7 * (i % 2 ? 1 : -1) });
+    }
   }
-  return pts.at(-1);
+  return out;
 }
 
 const floaters = Array.from({ length: 14 }, (_, i) => ({ x: Math.random(), y: Math.random(), sp: 0.015 + Math.random() * 0.03, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.6, c: { r: 2 + Math.floor(Math.random() * 13), s: i % 4 }, sc: 0.5 + Math.random() * 0.4, back: Math.random() < 0.35 }));
@@ -132,108 +129,102 @@ export const Screens = {
     R.text('A SHEDDING ROGUELITE · SOUND ON', vw / 2, vh - 11, { color: P.ink6, align: 'center', outline: null, ...T });
   },
 
-  // Between rounds: the Midnight Circuit map (after Super Meat Boy's world maps).
+  // Between rounds: the Midnight Circuit, seen from above: four opponent cards on a
+  // crypt card table (after The Binding of Isaac's rooms). Pick a table, then GO.
   map(game) {
-    const vw = R.vw, vh = R.vh, land = R.land, mp = game.map, t = mp.t, next = mp.next;
+    const vw = R.vw, vh = R.vh, land = R.land, mp = game.map, t = mp.t, cleared = game.cleared || [];
     const key = `${Math.ceil(vw / 2)}x${Math.ceil(vh / 2)}`;
-    if (mapCache.key !== key) { mapCache.key = key; mapCache.spr = mapBackdrop(Math.ceil(vw / 2), Math.ceil(vh / 2), land).spr(); mapCache.crown ??= crownIcon().spr(); }
+    if (mapCache.key !== key) { mapCache.key = key; mapCache.room = mapRoom(Math.ceil(vw / 2), Math.ceil(vh / 2), land); mapCache.spr = mapCache.room.pix.spr(); mapCache.crown ??= crownIcon().spr(); }
+    const room = mapCache.room, tb = { cx: room.table.cx * 2, cy: room.table.cy * 2, rx: room.table.rx * 2, ry: room.table.ry * 2 };
     R.spr(mapCache.spr, 0, 0, { sc: 2, ax: 0, ay: 0 });
-    // Fireflies
-    for (const f of fireflies) {
-      const x = ((f.x + Math.sin(R.t * f.sp + f.ph) * 0.02) % 1) * vw, y = f.y * vh + Math.cos(R.t * f.sp * 1.3 + f.ph) * 6, a = 0.3 + 0.7 * Math.max(0, Math.sin(R.t * 2 + f.ph));
-      R.rect(Math.round(x), Math.round(y), 1, 1, f.c, a);
-    }
-    const nodes = mapNodes(vw, vh, land), pathW = land ? 9 : 8;
-    // Path, cleared sections a little brighter
-    for (let i = 1; i < nodes.length; i++) {
-      const pts = elbow(nodes[i - 1], nodes[i], land), done = i < next;
-      for (let j = 1; j < pts.length; j++) {
-        const a = pts[j - 1], b = pts[j], x0 = Math.min(a.x, b.x) - pathW / 2, y0 = Math.min(a.y, b.y) - pathW / 2;
-        R.rect(x0 - 1, y0 - 1, Math.abs(b.x - a.x) + pathW + 2, Math.abs(b.y - a.y) + pathW + 2, P.ink0, 0.9);
-      }
-      for (let j = 1; j < pts.length; j++) {
-        const a = pts[j - 1], b = pts[j], x0 = Math.min(a.x, b.x) - pathW / 2, y0 = Math.min(a.y, b.y) - pathW / 2;
-        R.rect(x0, y0, Math.abs(b.x - a.x) + pathW, Math.abs(b.y - a.y) + pathW, done ? '#d8c79c' : '#8a7a5c');
-      }
-    }
-    // Nodes
-    const tw = land ? 58 : 56, th = land ? 70 : 66;
-    let hover = null;
-    ROUNDS.forEach((rd, i) => {
-      const n = nodes[i], round = i + 1, beaten = round < next, current = round === next, locked = round > next;
-      const bob = current ? Math.sin(R.t * 3) * 1.5 : 0, x = Math.round(n.x - tw / 2), y = Math.round(n.y - th / 2 + bob);
-      const lead = OPPONENTS[oppIndex(rd.opps[0])];
-      if (current) R.box(x - 3, y - 3, tw + 6, th + 6, P.gold1, 3, 0.5 + Math.sin(R.t * 6) * 0.35);
-      R.panel(x, y, tw, th, { fill: beaten ? P.ink2 : current ? P.ink3 : P.ink1, rim: beaten ? P.grn2 : current ? P.gold1 : P.ink0, hi: P.ink4, depth: 3 });
-      const ps = rd.opps.length > 1 ? 0.55 : 1;
-      rd.opps.forEach((id, k) => {
-        const px = x + tw / 2 + (rd.opps.length > 1 ? (k - 0.5) * 25 : 0), py = y + 4 + 22 * ps + (rd.opps.length > 1 ? 10 : 0);
-        R.spr(portrait(oppIndex(id), current && (R.t + k) % 3.5 < 0.12 ? 'blink' : 'idle', Math.floor(R.t * 6)), px, py, { sc: ps, alpha: locked ? 0.5 : 1 });
-      });
-      if (locked) { R.box(x + 3, y + 3, tw - 6, th - 20, P.ink0, 2, 0.45); R.spr(Sprites.lock, x + tw / 2, y + 26); }
-      const name = (rd.name || lead.name).replace('The ', '').toUpperCase();
-      R.text(name, x + tw / 2, y + th - 13, { font: R.measure(name) > tw - 6 ? TINY : undefined, color: locked ? P.ink6 : rd.name ? P.teal1 : lead.color, align: 'center' });
-      R.text(`ROUND ${round}`, x + tw / 2, y - 9, { font: TINY, color: current ? P.gold1 : P.ink6, align: 'center' });
-      if (rd.rule) { const tag = 'NEW RULE'; const ww = R.measure(tag, { font: TINY }) + 6; R.box(x + tw - ww + 3, y + th - 4, ww, 8, P.ink0, 1); R.box(x + tw - ww + 4, y + th - 3, ww - 2, 6, RULES[rd.rule].color, 1); R.text(tag, x + tw - ww / 2 + 3, y + th - 2, { font: TINY, color: P.ink0, outline: null, shadow: null, align: 'center' }); }
-      if (beaten) {
-        R.ctx.save(); R.ctx.translate(x + tw / 2, y + 26); R.ctx.rotate(-0.25);
-        R.box(-26, -5, 52, 11, P.red2, 1, 0.95); R.text('BONEHEAD', 0, -2, { font: TINY, color: P.white, align: 'center', outline: null });
-        R.ctx.restore();
-        R.spr(Sprites.check, x + tw - 6, y + 6);
-      }
-      if (current) {
-        // A little flag, waving, planted above the next table.
-        const fx = x + tw - 8, fy = y - 18;
-        R.rect(fx, fy, 1, 18, P.bone2);
-        for (let k = 0; k < 9; k++) R.rect(fx + 1 + k, fy + Math.round(Math.sin(R.t * 6 - k * 0.7) * 1), 1, 6, k < 8 ? P.bone0 : P.bone2);
-      }
-      if (Input.over(x, y, tw, th) && !UI.blocked) hover = { rd, round, x: x + tw / 2, y, beaten, locked, lead };
+    // Candle flames and a flickering glow
+    room.candles.forEach((c, i) => {
+      const fl = Sprites.flame[Math.floor(R.t * 8 + i) % 3], x = c.x * 2 + 1, y = c.y * 2 - 4;
+      R.box(x - 8, y - 6, 16, 16, P.fire2, 4, 0.05 + Math.sin(R.t * 9 + i * 2) * 0.03);
+      R.spr(fl, x, y, { sc: 0.55 + Math.sin(R.t * 11 + i) * 0.05 });
     });
-    // Player token: hops along the path from the last table to the next.
-    const to = nodes[next - 1], from = mp.from ? nodes[mp.from - 1] : null, hopT = clamp(t / 1.3), end = spot(to, land, tw, th);
-    let tx = end.x, ty = end.y - 10;
-    if (from && hopT < 1) {
-      const route = elbow(from, to, land); route[0] = spot(from, land, tw, th); route[route.length - 1] = end;
-      const pos = along(route, ease.inOutCubic(hopT));
-      tx = pos.x; ty = pos.y - 10 - Math.abs(Math.sin(hopT * Math.PI * 4)) * 10;
-      if (!mp.hops) mp.hops = 0;
-      const hopIdx = Math.floor(hopT * 4);
-      if (hopIdx > mp.hops) { mp.hops = hopIdx; Audio.play('land', 0.4); }
-    } else if (!from && t < 0.6) ty -= (1 - ease.outCubic(t / 0.6)) * 60;
-    if ((hopT >= 1 || !from) && !mp.landed && t > (from ? 1.3 : 0.6)) { mp.landed = true; Audio.play('thud'); FX.burst(tx, ty + 12, 10, { colors: [P.bone1, P.ink5], speed: [20, 60], angle: -Math.PI / 2, spread: 1.2, grav: 150, life: [0.3, 0.5], top: true }); }
-    R.spr(Cards.shadow, tx, end.y + 2, { sx: 0.5, sy: 0.08, alpha: 0.4 });
-    R.spr(game.mascotSpr((R.t % 4) > 3.8 ? 'wink' : 'idle'), tx, ty, { sc: land ? 0.42 : 0.38 });
+    // Dust motes drifting in the lamp light over the table
+    for (const m of motes) {
+      const x = tb.cx + (m.x - 0.5) * tb.rx * 2, y = tb.cy + (m.y - 0.5) * tb.ry * 2 + Math.sin(R.t * m.sp + m.ph) * 5;
+      R.rect(Math.round(x), Math.round(y), 1, 1, P.bone1, 0.15 + 0.35 * Math.max(0, Math.sin(R.t * 1.5 + m.ph)));
+    }
+    const cards = mapCards(tb, land), sel = mp.sel;
+    // Chalk path: dotted, solid gold through cleared tables
+    const path = snake(cards);
+    path.forEach((pt, i) => {
+      if (i % 2) return;
+      const done = cleared.includes(pt.seg + 1) && cleared.includes(pt.seg + 2);
+      R.rect(Math.round(pt.x) - 1, Math.round(pt.y) - 1, 3, 3, P.ink0, 0.35); R.rect(Math.round(pt.x) - 1, Math.round(pt.y) - 1, 2, 2, done ? P.gold1 : '#eef6e6', done ? 1 : 0.8);
+    });
+    // Opponent cards
+    const cw = 41, ch = 57;
+    let hover = null;
+    const order = ROUNDS.map((_, i) => i).sort((a, b) => (a === sel - 1) - (b === sel - 1));
+    for (const i of order) {
+      const rd = ROUNDS[i], round = i + 1, n = cards[i], done = cleared.includes(round), picked = round === sel;
+      const locked = ROUND_LOCKS && !done && round !== mp.next;
+      const hot = Input.over(n.x - cw / 2, n.y - ch / 2, cw, ch) && !UI.blocked && !locked;
+      const lift = picked ? 7 + Math.sin(R.t * 3) * 1.5 : hot ? 3 : 0, sc = picked ? 1.12 : 1;
+      const x = n.x, y = n.y - lift;
+      R.ctx.save(); R.ctx.translate(x, y); R.ctx.scale(sc, sc); R.ctx.rotate(picked ? 0 : (i % 2 ? 0.04 : -0.04));
+      R.box(-cw / 2 + 2, -ch / 2 + 3 + lift * 0.6, cw, ch, P.ink0, 3, 0.45);
+      if (picked) R.box(-cw / 2 - 3, -ch / 2 - 3, cw + 6, ch + 6, P.gold1, 3, 0.55 + Math.sin(R.t * 6) * 0.35);
+      R.box(-cw / 2, -ch / 2, cw, ch, P.ink1, 3);
+      R.box(-cw / 2 + 1, -ch / 2 + 1, cw - 2, ch - 2, done ? '#d8cfb4' : P.bone0, 3);
+      const lead = OPPONENTS[oppIndex(rd.opps[0])], col = rd.name ? P.teal2 : lead.color;
+      R.box(-cw / 2 + 4, -ch / 2 + 9, cw - 8, 30, col, 1);
+      R.box(-cw / 2 + 5, -ch / 2 + 10, cw - 10, 28, P.ink1, 1);
+      const pscale = rd.opps.length > 1 ? 0.34 : 0.6;
+      rd.opps.forEach((id, k) => R.spr(portrait(oppIndex(id), picked && (R.t + k) % 3.5 < 0.12 ? 'blink' : 'idle', Math.floor(R.t * 6)), (rd.opps.length > 1 ? (k - 0.5) * 15 : 0), -ch / 2 + 24, { sc: pscale }));
+      R.text(String(round), -cw / 2 + 3, -ch / 2 + 2, { font: TINY, color: P.ink1, outline: null, shadow: null });
+      if (rd.rule) R.text('!', cw / 2 - 5, -ch / 2 + 2, { font: TINY, color: P.red2, outline: null, shadow: null });
+      const full = (rd.name || lead.name).replace('The ', '').toUpperCase(), name = R.measure(full, { font: TINY }) > cw - 5 ? full.split(' ')[0] : full;
+      R.text(name, 0, ch / 2 - 12, { font: TINY, color: P.ink2, align: 'center', outline: null, shadow: null });
+      if (done) {
+        R.ctx.rotate(-0.3);
+        R.box(-21, -4, 42, 9, P.red2, 1, 0.92); R.text('BONEHEAD', 0, -2, { font: TINY, color: P.white, align: 'center', outline: null, shadow: null });
+        R.ctx.rotate(0.3);
+        R.spr(Sprites.check, cw / 2 - 3, -ch / 2 + 3);
+      }
+      if (locked) { R.box(-cw / 2 + 1, -ch / 2 + 1, cw - 2, ch - 2, P.ink0, 3, 0.55); R.spr(Sprites.lock, 0, 0); }
+      R.ctx.restore();
+      // Bouncing arrow over the selected table
+      if (picked) R.text('↓', x, y - ch * sc / 2 - 13 - Math.abs(Math.sin(R.t * 4)) * 4, { size: 2, color: P.gold1, align: 'center' });
+      if (hot) hover = { rd, round, x, y: y - ch / 2, done, lead };
+      if (!locked && Input.button('map-card-' + round, n.x - cw / 2, n.y - ch / 2, cw, ch, !UI.blocked)) {
+        if (sel === round) game.startMapRound(); else { mp.sel = round; Audio.play('select', round * 2); }
+      }
+    }
     // Header banner
-    const bw = Math.min(vw - 16, land ? 290 : 236), bx = vw / 2 - bw / 2, by = 6;
-    R.box(bx - 2, by - 2, bw + 4, 37, P.ink0, 2);
-    R.box(bx, by, bw, 33, P.bone0, 2);
-    for (let k = 0; k < 3; k++) { R.rect(bx + 5, by + 8 + k * 6, 10 - k * 2, 2, P.ink0); R.rect(bx + bw - 15 + k * 2, by + 8 + k * 6, 10 - k * 2, 2, P.ink0); }
+    const bw = Math.min(vw - 16, land ? 250 : 236), bx = vw / 2 - bw / 2, by = 5;
+    R.box(bx - 2, by - 2, bw + 4, 33, P.ink0, 2);
+    R.box(bx, by, bw, 29, P.bone0, 2);
+    for (let k = 0; k < 3; k++) { R.rect(bx + 5, by + 7 + k * 6, 10 - k * 2, 2, P.ink0); R.rect(bx + bw - 15 + k * 2, by + 7 + k * 6, 10 - k * 2, 2, P.ink0); }
     const title = 'THE MIDNIGHT CIRCUIT', tsize = R.measure(title, { size: 2 }) < bw - 40 ? 2 : 1;
-    R.text(title, vw / 2, by + (tsize === 2 ? 2 : 6), { size: tsize, color: P.ink0, align: 'center', outline: null, shadow: null });
-    const pct = `${Math.round((next - 1) / ROUNDS.length * 100)}%`;
-    R.spr(mapCache.crown, vw / 2 - R.measure(pct) / 2 - 7, by + 26);
-    R.text(pct, vw / 2 + 3, by + 23, { color: P.ink0, align: 'center', outline: null, shadow: null });
-    // Name strip: who's next, with a brushed black band
-    const nr = ROUNDS[next - 1], nlead = OPPONENTS[oppIndex(nr.opps[0])], label = `${(nr.name || nlead.name).toUpperCase()} · ${nr.venue || nlead.venue}`;
-    const sw = Math.min(vw - 8, R.measure(label) + 40), sy = by + 41;
-    R.rect(vw / 2 - sw / 2, sy, sw, 13, P.ink0);
-    for (let k = 0; k < 8; k++) { const jl = (k * 7) % 5 + 2; R.rect(vw / 2 - sw / 2 - jl, sy + k * 1.6, jl, 1.6, P.ink0); R.rect(vw / 2 + sw / 2, sy + k * 1.6, (k * 5) % 6 + 2, 1.6, P.ink0); }
+    R.text(title, vw / 2, by + (tsize === 2 ? 2 : 5), { size: tsize, color: P.ink0, align: 'center', outline: null, shadow: null });
+    const pct = `${Math.round(cleared.length / ROUNDS.length * 100)}%`;
+    R.spr(mapCache.crown, vw / 2 - R.measure(pct) / 2 - 7, by + 22);
+    R.text(pct, vw / 2 + 3, by + 19, { color: P.ink0, align: 'center', outline: null, shadow: null });
+    // Selected table: who, where, what changes
+    const nr = ROUNDS[sel - 1], nlead = OPPONENTS[oppIndex(nr.opps[0])];
+    const label = `ROUND ${sel} · ${(nr.name || nlead.name).toUpperCase()} · ${nr.venue || nlead.venue}`;
+    const sw = Math.min(vw - 8, R.measure(label) + 30), sy = vh - (land ? 52 : 60);
+    R.rect(vw / 2 - sw / 2, sy, sw, 13, P.ink0, 0.9);
     R.text(label, vw / 2, sy + 3, { color: P.gold2, align: 'center', outline: null, ...(R.measure(label) > vw - 20 ? { font: TINY } : {}) });
+    const note = nr.rule ? `RULE CHANGE: ${RULES[nr.rule].title}` : cleared.includes(sel) ? 'ALREADY BEATEN · PLAY IT AGAIN' : 'CLASSIC RULES';
+    R.text(note, vw / 2, sy + 16, { font: TINY, color: nr.rule ? RULES[nr.rule].color : P.bone2, align: 'center', alpha: 0.75 + Math.sin(R.t * 5) * 0.25 });
     const stats = `SCORE ${game.score.toLocaleString()} · ${fmtTime(game.elapsed)} · BEST ${game.best.toLocaleString()}`;
-    const stw = R.measure(stats, { font: TINY }) + 12;
-    R.box(vw / 2 - stw / 2, sy + 15, stw, 10, P.ink0, 1, 0.85);
-    R.text(stats, vw / 2, sy + 17, { font: TINY, color: P.bone1, align: 'center', outline: null });
-    if (nr.rule) R.text(`RULE CHANGE: ${RULES[nr.rule].title}`, vw / 2, sy + 29, { font: TINY, color: RULES[nr.rule].color, align: 'center', alpha: 0.7 + Math.sin(R.t * 5) * 0.3 });
+    R.text(stats, vw / 2, by + 36, { font: TINY, color: P.bone2, align: 'center' });
     // Tricks in your bag
     const items = Object.entries(mp.items || {}).filter(([, n]) => n > 0).map(([id]) => id), owned = [...game.tricks, ...items];
-    owned.forEach((id, i) => R.spr(Sprites.tricks[id], vw / 2 + (i - (owned.length - 1) / 2) * 16, vh - 16, { sc: 0.7 }));
+    owned.forEach((id, i) => R.spr(Sprites.tricks[id], vw / 2 + (i - (owned.length - 1) / 2) * 16, vh - 18, { sc: 0.7 }));
     // Footer
     if (UI.button('map-title', 8, vh - 28, 56, 20, 'TITLE', { color: 'ink' })) game.transition(() => { game.scene = 'title'; });
-    if (UI.button('map-go', vw - 78, vh - 30, 70, 24, 'GO!', { size: 2, pulse: t > 1.2, color: 'gold' })) game.startMapRound();
+    if (UI.button('map-go', vw - 78, vh - 30, 70, 24, 'GO!', { size: 2, pulse: t > 0.8, color: 'gold' })) game.startMapRound();
     if (hover) {
-      const st = hover.beaten ? '^lBEATEN. Officially a Bonehead.' : hover.locked ? '^dLocked until you clear the tables before it.' : '^gUp next.';
+      const st = hover.done ? '^lBeaten. Officially a Bonehead.' : hover.round === sel ? '^gSelected. Tap again or GO to play.' : '^dTap to select.';
       const who = hover.rd.opps.map(id => OPPONENTS[oppIndex(id)].name).join(' & ');
-      UI.tooltip(who, `${hover.rd.venue || hover.lead.venue}${hover.rd.rule ? `\n^o${RULES[hover.rd.rule].title}` : ''}\n${st}`, hover.x, hover.y - 6, { color: hover.rd.name ? P.teal1 : hover.lead.color, w: 150 });
+      UI.tooltip(who, `${hover.rd.venue || hover.lead.venue}${hover.rd.rule ? `\n^o${RULES[hover.rd.rule].title}` : ''}\n${st}`, hover.x, hover.y - 10, { color: hover.rd.name ? P.teal1 : hover.lead.color, w: 150 });
     }
   },
 
@@ -483,7 +474,7 @@ export const Screens = {
 
   result(game, m) {
     // With two opponents, the one left holding the most cards takes the title.
-    const g = game.g, win = g.winner === 'player', last = g.round >= ROUNDS.length, advance = win && !last;
+    const g = game.g, win = g.winner === 'player', last = game.allCleared(), advance = win && !last;
     const seats = game.cpuSeats(), loserSeat = seats.reduce((a, s2) => (cardsLeft(g[s2]) > cardsLeft(g[a]) ? s2 : a), seats[0]);
     const idx = game.oppIdx(loserSeat), opp = OPPONENTS[idx];
     const w = Math.min(R.vw - 12, 250), h = Math.min(R.vh - 10, 232), b = UI.modal('result', w, h, m.t, { fill: win ? P.ink2 : '#2a0f1f' });
@@ -519,7 +510,7 @@ function THEMES_TITLE() { return { a: '#43195c', b: '#0e1230', c: '#b0305a' }; }
 
 function resultAction(game) {
   const g = game.g, win = g.winner === 'player';
-  if (win && g.round < ROUNDS.length) { game.modal = null; game.claimTrick(); }
+  if (win && !game.allCleared()) { game.modal = null; game.claimTrick(); }
   else { store.set('bh2-save', null); startFresh(game); }
 }
 

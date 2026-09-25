@@ -1,67 +1,100 @@
 import { Pix, rng } from '../core/pixel.js';
 import { P } from './palette.js';
 
-// The Midnight Circuit backdrop: a dithered night sky, a moon, a casino skyline
-// with neon suit signs, rolling fog and a graveyard. Painted at half the virtual
-// resolution for chunky pixels, sized to the screen's aspect.
+// The Midnight Circuit, seen from above: a candle-lit crypt with a card table in
+// the middle (in the spirit of The Binding of Isaac's rooms). Painted at half the
+// virtual resolution for chunky pixels. Returns the art plus where the table and
+// candles are, so the screen can place cards and flicker the flames.
 const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
-const SKY = ['#0a0a1e', '#121232', '#1e1846', '#321d56', '#512252', '#76294a'];
-const PIPS = [
-  ['..#..', '.###.', '#####', '..#..', '.###.'],
-  ['##.##', '#####', '#####', '.###.', '..#..'],
-  ['.###.', '.###.', '#####', '..#..', '.###.'],
-  ['..#..', '.###.', '#####', '.###.', '..#..'],
-];
+const dith = (x, y) => BAYER[y & 3][x & 3] / 16;
 
-export function mapBackdrop(w, h, land) {
-  const p = new Pix(w, h), r = rng(1337), hz = Math.round(h * (land ? 0.5 : 0.36));
-  // Sky gradient with ordered dithering
-  for (let y = 0; y < hz; y++) for (let x = 0; x < w; x++) {
-    const t = y / hz * (SKY.length - 1) + (BAYER[y % 4][x % 4] / 16 - 0.5);
-    p.set(x, y, SKY[Math.max(0, Math.min(SKY.length - 1, Math.round(t)))]);
+export function mapRoom(w, h, land) {
+  const p = new Pix(w, h), r = rng(4242);
+  const wallT = Math.round(h * (land ? 0.17 : 0.1)), wallB = Math.round(h * 0.06), wallS = Math.round(w * (land ? 0.06 : 0.08));
+  // Floor: stone slabs with mortar, grime and cracks
+  const tile = 14, slabs = ['#2c2219', '#271e16', '#31261b', '#2a2118'];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const tx = Math.floor((x + (Math.floor(y / tile) % 2) * 7) / tile), ty = Math.floor(y / tile);
+    const mortar = (x + (Math.floor(y / tile) % 2) * 7) % tile === 0 || y % tile === 0;
+    p.set(x, y, mortar ? '#16100b' : slabs[(tx * 7 + ty * 13) % slabs.length]);
   }
-  for (let i = 0; i < w * hz / 55; i++) p.set(Math.floor(r() * w), Math.floor(r() * hz * 0.75), r() < 0.25 ? P.bone0 : '#6c63a8');
-  // Moon with a dithered halo
-  const mx = Math.round(w * (land ? 0.8 : 0.72)), my = Math.round(hz * 0.3), mr = Math.max(6, Math.round(Math.min(w, h) * 0.07));
-  p.circ(mx, my, mr + 5, '#2e2560', (x, y) => (x + y) % 2 === 0);
-  p.circ(mx, my, mr, P.bone0);
-  p.circ(mx - mr * 0.3, my - mr * 0.2, mr * 0.25, P.bone2);
-  p.circ(mx + mr * 0.35, my + mr * 0.35, mr * 0.18, P.bone2);
-  p.each((x, y, c) => (c === P.bone0 && Math.hypot(x - mx, y - my) <= mr && x > mx + mr * 0.35 ? P.bone1 : undefined));
-  // Casino skyline: windows, antennas and neon suit signs
-  let x = -2;
-  while (x < w) {
-    const bw = 8 + Math.floor(r() * 16), bh = Math.round(hz * (0.14 + r() * 0.3)), top = hz - bh, body = r() < 0.5 ? '#1c1638' : '#211a42';
-    p.rect(x, top, bw, bh + 2, body);
-    for (let yy = top + 3; yy < hz - 2; yy += 4) for (let xx = x + 2; xx < x + bw - 1; xx += 3) if (r() < 0.32) p.set(xx, yy, r() < 0.5 ? P.gold1 : P.gold2);
-    if (r() < 0.4) p.vline(x + (bw >> 1), top - 5, top, body);
-    if (r() < 0.35 && bw >= 9) {
-      const neon = [P.red1, P.teal1, P.vio1, P.gold1][Math.floor(r() * 4)], sx = x + (bw >> 1) - 2, sy = top + 3;
-      p.rect(sx - 1, sy - 1, 7, 7, '#2b2150');
-      p.map(PIPS[Math.floor(r() * 4)], sx, sy, { '#': neon });
+  for (let i = 0; i < w * h / 90; i++) { const x = Math.floor(r() * w), y = Math.floor(r() * h); p.set(x, y, r() < 0.5 ? '#3a2e22' : '#1c150f'); }
+  for (let i = 0; i < 10; i++) { let x = Math.floor(r() * w), y = Math.floor(r() * h); for (let k = 0; k < 8; k++) { p.set(x, y, '#140e09'); x += Math.round(r() * 2 - 1); y += 1; } }
+  for (let i = 0; i < 7; i++) { const cx = r() * w, cy = r() * h, rad = 4 + r() * 8; p.circ(cx, cy, rad, '#1d160f', (x, y) => dith(x, y) < 0.45); }
+  // Card table: shadow, wooden rim, felt with a lamp-lit centre
+  const cx = w / 2, cy = wallT + (h - wallT - wallB) * (land ? 0.55 : 0.52);
+  const rx = land ? w * 0.29 : w * 0.34, ry = land ? (h - wallT - wallB) * 0.33 : (h - wallT - wallB) * 0.3;
+  p.ell(cx + 3, cy + 4, rx + 4, ry + 4, '#0b0810');
+  p.ell(cx, cy, rx + 4, ry + 4, '#4a2a18');
+  p.ell(cx, cy, rx + 3, ry + 3, '#6a3d22', (x, y) => y < cy);
+  p.ell(cx, cy, rx + 1, ry + 1, '#3b2214');
+  p.ell(cx, cy, rx, ry, '#1d5238');
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+    const d = Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry);
+    if (d > 1) continue;
+    if (d < 0.55 && dith(x, y) < 0.55 - d * 0.6) p.set(x, y, '#27684a');
+    else if (d > 0.82 && dith(x, y) < (d - 0.82) * 4) p.set(x, y, '#164430');
+  }
+  p.ell(cx, cy, rx - 5, ry - 5, '#2a7050', (x, y) => Math.abs(Math.hypot((x + 0.5 - cx) / (rx - 5), (y + 0.5 - cy) / (ry - 5)) - 1) < 0.02 && (x + y) % 3 === 0);
+  // Poker chips and a stray card on the felt edge
+  const chip = (x, y, c) => { p.circ(x, y, 2.6, c); p.set(Math.round(x), Math.round(y - 2), P.bone0); p.set(Math.round(x), Math.round(y + 1), P.bone0); };
+  chip(cx - rx * 0.78, cy + ry * 0.35, P.red2); chip(cx - rx * 0.72, cy + ry * 0.48, P.blue2); chip(cx + rx * 0.8, cy - ry * 0.3, P.gold2);
+  // Walls: bricks with a lit top edge, deeper at the top (looking down and in)
+  const brick = (x0, y0, x1, y1) => {
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const row = Math.floor((y - y0) / 5), off = row % 2 ? 4 : 0, mortar = (y - y0) % 5 === 4 || (x + off) % 9 === 0;
+      p.set(x, y, mortar ? '#1b1620' : ((Math.floor((x + off) / 9) + row) % 3 ? '#4d4456' : '#433b4c'));
     }
-    x += bw + Math.floor(r() * 3);
-  }
-  // Rolling hills and a band of fog
-  for (let xx = 0; xx < w; xx++) {
-    const top = hz + Math.round(Math.sin(xx * 0.05) * 3 + Math.sin(xx * 0.013 + 1) * 5) + 5;
-    for (let y = top; y < h; y++) p.set(xx, y, y < top + 2 ? '#241b44' : '#16112c');
-  }
-  for (let y = hz - 3; y < hz + 12; y++) for (let xx = 0; xx < w; xx++) if (BAYER[y % 4][xx % 4] < 6 - Math.abs(y - (hz + 4)) * 0.7) p.set(xx, y, '#3b3066');
-  // Graveyard: tombstones and crosses scattered over the ground
-  for (let i = 0; i < w / 10; i++) {
-    const tx = Math.floor(r() * w), ty = hz + 14 + Math.floor(r() * (h - hz - 16)), stone = '#2a2350', hi = '#3b3470';
-    if (r() < 0.7) { const tw = 4 + Math.floor(r() * 3), th = 4 + Math.floor(r() * 4); p.rect(tx, ty - th, tw, th, stone); p.ell(tx + tw / 2, ty - th, tw / 2, 2, stone); p.set(tx + 1, ty - th + 1, hi); }
-    else { p.vline(tx + 1, ty - 7, ty, stone); p.hline(tx, tx + 2, ty - 5, stone); }
-  }
-  for (let i = 0; i < w / 4; i++) p.set(Math.floor(r() * w), hz + 10 + Math.floor(r() * (h - hz - 10)), '#1f1a3c');
-  // Dead trees framing the edges
-  const tree = (bx, dir) => {
-    for (let y = hz - 6; y < h; y++) { p.set(bx, y, '#0b0917'); p.set(bx + 1, y, '#0b0917'); }
-    for (let k = 0; k < 4; k++) { const by = hz - 4 + k * 7, len = 6 + Math.floor(r() * 6); p.line(bx, by, bx + dir * len, by - 4 - Math.floor(r() * 4), '#0b0917'); }
   };
-  tree(3, 1); tree(w - 5, -1);
-  return p;
+  brick(0, 0, w, wallT); brick(0, h - wallB, w, h); brick(0, 0, wallS, h); brick(w - wallS, 0, w, h);
+  p.hline(wallS, w - wallS - 1, wallT - 2, '#766a80'); p.hline(wallS, w - wallS - 1, wallT - 1, '#5c5166'); p.hline(wallS, w - wallS - 1, wallT, '#0c090e');
+  for (let y = wallT; y < h - wallB; y++) { p.set(wallS - 1, y, '#6a5e74'); p.set(wallS - 2, y, '#5c5166'); p.set(w - wallS, y, '#2e2733'); }
+  p.hline(wallS - 2, w - wallS + 1, h - wallB, '#5c5166');
+  // Soft shadow the walls cast onto the floor
+  for (let y = wallT; y < h - wallB; y++) for (let x = wallS; x < w - wallS; x++) {
+    const d = Math.min(y - wallT, x - wallS, w - wallS - 1 - x) / 10;
+    if (d < 1 && dith(x, y) > d) p.set(x, y, '#120c08');
+  }
+  // Arched doorway in the top wall with a faint red glow
+  const dx = Math.round(w / 2), dw = Math.max(8, Math.round(w * 0.06)), dh = Math.round(wallT * 0.75);
+  p.rect(dx - dw - 2, wallT - dh - 2, dw * 2 + 4, dh + 2, '#5a4866');
+  p.ell(dx, wallT - dh, dw + 2, dw * 0.8 + 2, '#5a4866', (x, y) => y < wallT - dh);
+  p.rect(dx - dw, wallT - dh, dw * 2, dh, '#07050a');
+  p.ell(dx, wallT - dh, dw, dw * 0.8, '#07050a', (x, y) => y < wallT - dh);
+  for (let y = wallT; y < wallT + 8; y++) for (let x = dx - dw; x < dx + dw; x++) if (dith(x, y) < 0.5 - (y - wallT) / 16) p.set(x, y, '#3a1420');
+  // Props on the floor: skulls, bones, scattered cards, wax stains
+  const floorY = () => wallT + 6 + r() * (h - wallT - wallB - 12), floorX = () => wallS + 6 + r() * (w - wallS * 2 - 12);
+  const clearOfTable = (x, y) => Math.hypot((x - cx) / (rx + 8), (y - cy) / (ry + 8)) > 1;
+  const skull = (x, y) => { p.ell(x, y, 3, 2.6, P.bone2); p.rect(x - 1.5, y + 1.5, 3, 2, P.bone2); p.set(x - 1, y, '#120d17'); p.set(x + 1, y, '#120d17'); p.set(Math.round(x - 1), Math.round(y - 1), P.bone1); };
+  const bone = (x, y, a) => { const c = Math.cos(a) * 3, s = Math.sin(a) * 3; p.line(x - c, y - s, x + c, y + s, P.bone3); p.set(Math.round(x - c), Math.round(y - s - 1), P.bone3); p.set(Math.round(x + c), Math.round(y + s + 1), P.bone3); };
+  const card = (x, y) => { p.rect(x, y, 4, 6, P.bone2); p.set(x + 1, y + 2, r() < 0.5 ? P.red2 : P.ink3); };
+  for (let i = 0; i < 26; i++) {
+    const x = floorX(), y = floorY();
+    if (!clearOfTable(x, y)) continue;
+    const k = r();
+    if (k < 0.18) skull(x, y); else if (k < 0.55) bone(x, y, r() * Math.PI); else if (k < 0.75) card(Math.round(x), Math.round(y));
+    else p.circ(x, y, 1.5 + r() * 2, '#4a1f1f', (xx, yy) => dith(xx, yy) < 0.6);
+  }
+  // Cobwebs in the top corners
+  for (const [ox, dir] of [[wallS, 1], [w - wallS - 1, -1]]) for (let k = 0; k < 4; k++) {
+    p.line(ox, wallT + 1, ox + dir * (6 + k * 3), wallT + 1 + (12 - k * 3), '#6a6078');
+    p.line(ox + dir * (2 + k * 2), wallT + 1, ox, wallT + 3 + k * 2, '#524868');
+  }
+  // Candles in the four inner corners, each with a warm pool of light
+  const candles = [[wallS + 7, wallT + 7], [w - wallS - 8, wallT + 7], [wallS + 7, h - wallB - 8], [w - wallS - 8, h - wallB - 8]].map(([x, y]) => ({ x, y }));
+  for (const c of candles) {
+    for (let y = c.y - 14; y <= c.y + 14; y++) for (let x = c.x - 14; x <= c.x + 14; x++) {
+      const d = Math.hypot(x - c.x, y - c.y) / 14;
+      if (d < 1 && x >= wallS && x < w - wallS && y > wallT && y < h - wallB && dith(x, y) < (1 - d) * 0.35) p.set(x, y, '#4a3522');
+    }
+    p.rect(c.x - 1, c.y - 1, 3, 4, P.bone1); p.set(c.x, c.y - 1, P.bone0); p.set(c.x + 2, c.y + 3, P.bone2);
+  }
+  // Vignette
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const d = Math.hypot((x - w / 2) / (w / 2), (y - h / 2) / (h / 2));
+    if (d > 0.75 && dith(x, y) < (d - 0.75) * 1.4) p.set(x, y, '#07050a');
+  }
+  return { pix: p, candles, table: { cx, cy, rx, ry } };
 }
 
 export function crownIcon() {

@@ -11,6 +11,9 @@ export const ROUNDS = [
   { opps: ['boss'], theme: 2, key: -2, skill: 2, rule: 'choose' },
 ];
 
+// While testing, every table on the map is playable in any order.
+export const ROUND_LOCKS = false;
+
 export const RULES = {
   choose: {
     title: 'PICK YOUR TABLE', color: P.gold1,

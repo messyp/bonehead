@@ -38,7 +38,7 @@ dist/
   js/core/pixel.js      pixel painter used to generate every sprite
   js/art/cards.js       card faces, skeleton court cards, magic cards, back, foil
   js/art/sprites.js     opponents (animated), title mascot, icons, dialogue
-  js/art/map.js         the Midnight Circuit backdrop for the progression map
+  js/art/map.js         the top-down crypt room for the progression map
   js/audio/sfx.js       synthesized sound effects and mix bus
   js/audio/music.js     generative lo-fi soundtrack with intensity layers
   js/game/game.js       table layout, card physics, turn flow, scoring, AI
@@ -58,7 +58,7 @@ A run is four tables, defined in `js/game/rounds.js`:
 3. **The Twins** (Tibia and Fibula), two opponents at once. Go out first to win. If a twin goes out, beat the other. The last one holding cards is the Bonehead.
 4. The Pit Boss, Pick Your Table again.
 
-Between rounds, the **Midnight Circuit** map shows every table on a path. Beaten opponents are stamped BONEHEAD, the next one flies a flag, later ones are locked, and your skull token hops along the path. Hover a table for its venue and any rule change. A rule-change card then explains the twist before the deal.
+Between rounds, the **Midnight Circuit** map shows a crypt from above (in the spirit of The Binding of Isaac's rooms), with the four opponents as cards on a candle-lit card table, joined by a chalk path. Beaten tables are stamped BONEHEAD. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal.
 
 ## Bonus goals and trophies
 

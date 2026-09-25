@@ -218,7 +218,7 @@ export const Game = {
   },
   save() {
     if (!this.started || this.moving || !this.g) return;
-    store.set('bh2-save', { g: this.g, score: this.score, tricks: this.tricks, shields: this.shields, rewardChoices: this.rewardChoices, pending: this.pending, elapsed: this.elapsed, slot: [...this.slot], map: this.pending === 'map' ? { next: this.map.next, items: this.map.items } : null });
+    store.set('bh2-save', { g: this.g, score: this.score, tricks: this.tricks, shields: this.shields, rewardChoices: this.rewardChoices, pending: this.pending, elapsed: this.elapsed, slot: [...this.slot], map: this.pending === 'map' ? { next: this.map.sel, items: this.map.items } : null, cleared: this.cleared || [] });
   },
   hasSave() { const s = store.get('bh2-save', null); return !!(s?.g && (!s.g.ended || ['upgrade', 'result', 'map'].includes(s.pending))); },
 
@@ -239,6 +239,7 @@ export const Game = {
     this.score = 0; this.shownScore = 0; this.elapsed = 0; this.tricks = []; this.rewardChoices = []; this.shields = 0; this.pending = null;
     this.selected = []; this.swapMode = false; this.drag = null;
     this.stats = { maxBurn: 0 };
+    this.cleared = [];
     this.g = null; this.started = true;
     if (viaMap) this.showMap(round, 0, {});
     else this.beginRound(round, {});
@@ -255,17 +256,20 @@ export const Game = {
     this.token++;
     Clock.clear(); FX.clear(); this.views.clear();
     this.modal = null; Audio.muffle(false);
-    this.map = { t: 0, next, from, items: items || {} };
+    this.map = { t: 0, next, from, sel: next, items: items || {} };
     this.scene = 'map';
     if (this.g) { this.pending = 'map'; this.save(); }
     Post.theme(THEMES[roundOf(next).theme]);
     Music.set(0, roundOf(next).key);
   },
+  nextUncleared() { const c = this.cleared || []; return ROUNDS.findIndex((_, i) => !c.includes(i + 1)) + 1 || ROUNDS.length; },
+  allCleared() { return (this.cleared || []).length >= ROUNDS.length; },
+
   startMapRound() {
     const mp = this.map;
     if (!mp || this.trans) return;
     Audio.play('coin');
-    this.transition(() => { this.pending = null; this.beginRound(mp.next, mp.items); });
+    this.transition(() => { this.pending = null; this.beginRound(mp.sel, mp.items); });
   },
 
   resetPanel() { Object.assign(this.panel, { chips: 0, mult: 1, label: '', total: 0, showTotal: false, flame: 0, bonus: [] }); },
@@ -273,7 +277,8 @@ export const Game = {
   // A fresh deal for a round, honouring its seats and rule changes.
   dealRound(n, items = {}) {
     const rd = roundOf(n), g = deal(n, this.config.extraMagic, this.config.minHand, { seats: seatsFor(n), choose: rd.rule === 'choose' });
-    g.finalRound = ROUNDS.length;
+    const left = ROUNDS.map((_, i) => i + 1).filter(r => !(this.cleared || []).includes(r));
+    g.finalRound = left.length === 1 && left[0] === n ? n : -1;
     g.goals = pickGoals(n);
     g.opps = [...rd.opps];
     g.items = items;
@@ -698,6 +703,7 @@ export const Game = {
 
   finish() {
     const g = this.g, win = g.winner === 'player';
+    if (win) { this.cleared ??= []; if (!this.cleared.includes(g.round)) this.cleared.push(g.round); }
     this.busy = true;
     this.payGoals(); this.checkTrophies();
     this.best = Math.max(this.best, this.score); store.set('ll-best', this.best);
@@ -732,7 +738,7 @@ export const Game = {
     if (!UPGRADES[id] || this.tricks.includes(id) || this.pending !== 'upgrade' || !this.rewardChoices.includes(id)) return;
     const items = { ...(this.g.items || {}) };
     if (['reshuffle', 'swap'].includes(id)) items[id] = (items[id] || 0) + 1; else this.tricks.push(id);
-    this.showMap(this.g.round + 1, this.g.round, items);
+    this.showMap(this.nextUncleared(), this.g.round, items);
   },
 
   continueRun() {
@@ -742,6 +748,7 @@ export const Game = {
     FX.clear(); this.views.clear(); this.hidden.clear(); this.revealing.clear();
     Object.assign(this, { g: s.g, score: s.score, shownScore: s.score, tricks: s.tricks || [], shields: s.shields || 0, rewardChoices: s.rewardChoices || [], pending: s.pending, elapsed: s.elapsed || 0 });
     this.slot = new Map(s.slot || []);
+    this.cleared = s.cleared || ROUNDS.map((_, i) => i + 1).filter(r => r < (s.g.round || 1) || (r === s.g.round && s.g.ended && s.g.winner === 'player'));
     this.started = true; this.selected = []; this.busy = false; this.moving = false; this.scene = 'table'; this.modal = null;
     if (this.pending === 'map' && s.map) { this.showMap(s.map.next, s.map.next - 1, s.map.items); this.map.t = 2; return; }
     this.resetPanel();
@@ -990,7 +997,9 @@ export const Game = {
       if (k.ctrl && k.shift) { this.devKey(k.code); continue; }
       if (this.cine && (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape')) { this.cine.skip = true; continue; }
       if (this.modal) { Screens.key?.(this, k); continue; }
-      if (this.scene === 'map') { if (k.key === 'Enter' || k.key === ' ') this.startMapRound(); if (k.key === 'Escape') this.transition(() => { this.scene = 'title'; }); continue; }
+      if (this.scene === 'map') {
+        if ((k.key === 'ArrowRight' || k.key === 'ArrowLeft') && this.map) { this.map.sel = clamp(this.map.sel + (k.key === 'ArrowRight' ? 1 : -1), 1, ROUNDS.length); Audio.play('select', this.map.sel * 2); }
+        if (k.key === 'Enter' || k.key === ' ') this.startMapRound(); if (k.key === 'Escape') this.transition(() => { this.scene = 'title'; }); continue; }
       if (this.scene !== 'table') continue;
       if (k.key === 'Escape') { if (this.selected.length) { this.selected = []; Audio.play('deselect'); } else this.openModal('pause'); continue; }
       if (!this.myTurn()) continue;
@@ -1364,7 +1373,7 @@ export const Game = {
     R.text('ROUND', x + 6, y + 5, { color: P.ink6 });
     R.text(`${g.round}`, x + 6, y + 15, { size: 2, color: opp.color });
     R.text(`/${nR}`, x + 6 + R.measure(`${g.round}`, { size: 2 }) + 2, y + 22, { color: P.ink6 });
-    for (let i = 0; i < nR; i++) { const cx = x + w - 6 - nR * 11 + i * 11; R.box(cx, y + 6, 9, 9, P.ink0, 2); R.box(cx + 1, y + 7, 7, 7, i < g.round - 1 ? P.grn2 : i === g.round - 1 ? opp.color : P.ink3, 1); }
+    for (let i = 0; i < nR; i++) { const cx = x + w - 6 - nR * 11 + i * 11; R.box(cx, y + 6, 9, 9, P.ink0, 2); R.box(cx + 1, y + 7, 7, 7, i === g.round - 1 ? opp.color : (this.cleared || []).includes(i + 1) ? P.grn2 : P.ink3, 1); }
     R.text(venue, x + w - 6, y + 20, { font: undefined, color: P.bone1, align: 'right', ...(R.measure(venue) > w - 40 ? TINY_OPTS : {}) });
     R.text(fmtTime(this.elapsed), x + w - 6, y + 29, { color: P.ink6, align: 'right', outline: null });
     y += 44;
