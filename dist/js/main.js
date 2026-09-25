@@ -10,8 +10,12 @@ import { Music } from './audio/music.js';
 import { Game } from './game/game.js';
 
 const view = document.getElementById('view');
-R.init();
-Post.init(view);
+// Firefox always uses the software canvas; Safe Rendering also drops WebGL effects.
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem('bh2-settings')) || {}; } catch { /* storage may be unavailable */ }
+const firefox = /firefox/i.test(navigator.userAgent);
+R.init(firefox || !!saved.safe);
+Post.init(view, !saved.safe);
 Input.init(view);
 Cards.init();
 Sprites.init(() => skullIcon());
@@ -62,4 +66,4 @@ function frame(now) {
 requestAnimationFrame(t => { last = t; document.body.classList.add('ready'); requestAnimationFrame(frame); });
 
 // Handy for debugging from the console.
-window.__bonehead = { Game, R, Post, Audio, Music, FX };
+window.__bonehead = { Game, R, Post, Audio, Music, FX, firefox };

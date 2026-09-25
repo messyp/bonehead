@@ -1,7 +1,8 @@
-import { deal, rule, legal, valid, source, options, play, pickup, SUITS } from '../../engine.js';
+import { deal, rule, legal, source, options, play, pickup, SUITS } from '../../engine.js';
 import { scorePlay, comboReward, cardPoints, roundGoals } from '../../scoring.js';
 import { claimGoals, trophies, earnedTrophies, exchangeHand } from '../../progression.js';
 import { guidance } from '../../guidance.js';
+import { allChains, containing, exactly, bestChain, completion } from '../../runs.js';
 import { R } from '../core/render.js';
 import { Input } from '../core/input.js';
 import { FX, Dissolve, Sliced, Slash, Flames, FIRE, CONFETTI } from '../core/fx.js';
@@ -74,7 +75,7 @@ export const Game = {
   started: false, busy: false, moving: false, token: 0, hidden: new Set(), revealing: new Set(), slot: new Map(),
   config: { minHand: 3, aiDelay: 1.05, timeBonus: 8, extraMagic: 0, aiSkill: 0 },
   settings: { music: 0.55, sfx: 0.8, crt: true, shake: true, fast: false, reduced: false },
-  unlocked: {}, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
+  unlocked: {}, dev: { mascot: 'classic', logo: 'classic' }, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
   panel: { chips: 0, mult: 1, label: '', total: 0, showTotal: false, flame: 0, pop: 0, mpop: 0, bonus: [] },
   speech: null, cine: null, portraitState: 'idle', blinkT: 2, tellMsg: '', tellT: 0, tellBad: false,
   turnStart: 0, submittedAt: 0, ruleKey: '', rulePop: 0, turnPulse: 0, lastTurn: '', housePulse: 0, stats: {},
@@ -83,6 +84,7 @@ export const Game = {
     this.settings = { ...this.settings, ...store.get('bh2-settings', {}) };
     this.best = store.get('ll-best', 0);
     this.unlocked = store.get('bh-trophies', {});
+    this.dev = { ...this.dev, ...store.get('bh2-dev', {}) };
     this.applySettings();
     Post.theme(THEMES[3], true);
     this.computeLayout();
@@ -164,8 +166,21 @@ export const Game = {
   canPlay(c) {
     const g = this.g, src = source(g.player);
     if (src === 'blind') return true;
-    return valid([...this.selCards(), c], g.pile);
+    return containing(this.runIndex(), [...this.selected, c.id]).length > 0;
   },
+  // All legal plays from the active cards, cached until the hand or pile changes.
+  runIndex() {
+    const g = this.g, src = source(g.player), cards = g.player[src];
+    const key = src + '|' + cards.map(c => c.id).join(',') + '|' + g.pile.map(c => c.id).join(',');
+    if (this.runKeyIdx !== key) { this.runKeyIdx = key; this.chains = src === 'blind' ? [] : allChains(cards, g.pile); }
+    return this.chains;
+  },
+  // A selection is ready when it is exactly one legal play (blind flips: one card).
+  selectionReady() {
+    if (!this.selected.length) return false;
+    return source(this.g.player) === 'blind' ? this.selected.length === 1 : !!exactly(this.runIndex(), this.selected);
+  },
+  missingCards() { return this.selected.length && !this.selectionReady() ? completion(this.runIndex(), this.selected) || [] : []; },
   tell(msg, bad = false) { this.tellMsg = msg; this.tellT = 2.6; this.tellBad = bad; this.announce(msg); },
   announce(msg) { const el = document.getElementById('live'); if (el && el.textContent !== msg) el.textContent = msg; },
 
@@ -297,6 +312,7 @@ export const Game = {
     if (!this.myTurn() || this.drag?.active) return;
     if (this.mustPickUp()) { this.selected = []; this.animatePickup('player'); return; }
     if (!this.selected.length) { this.tell('Pick a card first.', true); Audio.play('bad'); return; }
+    if (!this.selectionReady()) { this.tell(`Add ${this.missingCards().map(cardName).join(' ')} to finish the run.`, true); Audio.play('bad'); return; }
     this.submittedAt = Clock.t;
     this.noteRun(this.selected.length);
     this.animatePlay('player', [...this.selected]);
@@ -770,21 +786,40 @@ export const Game = {
 
   overPile(x, y) { const L = this.L; return Math.abs(x - L.pile.x) < CW * 0.5 + 22 && Math.abs(y - L.pile.y) < CH * 0.5 + 22; },
 
+  // Selection is a set: cards can be picked in any order and are arranged into a
+  // playable run. this.selected always holds that play order.
   toggleSelect(id) {
     const g = this.g, src = source(g.player), c = g.player[src].find(x => x.id === id);
     if (!c) return;
     if (this.swapMode) { this.swapMode = false; this.useTrick('swap', id); return; }
-    if (this.selected.includes(id)) { this.selected = this.selected.slice(0, this.selected.indexOf(id)); Audio.play('deselect'); return; }
-    const next = src === 'blind' ? [id] : [...this.selected, id];
-    if (src !== 'blind' && !valid(next.map(x => g.player[src].find(k => k.id === x)), g.pile)) {
-      this.tell(this.selected.length ? 'Link equal ranks, or the next card of the same suit.' : 'Too low to beat the pile. Try a higher card, or a magic card.', true);
+    const chains = this.runIndex(), arrange = ids => exactly(chains, ids)?.cards.map(x => x.id) || ids;
+    if (this.selected.includes(id)) {
+      const rest = this.selected.filter(x => x !== id);
+      this.selected = src === 'blind' || !rest.length || containing(chains, rest).length ? arrange(rest) : this.selected.slice(0, this.selected.indexOf(id));
+      Audio.play('deselect');
+      return;
+    }
+    const ok = src === 'blind' || containing(chains, [...this.selected, id]).length > 0;
+    if (!ok) {
+      this.tell(this.selected.length ? 'That card can\'t join this run. Match the rank, or continue the suit.' : 'Too low to beat the pile. Try a higher card, or a magic card.', true);
       Audio.play('bad');
       const v = this.views.get(id); if (v) v.wig = 1;
       return;
     }
+    const next = src === 'blind' ? [id] : arrange([...this.selected, id]);
     this.selected = next;
     Audio.play('select', next.length * 2);
     const v = this.views.get(id); if (v) { v.flash = 0.5; v.s = 1.14; }
+  },
+
+  autoRun(id) {
+    const g = this.g, src = source(g.player);
+    if (src === 'blind') return;
+    const run = bestChain(this.runIndex(), id)?.cards;
+    if (!run) { this.toggleSelect(id); return; }
+    this.selected = run.map(c => c.id);
+    run.forEach((c, i) => { const v = this.views.get(c.id); if (v) { v.flash = 0.6; v.s = 1.14; } Audio.play('select', i * 2 + 2); });
+    if (run.length > 1) FX.pop(`${run.length}-CARD RUN`, this.views.get(id)?.x ?? this.L.hand.cx, (this.views.get(id)?.y ?? this.L.handY) - CH * 0.8, { color: P.white, box: P.teal3 });
   },
 
   handleInput(dt) {
@@ -814,12 +849,19 @@ export const Game = {
     if (d && Input.released) {
       Input.released = false; Input.active = null;
       this.drag = null;
-      if (!d.active) { if (this.myTurn()) this.toggleSelect(d.id); }
+      if (!d.active) {
+        // Double-tap builds the best run through that card; a single tap toggles it.
+        const now = performance.now(), dbl = this.lastTap && this.lastTap.id === d.id && now - this.lastTap.t < 340;
+        if (this.myTurn()) { if (dbl) this.autoRun(d.id); else this.toggleSelect(d.id); }
+        this.lastTap = dbl ? null : { id: d.id, t: now };
+      }
       else if (this.myTurn()) {
         const vel = Input.vel(), flick = vel.y < -380 && Math.abs(vel.x) < Math.abs(vel.y) * 1.2 && Input.y < d.y0 - 12;
         if (this.overPile(Input.x, Input.y) || flick) {
           const src = source(this.g.player), cards = d.ids.map(id => this.g.player[src].find(c => c.id === id));
-          const ok = cards.every(Boolean) && (src === 'blind' ? cards.length === 1 : valid(cards, this.g.pile));
+          const ord = src === 'blind' ? null : exactly(this.runIndex(), d.ids);
+          if (ord) d.ids = ord.cards.map(c => c.id);
+          const ok = cards.every(Boolean) && (src === 'blind' ? cards.length === 1 : !!ord);
           if (ok) { this.selected = d.ids; if (flick) Audio.play('swoosh'); this.submittedAt = Clock.t; this.noteRun(d.ids.length); this.animatePlay('player', d.ids); }
           else { this.tell('That card can\'t beat the pile.', true); Audio.play('bad'); d.ids.forEach(id => { const v = this.views.get(id); if (v) v.wig = 1; }); }
         } else Audio.play('deselect');
@@ -844,7 +886,13 @@ export const Game = {
     }
   },
 
+  // Dev-mode art trials. Players only ever see 'classic' unless they open the dev panel.
+  setDev(key, value) { this.dev[key] = value; store.set('bh2-dev', this.dev); Audio.play('ui'); },
+  mascotSpr(state = 'idle') { const m = Sprites.mascots[this.dev.mascot] || Sprites.mascots.classic; return m[state]; },
+  logoSkull() { return Sprites.logoSkulls[this.dev.logo] || Sprites.logoSkulls.classic; },
+
   devKey(code) {
+    if (code === 'KeyD') { if (this.modal?.kind === 'dev') this.closeModal(); else this.openModal('dev'); return; }
     if (!this.started || this.moving || !this.g) return;
     const g = this.g, c = (r, s, id) => ({ r, s, id });
     if (code === 'KeyB') { g.ended = false; g.turn = 'player'; g.pile = [c(7, 0, 't7a'), c(7, 1, 't7b'), c(7, 2, 't7c')]; g.player.hand = [c(7, 3, 't7d'), c(10, 1, 't10'), c(8, 0, 't8')]; }
@@ -887,7 +935,7 @@ export const Game = {
       if (!p.scoring && !this.moving) {
         const cards = this.selCards();
         if (cards.length && source(this.g.player) === 'blind') { p.chips = '?'; p.mult = 1; p.label = 'BLIND FLIP'; p.showTotal = false; }
-        else if (cards.length) { const cr = comboReward(cards, this.tricks.includes('chain')); p.chips = cards.reduce((a, c) => a + cardPoints(c), 0); p.mult = cr.mult; p.label = cr.reason; p.showTotal = false; }
+        else if (cards.length) { const cr = comboReward(cards, this.tricks.includes('chain')); p.chips = cards.reduce((a, c) => a + cardPoints(c), 0); p.mult = cr.mult; p.label = this.selectionReady() ? cr.reason : 'RUN NOT FINISHED'; p.showTotal = false; }
         else if (!p.showTotal) { p.chips = 0; p.mult = 1; p.label = ''; }
       }
       // Rule badge pop when the rule changes
@@ -975,7 +1023,7 @@ export const Game = {
     if (L.land) R.panel(L.play.x, L.play.y, L.play.w, L.play.h, { fill: P.ink1, rim: P.ink0, hi: null, alpha: 0.28, shadow: false });
     // Pile slot
     const px = L.pile.x, py = L.pile.y, pw = CW + 8, ph = CH + 8;
-    const dragging = this.drag?.active, ok = dragging && (() => { const src = source(g.player), cards = this.drag.ids.map(id => g.player[src].find(c => c.id === id)); return cards.every(Boolean) && (src === 'blind' || valid(cards, g.pile)); })();
+    const dragging = this.drag?.active, ok = dragging && (() => { const src = source(g.player), cards = this.drag.ids.map(id => g.player[src].find(c => c.id === id)); return cards.every(Boolean) && (src === 'blind' ? cards.length === 1 : !!exactly(this.runIndex(), this.drag.ids)); })();
     const hot = dragging && this.overPile(Input.x, Input.y);
     const rimCol = dragging ? (ok ? (hot ? P.gold1 : P.grn1) : P.red1) : P.ink4;
     const pulse = dragging ? 0.5 + Math.sin(R.t * 10) * 0.5 : 0;
@@ -1246,7 +1294,7 @@ export const Game = {
   drawControls() {
     const L = this.L, g = this.g, must = this.mustPickUp(), src = source(g.player), myTurn = this.myTurn();
     const label = must ? 'PICK UP' : src === 'blind' && !g.deck.length ? 'FLIP IT' : 'PLAY';
-    const enabled = myTurn && (must || this.selected.length > 0);
+    const enabled = myTurn && (must || this.selectionReady());
     const bw = L.btn.w, bh = L.land ? 26 : 24;
     if (UI.button('play', L.btn.x, L.btn.y, bw, bh, label, { color: must ? 'red' : 'gold', enabled, pulse: enabled && (must || this.selected.length > 0), size: L.land ? 2 : 2, sound: 'ui' })) this.playerPlay();
     if (L.land) {
@@ -1269,6 +1317,7 @@ export const Game = {
     if (!msg && this.started && !g.ended && !this.cine) {
       if (this.swapMode) msg = 'SWITCHEROO: pick a hand card to trade.';
       else if (this.mustPickUp()) { msg = 'Nothing beats the pile. Pick it up.'; bad = true; }
+      else if (this.myTurn() && this.selected.length && !this.selectionReady()) msg = `Add ${this.missingCards().map(cardName).join(' ')} to finish the run.`;
       else if (this.myTurn()) msg = guidance(g, this.selected);
     }
     this.drawRunTip(!!msg && this.tellT > 0);
@@ -1287,7 +1336,7 @@ export const Game = {
     else if ((this.runsPlayed ??= store.get('bh-runs-played', 0)) < 3) {
       const key = g.moves + ':' + g.player.hand.length + ':' + g.pile.length;
       if (this.runKey !== key) { this.runKey = key; this.runAvail = options(g, 'player').some(o => o.length > 1); }
-      if (this.runAvail) tip = '^tTIP:^0 play several cards at once. Pairs, or a climb like 4♥ 5♥ 6♥.';
+      if (this.runAvail) tip = '^tTIP:^0 double-tap a card to build a run. Pairs, or climbs like 4♥ 5♥ 6♥.';
     }
     if (!tip) return;
     const y = L.land ? L.guide.y - 11 : L.guide.y + 10, big = R.measure(tip) > (L.land ? L.hand.w + 60 : R.vw - 12);
@@ -1299,7 +1348,7 @@ export const Game = {
     let cx = x;
     for (let i = 0; i < letters.length; i++) {
       const ch = letters[i], dy = Math.sin(R.t * 3 + i * 0.6) * 0.8 * size;
-      if (ch === 'O') { R.spr(Sprites.skull, cx + 4 * size, y + 3.5 * size + dy, { sc: size * 0.72 }); cx += 9 * size; continue; }
+      if (ch === 'O') { const sk = this.logoSkull(); R.spr(sk, cx + 4 * size, y + 3.5 * size + dy, { sc: size * 7.9 / sk.h }); cx += 9 * size; continue; }
       const col = i < 4 ? P.bone0 : P.gold1;
       R.text(ch, cx, y + dy, { size, color: col });
       cx += (R.measure(ch) + 1) * size;

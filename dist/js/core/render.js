@@ -5,15 +5,20 @@ import { P } from '../art/palette.js';
 // Everything is laid out in virtual pixels. R.S converts to device pixels.
 export const R = {
   scene: null, ctx: null, W: 1, H: 1, S: 1, vw: 480, vh: 300, k: 1, dpr: 1, land: true, t: 0,
-  trauma: 0, shakeOn: true, shakeX: 0, shakeY: 0, shakeR: 0, punch: 0, quality: 1,
+  trauma: 0, shakeOn: true, shakeX: 0, shakeY: 0, shakeR: 0, punch: 0, quality: 1, soft: false, maxPixels: 9e6,
 
-  init() {
+  // soft: a CPU-backed canvas. Firefox's GPU canvas can drop images drawn from
+  // many small source canvases (our glyphs and sprites), so it renders in software.
+  init(soft = false) {
+    this.soft = soft;
+    this.maxPixels = soft ? 3.2e6 : 9e6;
     this.scene = document.createElement('canvas');
-    this.ctx = this.scene.getContext('2d', { alpha: true });
+    this.ctx = this.scene.getContext('2d', { alpha: true, willReadFrequently: soft });
   },
 
   resize(cssW, cssH, dpr) {
-    this.dpr = dpr * this.quality;
+    const budget = Math.min(1, Math.sqrt(this.maxPixels / Math.max(1, cssW * cssH * dpr * dpr)));
+    this.dpr = dpr * this.quality * budget;
     const W = Math.max(1, Math.round(cssW * this.dpr)), H = Math.max(1, Math.round(cssH * this.dpr));
     this.W = W; this.H = H;
     this.land = W / H >= 0.9;

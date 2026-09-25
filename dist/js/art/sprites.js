@@ -174,7 +174,7 @@ export function portrait(i, state = 'idle', frame = 0) {
   return s;
 }
 
-// ---------- Title mascot: a grinning skull chomping an Ace of Spades ----------
+// ---------- Title mascots (64x60). 'classic' ships; the others are dev-mode trials. ----------
 export function mascot(wink = false, chomp = 0) {
   const p = new Pix(64, 60);
   // Cranium
@@ -205,6 +205,77 @@ export function mascot(wink = false, chomp = 0) {
   p.outline(P.ink2);
   return p;
 }
+
+// Soft two-tone shading on a round skull: a lower-right crescent in two steps.
+function shadeSkull(p, cx, cy, rx, ry) {
+  p.each((x, y, c) => (c === P.bone0 && Math.hypot((x - cx + rx * 0.25) / rx, (y - cy + ry * 0.2) / ry) > 0.92 ? P.bone1 : undefined));
+  p.each((x, y, c) => (c === P.bone1 && Math.hypot((x - cx + rx * 0.33) / rx, (y - cy + ry * 0.3) / ry) > 1.08 ? P.bone2 : undefined));
+}
+
+// Round, symmetric cartoon skull: big friendly eyes, wide grin, tongue out on the wink.
+export function mascotGrin(wink = false, chomp = 0) {
+  const p = new Pix(64, 60), cx = 32, bone = P.bone0, dark = P.ink0;
+  p.ell(cx, 25, 24, 22, bone);
+  p.ell(cx, 40, 17, 12, bone);
+  shadeSkull(p, cx, 25, 24, 22);
+  p.ell(21, 11, 5, 2.6, P.white);
+  const eye = (ex, closed) => {
+    if (closed) { for (let i = -5; i <= 5; i++) { const y = 27 - Math.round(Math.sqrt(25 - i * i) * 0.6); p.set(ex + i, y, dark); p.set(ex + i, y + 1, dark); } return; }
+    p.ell(ex, 26, 7, 7.5, dark); p.rect(ex - 4, 21, 4, 4, P.white); p.rect(ex + 2, 29, 2, 2, P.teal1);
+  };
+  eye(21, false); eye(43, wink);
+  p.map(['##.##', '#####', '.###.', '..#..'], cx - 2, 33, { '#': dark });
+  for (let x = cx - 13; x <= cx + 13; x++) {
+    const t = (x - cx) / 13, y = Math.round(40 + (1 - t * t) * 3), h = 3 + chomp;
+    p.vline(x, y, y + h, dark);
+    if (Math.abs(x - cx) < 13 && (x - cx + 13) % 3 !== 0) { p.set(x, y + 1, bone); p.set(x, y + 2, P.bone1); }
+  }
+  p.rect(cx + 4, 45, 2, 2, P.gold1);
+  if (wink) { p.ell(cx + 6, 49 + chomp, 3.5, 4, P.red1); p.vline(cx + 6, 47 + chomp, 51 + chomp, P.red2); p.set(cx + 5, 48 + chomp, P.red0); }
+  p.line(44, 6, 47, 11, P.bone2); p.line(47, 11, 45, 15, P.bone2); p.line(47, 11, 50, 13, P.bone2);
+  p.outline(dark); p.outline(P.ink2);
+  return p;
+}
+
+// Chibi skull: oversized cranium, tiny jaw, huge sparkly eyes, a plaster on the head.
+export function mascotChibi(wink = false, chomp = 0) {
+  const p = new Pix(64, 60), cx = 32, bone = P.bone0, dark = P.ink0;
+  p.ell(cx, 25, 26, 22, bone);
+  p.ell(cx, 44, 13, 9, bone);
+  shadeSkull(p, cx, 25, 26, 22);
+  p.ell(19, 10, 6, 2.6, P.white);
+  const eye = (ex, closed) => {
+    if (closed) { p.line(ex - 6, 29, ex, 25, dark); p.line(ex, 25, ex + 6, 29, dark); p.line(ex - 6, 30, ex, 26, dark); p.line(ex, 26, ex + 6, 30, dark); return; }
+    p.ell(ex, 28, 8, 9, dark);
+    p.ell(ex + 1, 31, 4.5, 4.5, P.teal4, (x, y) => y > 29);
+    p.rect(ex - 5, 22, 4, 4, P.white); p.rect(ex + 3, 32, 2, 2, P.white); p.set(ex - 1, 27, P.teal0);
+  };
+  eye(19, false); eye(45, wink);
+  p.rect(9, 38, 5, 2, P.red0); p.rect(50, 38, 5, 2, P.red0);
+  p.rect(cx - 1, 38, 3, 2, dark);
+  const my = 44;
+  p.hline(cx - 7, cx + 7, my, dark);
+  for (let x = cx - 7; x <= cx + 7; x++) { p.set(x, my + 1, (x - cx + 7) % 3 ? bone : dark); p.set(x, my + 2, (x - cx + 7) % 3 ? P.bone1 : dark); }
+  p.rect(cx - 7, my + 3, 15, 1 + chomp, dark);
+  const tape = '#f6cfa4';
+  p.rect(41, 8, 12, 4, tape); p.rect(45, 4, 4, 12, tape); p.set(43, 9, P.bone3); p.set(50, 10, P.bone3); p.set(46, 6, P.bone3); p.set(47, 13, P.bone3);
+  p.outline(dark); p.outline(P.ink2);
+  return p;
+}
+
+// A friendlier O for the logo, matching the cartoon mascots.
+export function cuteSkull() {
+  const p = new Pix(13, 13), bone = P.bone0, dark = P.ink0;
+  p.ell(6.5, 5.5, 6.2, 5.5, bone); p.ell(6.5, 9.5, 4.5, 3, bone);
+  p.rect(2, 4, 4, 4, dark); p.rect(7, 4, 4, 4, dark);
+  p.set(2, 4, P.white); p.set(3, 4, P.white); p.set(7, 4, P.white); p.set(8, 4, P.white);
+  p.set(6, 8, dark);
+  p.hline(4, 8, 11, dark); p.set(4, 10, dark); p.set(6, 10, dark); p.set(8, 10, dark); p.set(7, 10, P.gold1);
+  p.outline(dark);
+  return p;
+}
+
+const MASCOTS = { classic: mascot, grin: mascotGrin, chibi: mascotChibi };
 
 // ---------- Icons ----------
 export function flameIcon(f = 0) {
@@ -274,14 +345,15 @@ export function trickIcon(id) {
 }
 
 export const Sprites = {
-  mascot: null, mascotWink: null, mascotChomp: null, flame: [], trophy: null, trophyDim: null, lock: null, check: null, uncheck: null, tricks: {}, skull: null,
+  mascots: {}, logoSkulls: {}, flame: [], trophy: null, trophyDim: null, lock: null, check: null, uncheck: null, tricks: {}, skull: null,
   init(skullIconFn) {
-    this.mascot = mascot(false, 0).spr(); this.mascotWink = mascot(true, 0).spr(); this.mascotChomp = mascot(false, 2).spr();
+    for (const [k, f] of Object.entries(MASCOTS)) this.mascots[k] = { idle: f(false, 0).spr(), wink: f(true, 0).spr(), chomp: f(false, 2).spr() };
     this.flame = [0, 1, 2].map(f => flameIcon(f).spr());
     this.trophy = trophyIcon().spr(); this.trophyDim = trophyIcon(P.ink4).spr();
     this.lock = lockIcon().spr(); this.check = checkIcon(true).spr(); this.uncheck = checkIcon(false).spr();
     for (const id of ['reshuffle', 'swap', 'wild', 'chain', 'insurance', 'embers']) this.tricks[id] = trickIcon(id).spr();
     const sk = skullIconFn(); sk.outline(P.ink0); this.skull = sk.spr();
+    this.logoSkulls = { classic: this.skull, cute: cuteSkull().spr() };
     for (let i = 0; i < 3; i++) for (const st of ['idle', 'blink', 'talk']) portrait(i, st, 0);
   },
 };

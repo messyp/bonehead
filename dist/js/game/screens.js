@@ -17,7 +17,7 @@ import { UPGRADES, fmtTime, store } from './game.js';
 const T = { font: TINY };
 const card = (r, s) => Cards.face({ r, s }, Math.floor(R.t * 8));
 
-function bigLogo(cx, cy, size) {
+function bigLogo(cx, cy, size, skull = Sprites.skull) {
   const letters = 'BONEHEAD', widths = [...letters].map(ch => (ch === 'O' ? 9 : R.measure(ch) + 1) * size);
   const total = widths.reduce((a, b) => a + b, 0);
   let x = cx - total / 2;
@@ -29,8 +29,9 @@ function bigLogo(cx, cy, size) {
     ctx.translate(x + widths[i] / 2, cy + dy); ctx.rotate(rot);
     if (ch === 'O') {
       const chomp = Math.sin(R.t * 4) > 0.7;
-      for (let k = 3; k >= 1; k--) R.spr(Sprites.skull, 0, 3.5 * size + k * size * 0.6, { sc: size * 0.78, alpha: 0.35 });
-      R.spr(Sprites.skull, 0, 3.5 * size + (chomp ? -size * 0.3 : 0), { sc: size * 0.78 });
+      const sc = size * 8.6 / skull.h;
+      for (let k = 3; k >= 1; k--) R.spr(skull, 0, 3.5 * size + k * size * 0.6, { sc, alpha: 0.35 });
+      R.spr(skull, 0, 3.5 * size + (chomp ? -size * 0.3 : 0), { sc });
     } else {
       for (let k = 3; k >= 1; k--) R.text(ch, 0, k * size * 0.6, { size, color: k === 1 ? P.red3 : P.red4, align: 'center', outline: P.ink0, shadow: null });
       R.text(ch, 0, 0, { size, color: col, align: 'center' });
@@ -39,6 +40,8 @@ function bigLogo(cx, cy, size) {
     x += widths[i];
   }
 }
+
+let devTaps = 0, devTapT = 0;
 
 const floaters = Array.from({ length: 14 }, (_, i) => ({ x: Math.random(), y: Math.random(), sp: 0.015 + Math.random() * 0.03, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.6, c: { r: 2 + Math.floor(Math.random() * 13), s: i % 4 }, sc: 0.5 + Math.random() * 0.4, back: Math.random() < 0.35 }));
 
@@ -53,7 +56,13 @@ export const Screens = {
       R.spr(f.back ? Cards.back : card(f.c.r, f.c.s), f.x * vw, f.y * vh, { rot: f.r, sc: f.sc, alpha: 0.28 });
     }
     const logoY = land ? vh * 0.2 : vh * 0.17, size = land ? Math.min(7, Math.floor(vw / 80)) : 4;
-    bigLogo(vw / 2, logoY - 3.5 * size, size);
+    bigLogo(vw / 2, logoY - 3.5 * size, size, game.logoSkull());
+    // Five quick taps on the logo open the dev panel (Ctrl+Shift+D on keyboards).
+    if (Input.released && !game.modal && Math.abs(Input.x - vw / 2) < 40 * size && Math.abs(Input.y - logoY) < 6 * size) {
+      const now = performance.now();
+      devTaps = now - devTapT < 600 ? devTaps + 1 : 1; devTapT = now;
+      if (devTaps >= 5) { devTaps = 0; game.openModal('dev'); }
+    }
     R.text('Lose your cards.  ^gDon\'t be the Bonehead.', vw / 2, logoY + 7 * size, { align: 'center', color: P.bone1 });
     // Mascot with orbiting cards.
     const tagBottom = logoY + 7 * size + 12, menuTop = land ? vh * 0.74 : vh * 0.66;
@@ -69,7 +78,7 @@ export const Screens = {
     drawOrbit(false);
     const wink = (R.t % 4) > 3.75, chomp = Math.sin(R.t * 3) > 0.85;
     R.spr(Cards.shadow, mx, my + 34 * ms / 2 + 8, { sx: 1.1, sy: 0.18, alpha: 0.35 });
-    R.spr(wink ? Sprites.mascotWink : chomp ? Sprites.mascotChomp : Sprites.mascot, mx, my + Math.sin(R.t * 2) * 3, { sc: ms, rot: Math.sin(R.t * 1.3) * 0.04 });
+    R.spr(game.mascotSpr(wink ? 'wink' : chomp ? 'chomp' : 'idle'), mx, my + Math.sin(R.t * 2) * 3, { sc: ms, rot: Math.sin(R.t * 1.3) * 0.04 });
     drawOrbit(true);
     // Menu
     const hasSave = game.hasSave(), bw = land ? 118 : 150, bh = 28;
@@ -121,7 +130,7 @@ export const Screens = {
   },
 
   options(game, m) {
-    const w = 210, h = 214, b = UI.modal('opts', w, h, m.t), s = game.settings;
+    const w = 210, h = 240, b = UI.modal('opts', w, h, m.t), s = game.settings;
     UI.title('OPTIONS', b.x + w / 2, b.y + 12, { size: 2 });
     UI.blocked = false;
     const x = b.x + 16, iw = w - 32;
@@ -131,9 +140,54 @@ export const Screens = {
     if (sv !== s.sfx) { s.sfx = sv; game.applySettings(); }
     const toggles = [['crt', 'CRT GLOW'], ['shake', 'SCREEN SHAKE'], ['reduced', 'REDUCED MOTION'], ['fast', 'FAST ANIMATIONS']];
     toggles.forEach(([key, label], i) => { const v = UI.toggle('o-' + key, x, b.y + 94 + i * 17, iw, label, s[key]); if (v !== s[key]) { s[key] = v; game.applySettings(); } });
+    // Switching renderer needs a fresh canvas, so it reloads the page (the run is saved).
+    const safe = UI.toggle('o-safe', x, b.y + 94 + 4 * 17, iw, 'SAFE RENDERING', !!s.safe);
+    if (safe !== !!s.safe) { s.safe = safe; game.applySettings(); game.save(); setTimeout(() => location.reload(), 250); }
+    R.text('Try Safe Rendering if graphics glitch.', b.x + w / 2, b.y + h - 52, { color: P.ink6, align: 'center', outline: null, ...T });
     R.text('All music & sound is synthesised live.', b.x + w / 2, b.y + h - 42, { color: P.ink6, align: 'center', outline: null, ...T });
     if (UI.button('o-back', b.x + w / 2 - 40, b.y + h - 30, 80, 20, 'BACK', { color: 'gold', ignoreBlock: true })) game.closeModal();
     UI.blocked = true;
+    b.restore();
+  },
+
+  // Hidden dev panel: compare art trials live and jump to test tables.
+  dev(game, m) {
+    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 262), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
+    UI.title('DEV MODE', b.x + w / 2, b.y + 8, { size: 2, color: P.teal1, wave: 0.5 });
+    const tile = (id, x, y, tw, th, selected, draw, label) => {
+      const hot = Input.over(x, y, tw, th);
+      if (selected || hot) R.box(x - 2, y - 2, tw + 4, th + 4, selected ? P.gold1 : P.ink5, 3);
+      R.panel(x, y, tw, th, { fill: selected ? P.ink3 : P.ink2, hi: P.ink4 });
+      draw(x + tw / 2, y + (th - 10) / 2);
+      R.text(label, x + tw / 2, y + th - 9, { font: TINY, color: selected ? P.gold1 : P.bone1, align: 'center' });
+      return Input.button('dv-' + id, x, y, tw, th, true);
+    };
+    let y = b.y + 30;
+    R.text('TITLE MASCOT', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    const styles = ['classic', 'grin', 'chibi'], tw = Math.floor((w - 24 - 16) / 3), th = 64;
+    styles.forEach((st, i) => {
+      const x = b.x + 12 + i * (tw + 8), wink = (R.t + i) % 4 > 3.7;
+      const spr = Sprites.mascots[st][wink ? 'wink' : 'idle'];
+      if (tile('m-' + st, x, y, tw, th, game.dev.mascot === st, (cx, cy) => R.spr(spr, cx, cy + Math.sin(R.t * 2 + i) * 1.5, { sc: Math.min((tw - 8) / 64, (th - 14) / 60) }), st.toUpperCase())) game.setDev('mascot', st);
+    });
+    y += th + 10;
+    R.text('LOGO SKULL', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    ['classic', 'cute'].forEach((st, i) => {
+      const lw = Math.floor((w - 24 - 8) / 2), x = b.x + 12 + i * (lw + 8), sk = Sprites.logoSkulls[st];
+      if (tile('l-' + st, x, y, lw, 40, game.dev.logo === st, (cx, cy) => {
+        R.text('B', cx - 22, cy - 7, { size: 2, color: P.bone0 }); R.spr(sk, cx, cy, { sc: 17 / sk.h }); R.text('NE', cx + 10, cy - 7, { size: 2, color: P.bone0 });
+      }, st.toUpperCase())) game.setDev('logo', st);
+    });
+    y += 50;
+    R.text('TEST TABLES' + (game.started && game.scene === 'table' ? '' : ' · START A RUN FIRST'), b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    const tests = [['KeyB', 'BURN'], ['KeyQ', 'QUADS'], ['KeyR', 'RUN'], ['KeyL', 'BLIND'], ['KeyW', 'WIN']];
+    const bw = Math.floor((w - 24 - 4 * 4) / 5), can = game.started && game.scene === 'table' && !game.moving;
+    tests.forEach(([code, label], i) => {
+      if (UI.button('dt-' + code, b.x + 12 + i * (bw + 4), y, bw, 16, label, { color: 'ink', enabled: can, ignoreBlock: true })) { game.modal = null; Audio.muffle(false); game.devKey(code); }
+    });
+    y += 24;
+    R.text(`${R.soft ? 'SOFTWARE' : 'GPU'} CANVAS · WEBGL ${Post.ok ? 'ON' : 'OFF'} · ${R.W}×${R.H} · ×${R.S.toFixed(2)}`, b.x + w / 2, y, { font: TINY, color: P.ink6, align: 'center' });
+    if (UI.button('dv-close', b.x + w / 2 - 40, b.y + h - 26, 80, 18, 'CLOSE', { ignoreBlock: true })) game.closeModal();
     b.restore();
   },
 
@@ -183,7 +237,7 @@ export const Screens = {
       { title: 'Lose every card.', body: 'Take turns playing onto the pile. Match or beat the top card. First to run out wins.', art: 'run', cards: [[4, 1], [7, 0], [11, 2]] },
       { title: `Keep ${game.config.minHand} in hand.`, body: 'After you play, you draw back up while the deck lasts. Can\'t beat the pile? You pick the whole thing up.', art: 'draw' },
       { title: 'Four magic cards.', body: 'All four play on anything. The ghost 8 is see-through, so the card under it still sets the rule. Four of a kind in a row burns the pile too.', art: 'magic' },
-      { title: 'Make a run.', body: 'Play equal ranks, or climbing cards of one suit, together. More cards, bigger multiplier.', art: 'combo' },
+      { title: 'Make a run.', body: 'Play equal ranks, or climbing cards of one suit, together. Pick them in any order, or double-tap a card and the game builds the run.', art: 'combo' },
       { title: 'The last six.', body: 'Deck and hand gone? Play your face-up table cards, then flip the blind ones. A bad flip picks up the pile.', art: 'blind' },
     ];
     const p = pages[d.page];
@@ -254,7 +308,7 @@ export const Screens = {
     // The loser gets the title. Stamp slams in.
     const px = b.x + w / 2, py = b.y + 62;
     if (win) { R.panel(px - 28, py - 28, 56, 56, { fill: P.ink3, rim: opp.color }); R.spr(portrait(idx, m.t > 0.9 ? 'talk' : 'idle', Math.floor(R.t * 6)), px, py); }
-    else R.spr(Sprites.mascot, px, py, { sc: 0.9 });
+    else R.spr(game.mascotSpr(), px, py, { sc: 0.9 });
     R.text(win ? opp.name.toUpperCase() : 'YOU', px, py + 32, { color: P.bone0, align: 'center' });
     R.text('IS OFFICIALLY A', px, py + 42, { color: P.ink6, align: 'center', ...T });
     const st = m.t - 0.55;

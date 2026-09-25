@@ -74,9 +74,10 @@ export const Post = {
   state: { c1: [0.06, 0.29, 0.29], c2: [0.07, 0.12, 0.25], c3: [0.12, 0.44, 0.39], spin: 0.8, speed: 1, crt: 1, impact: 0, bloom: 0.55, bright: 1, warp: 0, flash: [1, 1, 1, 0] },
   target: { c1: null, c2: null, c3: null, spin: 0.8, speed: 1, bright: 1 },
 
-  init(view) {
+  init(view, allowGL = true) {
     this.view = view;
     try {
+      if (!allowGL) throw new Error('safe rendering: WebGL off');
       const gl = view.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
       if (!gl) throw new Error('no webgl2');
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };

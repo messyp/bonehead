@@ -20,13 +20,14 @@ No build step, no dependencies, no external requests. The whole game is about 85
 for t in *.test.mjs; do node $t; done
 ```
 
-`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
+`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
 
 ## Structure
 
 ```
 dist/
   engine.js scoring.js progression.js guidance.js   rules and scoring (unchanged from v1)
+  runs.js               every legal run in a hand, for any-order selection and double-tap
   js/main.js            boot, main loop, hit-stop, adaptive resolution
   js/core/render.js     virtual-pixel renderer, sprite upscaling, bitmap text, panels
   js/core/post.js       WebGL2 pass: dithered swirl background, CRT, bloom, aberration
@@ -50,13 +51,16 @@ The game lays out in virtual pixels (a 480×300 minimum in landscape, 250×440 i
 
 If frames run slow for a few seconds, the render resolution steps down automatically.
 
+Firefox always renders the 2D scene on a CPU-backed canvas (`willReadFrequently`), with a lower pixel budget. Its GPU canvas can drop images drawn from many small source canvases, which is how every glyph and sprite here is drawn. Options → Safe Rendering does the same in any browser and also turns off the WebGL effects.
+
 ## Audio
 
 Everything is synthesized with Web Audio. The music is a generative lo-fi jazz loop: FM electric piano, walking bass, brushed drums, vinyl crackle, and a chiptune lead that joins when a round gets tense. It changes key per opponent and is muffled whenever a menu is open. The v1 MP3 is no longer used.
 
 ## Controls
 
-- Click or tap a card to select it; select more to build a run. Press PLAY, or drag the card onto the pile, or flick it upward.
+- Click or tap a card to select it; select more to build a run, in any order. The game arranges the play order, and if a run isn't finished yet it tells you which card is missing. Press PLAY, or drag the card onto the pile, or flick it upward.
+- Double-tap a card to auto-select the best run through it.
 - Keyboard: ←/→ move focus, Space selects, Enter plays, S sorts, Esc pauses.
 - Hover a card for its value and, for magic cards, what it does.
 
@@ -67,6 +71,8 @@ Unchanged from v1. 2, 8, 9 and 10 always play. 2 resets, 8 is see-through, 9 for
 Scoring is Chips × Mult: card chips times a run multiplier, plus burn and quick-play bonuses. Bonus goals and trophies persist in browser storage.
 
 ## Debug
+
+Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has side-by-side art trials for the title mascot (classic, grin, chibi) and the logo skull (classic, cute), test-table shortcuts, and renderer info. Art choices are stored per browser in `bh2-dev`. Players see the classic art unless they change it there.
 
 `window.__bonehead` exposes the game objects. `window.__timeScale = 0.2` slows everything down. With a run in progress, Ctrl+Shift+B sets up a 10 burn, Ctrl+Shift+Q a four-of-a-kind, Ctrl+Shift+L the blind-card stage, Ctrl+Shift+R a suited run, and Ctrl+Shift+W wins the round.
 
