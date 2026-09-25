@@ -75,7 +75,7 @@ export const Post = {
   gl: null, ok: false, view: null, ctx2d: null,
   u: {}, tex: null,
   // Live values the game can animate.
-  state: { c1: [0.06, 0.29, 0.29], c2: [0.07, 0.12, 0.25], c3: [0.12, 0.44, 0.39], spin: 0.8, speed: 1, crt: 1, impact: 0, bloom: 0.55, bright: 1, warp: 0, flash: [1, 1, 1, 0] },
+  state: { c1: [0.06, 0.29, 0.29], c2: [0.07, 0.12, 0.25], c3: [0.12, 0.44, 0.39], spin: 0.8, speed: 1, crt: 1, impact: 0, bloom: 0.55, bright: 1, warp: 0, fx: 1, flash: [1, 1, 1, 0] },
   target: { c1: null, c2: null, c3: null, spin: 0.8, speed: 1, bright: 1 },
 
   init(view, allowGL = true) {
@@ -150,7 +150,7 @@ export const Post = {
     gl.uniform2f(u.uRes, this.view.width, this.view.height);
     gl.uniform1f(u.uPix, S); gl.uniform1f(u.uTime, time);
     gl.uniform1f(u.uSpin, s.spin); gl.uniform1f(u.uSpeed, s.speed); gl.uniform1f(u.uCRT, s.crt);
-    gl.uniform1f(u.uImpact, s.impact); gl.uniform1f(u.uBloom, s.bloom); gl.uniform1f(u.uBright, s.bright); gl.uniform1f(u.uWarp, s.warp);
+    gl.uniform1f(u.uImpact, s.impact * s.fx); gl.uniform1f(u.uBloom, s.bloom); gl.uniform1f(u.uBright, s.bright); gl.uniform1f(u.uWarp, s.warp * s.fx);
     gl.uniform3fv(u.uC1, s.c1); gl.uniform3fv(u.uC2, s.c2); gl.uniform3fv(u.uC3, s.c3);
     gl.uniform4fv(u.uFlash, s.flash);
     gl.drawArrays(gl.TRIANGLES, 0, 3);

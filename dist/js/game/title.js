@@ -63,16 +63,16 @@ function drawField(t, front) {
     // Parallax: the nearer the card, the further it swings against the pointer
     const X = vw / 2 + x * vw * 0.52 - mx * (6 + f.z * f.z * 90), Y = vh / 2 + y * vh * 0.55 - my * (4 + f.z * f.z * 50);
     const sc = base * (0.3 + f.z * 0.85), rot = f.rot + Math.sin(t * 0.33 + f.i) * 0.22 - mx * f.z * 0.12;
-    const far = f.z < 0.4 ? 3 : f.z < 0.6 ? 2 : f.z < 0.75 ? 1 : 0;
+    const near = f.z >= 0.75, blur = Post.state.fx ? (f.z < 0.4 ? 3 : f.z < 0.6 ? 2 : 1) : 0;
     const alpha = f.z < 0.4 ? 0.45 : f.z < 0.6 ? 0.7 : 0.9;
-    if (!far) {
+    if (near) {
       // Near cards: crisp, shadowed, some slowly turning over to show their backs
       const turn = f.flip ? Math.cos(t * 0.45 + f.i) : 1, back = f.back ? turn > 0 : turn < 0;
       const sx = sc * Math.max(0.06, Math.abs(turn));
       R.spr(Cards.shadow, X + 5, Y + 8, { sx, sy: sc, rot, alpha: 0.35 });
       const spr = back ? Cards.back : Cards.face(f.c || { r: 14, s: 1 }, Math.floor(t * 8));
       R.spr(spr, X, Y, { sx, sy: sc, rot });
-    } else R.spr(cardSprite(f, far), X, Y, { sc, rot, alpha });
+    } else R.spr(blur ? cardSprite(f, blur) : f.back ? Cards.back : Cards.face(f.c, 0), X, Y, { sc, rot, alpha });
   }
 }
 

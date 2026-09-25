@@ -96,7 +96,11 @@ export const Game = {
     const s = this.settings;
     Audio.setSfx(s.sfx); Audio.setMusic(s.music);
     R.shakeOn = s.shake && !s.reduced;
+    // CRT & GLOW off gives a clean, sharp picture: no scanlines or curve, no bloom haze,
+    // no colour fringing or warp on big hits, no depth blur on the title cards
     Post.state.crt = s.crt ? 1 : 0;
+    Post.state.bloom = s.crt ? 0.55 : 0;
+    Post.state.fx = s.crt ? 1 : 0;
     FX.reduced = s.reduced;
     Clock.speed = s.fast ? 1.6 : 1;
     store.set('bh2-settings', s);

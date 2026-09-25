@@ -187,7 +187,7 @@ export const Screens = {
   },
 
   options(game, m) {
-    const w = 210, h = 257, b = UI.modal('opts', w, h, m.t), s = game.settings;
+    const w = 210, h = 268, b = UI.modal('opts', w, h, m.t), s = game.settings;
     UI.title('OPTIONS', b.x + w / 2, b.y + 12, { size: 2 });
     UI.blocked = false;
     const x = b.x + 16, iw = w - 32;
@@ -195,13 +195,14 @@ export const Screens = {
     const sv = UI.slider('o-sfx', x, b.y + 76, iw, s.sfx, 'SOUND FX');
     if (mv !== s.music) { s.music = mv; game.applySettings(); }
     if (sv !== s.sfx) { s.sfx = sv; game.applySettings(); }
-    const toggles = [['hints', 'CARD HINTS'], ['crt', 'CRT GLOW'], ['shake', 'SCREEN SHAKE'], ['reduced', 'REDUCED MOTION'], ['fast', 'FAST ANIMATIONS']];
+    const toggles = [['hints', 'CARD HINTS'], ['crt', 'CRT & GLOW'], ['shake', 'SCREEN SHAKE'], ['reduced', 'REDUCED MOTION'], ['fast', 'FAST ANIMATIONS']];
     toggles.forEach(([key, label], i) => { const v = UI.toggle('o-' + key, x, b.y + 94 + i * 17, iw, label, s[key]); if (v !== s[key]) { s[key] = v; game.applySettings(); } });
     // Switching renderer needs a fresh canvas, so it reloads the page (the run is saved).
     const safe = UI.toggle('o-safe', x, b.y + 94 + 5 * 17, iw, 'SAFE RENDERING', !!s.safe);
     if (safe !== !!s.safe) { s.safe = safe; game.applySettings(); game.save(); setTimeout(() => location.reload(), 250); }
+    R.text('Turn off CRT and Glow for a crisp, clean picture.', b.x + w / 2, b.y + h - 62, { color: P.ink6, align: 'center', outline: null, ...T });
     R.text('Try Safe Rendering if graphics glitch.', b.x + w / 2, b.y + h - 52, { color: P.ink6, align: 'center', outline: null, ...T });
-    R.text('All music & sound is synthesised live.', b.x + w / 2, b.y + h - 42, { color: P.ink6, align: 'center', outline: null, ...T });
+    R.text('All music and sound is synthesised live.', b.x + w / 2, b.y + h - 42, { color: P.ink6, align: 'center', outline: null, ...T });
     if (UI.button('o-back', b.x + w / 2 - 40, b.y + h - 30, 80, 20, 'BACK', { color: 'gold', ignoreBlock: true })) game.closeModal();
     UI.blocked = true;
     b.restore();
