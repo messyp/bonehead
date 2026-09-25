@@ -15,6 +15,7 @@ import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
 import { ROUNDS, RULES, ROUND_LOCKS } from './rounds.js';
 import { mapRoom, crownIcon } from '../art/map.js';
+import { mapRoomHD } from '../art/mapHD.js';
 import { drawTitle, titleKey } from './title.js';
 import { cardsLeft } from '../../engine.js';
 
@@ -53,15 +54,28 @@ export const Screens = {
   // crypt card table (after The Binding of Isaac's rooms). Pick a table, then GO.
   map(game) {
     const vw = R.vw, vh = R.vh, land = R.land, mp = game.map, t = mp.t, cleared = game.cleared || [];
-    const key = `${Math.ceil(vw / 2)}x${Math.ceil(vh / 2)}`;
-    if (mapCache.key !== key) { mapCache.key = key; mapCache.room = mapRoom(Math.ceil(vw / 2), Math.ceil(vh / 2), land); mapCache.spr = mapCache.room.pix.spr(); mapCache.crown ??= crownIcon().spr(); }
-    const room = mapCache.room, tb = { cx: room.table.cx * 2, cy: room.table.cy * 2, rx: room.table.rx * 2, ry: room.table.ry * 2 };
-    R.spr(mapCache.spr, 0, 0, { sc: 2, ax: 0, ay: 0 });
+    // Two room styles: classic (painted at half resolution, 2x pixels) and the detailed
+    // full-resolution room on trial (dev panel MAP ART, or ?map=detailed)
+    const hd = game.mapStyle() === 'detailed', k = hd ? 1 : 2;
+    const key = `${hd ? 'hd' : 'lo'}-${Math.ceil(vw / k)}x${Math.ceil(vh / k)}`;
+    if (mapCache.key !== key) {
+      mapCache.key = key;
+      mapCache.room = hd ? mapRoomHD(Math.ceil(vw), Math.ceil(vh), land) : mapRoom(Math.ceil(vw / 2), Math.ceil(vh / 2), land);
+      mapCache.spr = hd ? mapCache.room.spr : mapCache.room.pix.spr(); mapCache.crown ??= crownIcon().spr();
+    }
+    const room = mapCache.room, tb = { cx: room.table.cx * k, cy: room.table.cy * k, rx: room.table.rx * k, ry: room.table.ry * k };
+    R.spr(mapCache.spr, 0, 0, { sc: k, ax: 0, ay: 0 });
     // Candle flames and a flickering glow
     room.candles.forEach((c, i) => {
-      const fl = Sprites.flame[Math.floor(R.t * 8 + i) % 3], x = c.x * 2 + 1, y = c.y * 2 - 4;
-      R.box(x - 8, y - 6, 16, 16, P.fire2, 4, 0.05 + Math.sin(R.t * 9 + i * 2) * 0.03);
-      R.spr(fl, x, y, { sc: 0.55 + Math.sin(R.t * 11 + i) * 0.05 });
+      const fl = Sprites.flame[Math.floor(R.t * 8 + i) % 3], x = c.x * k + (hd ? 0.5 : 1), y = c.y * k - (hd ? 0 : 4);
+      R.box(x - (hd ? 5 : 8), y - (hd ? 4 : 6), hd ? 10 : 16, hd ? 10 : 16, P.fire2, hd ? 3 : 4, 0.05 + Math.sin(R.t * 9 + i * 2) * 0.03);
+      R.spr(fl, x, y, { sc: (hd ? 0.32 : 0.55) + Math.sin(R.t * 11 + i) * (hd ? 0.03 : 0.05) });
+    });
+    // Wall torches (detailed room only)
+    (room.torches || []).forEach((tc, i) => {
+      const fl = Sprites.flame[Math.floor(R.t * 9 + i * 2) % 3];
+      R.box(tc.x - 10, tc.y - 12, 20, 20, P.fire2, 6, 0.06 + Math.sin(R.t * 7 + i * 3) * 0.04);
+      R.spr(fl, tc.x, tc.y - 4, { sc: 0.75 + Math.sin(R.t * 10 + i) * 0.06 });
     });
     // Dust motes drifting in the lamp light over the table
     for (const m of motes) {
@@ -128,7 +142,7 @@ export const Screens = {
     // Selected table: who, where, what changes
     const nr = ROUNDS[sel - 1], nlead = OPPONENTS[oppIndex(nr.opps[0])];
     const label = `ROUND ${sel} · ${(nr.name || nlead.name).toUpperCase()} · ${nr.venue || nlead.venue}`;
-    const sw = Math.min(vw - 8, R.measure(label) + 30), sy = vh - (land ? 52 : 60);
+    const sw = Math.min(vw - 8, R.measure(label) + 30), sy = vh - (hd ? (land ? 66 : 70) : land ? 52 : 60);
     R.rect(vw / 2 - sw / 2, sy, sw, 13, P.ink0, 0.9);
     R.text(label, vw / 2, sy + 3, { color: P.gold2, align: 'center', outline: null, ...(R.measure(label) > vw - 20 ? { font: TINY } : {}) });
     const note = nr.rule ? `RULE CHANGE: ${RULES[nr.rule].title}` : cleared.includes(sel) ? 'ALREADY BEATEN · PLAY IT AGAIN' : 'CLASSIC RULES';
@@ -137,14 +151,15 @@ export const Screens = {
     R.text(stats, vw / 2, by + 36, { font: TINY, color: P.bone2, align: 'center' });
     // Tricks in your bag
     const items = Object.entries(mp.items || {}).filter(([, n]) => n > 0).map(([id]) => id), owned = [...game.tricks, ...items];
-    owned.forEach((id, i) => R.spr(Sprites.tricks[id], vw / 2 + (i - (owned.length - 1) / 2) * 16, vh - 18, { sc: 0.7 }));
+    owned.forEach((id, i) => R.spr(Sprites.tricks[id], hd ? vw - 14 - i * 16 : vw / 2 + (i - (owned.length - 1) / 2) * 16, vh - 18, { sc: 0.7 }));
     // Footer
     if (UI.button('map-title', 8, vh - 28, 56, 20, 'TITLE', { color: 'ink' })) game.transition(() => { game.scene = 'title'; });
-    if (UI.button('map-go', vw - 78, vh - 30, 70, 24, 'GO!', { size: 2, pulse: t > 0.8, color: 'gold' })) game.startMapRound();
+    const go = hd ? { x: vw / 2 - 48, y: vh - 36, w: 96, h: 28 } : { x: vw - 78, y: vh - 30, w: 70, h: 24 };
+    if (UI.button('map-go', go.x, go.y, go.w, go.h, 'GO!', { size: 2, pulse: t > 0.8, color: 'gold' })) game.startMapRound();
     // First run: point at GO so a new player knows how to take their seat
     if (game.onboardMap && t > 0.6) {
       const tip = land ? 'Beat all four tables. Start here!' : 'Start here!', tw = R.measure(tip) + 12, bob = Math.round(Math.sin(R.t * 5) * 2);
-      const tx = vw - 86 - tw + bob, ty = vh - 25;
+      const tx = go.x - 8 - tw + bob, ty = go.y + go.h / 2 - 7;
       R.box(tx - 1, ty - 1, tw + 2, 15, P.ink0, 3);
       R.box(tx, ty, tw, 13, P.gold1, 3);
       R.text(tip, tx + tw / 2, ty + 3, { color: P.ink0, align: 'center', outline: null, shadow: null });
@@ -235,7 +250,7 @@ export const Screens = {
 
   // Hidden dev panel: compare art trials live and jump to test tables.
   dev(game, m) {
-    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 294), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
+    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 320), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
     UI.title('DEV MODE', b.x + w / 2, b.y + 8, { size: 2, color: P.teal1, wave: 0.5 });
     const tile = (id, x, y, tw, th, selected, draw, label) => {
       const hot = Input.over(x, y, tw, th);
@@ -254,6 +269,14 @@ export const Screens = {
       if (tile('m-' + st, x, y, tw, th, game.dev.mascot === st, (cx, cy) => R.spr(spr, cx, cy + Math.sin(R.t * 2 + i) * 1.5, { sc: Math.min((tw - 8) / 64, (th - 14) / 60) }), st.toUpperCase())) game.setDev('mascot', st);
     });
     y += th + 10;
+    R.text('MAP ART', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    const mw = Math.floor((w - 24 - 8) / 3);
+    ['classic', 'detailed'].forEach((st, i) => { if (UI.button('dm-' + st, b.x + 12 + i * (mw + 4), y, mw, 18, st.toUpperCase(), { color: game.mapStyle() === st ? 'gold' : 'ink', ignoreBlock: true })) game.setDev('map', st); });
+    if (UI.button('dm-open', b.x + 12 + 2 * (mw + 4), y, mw, 18, 'OPEN MAP', { color: 'teal', ignoreBlock: true })) {
+      game.modal = null; Audio.muffle(false);
+      game.transition(() => { if (game.started && game.g) game.showMap(game.nextUncleared(), 0, {}); else game.newRun(); });
+    }
+    y += 26;
     R.text('TEST TABLES' + (game.started && game.scene === 'table' ? '' : ' · START A RUN FIRST'), b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const tests = [['KeyB', 'BURN'], ['KeyQ', 'QUADS'], ['KeyR', 'RUN'], ['KeyL', 'BLIND'], ['KeyW', 'WIN']];
     const bw = Math.floor((w - 24 - 4 * 4) / 5), can = game.started && game.scene === 'table' && !game.moving;

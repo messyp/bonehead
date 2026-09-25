@@ -39,6 +39,7 @@ dist/
   js/art/cards.js       card faces, skeleton court cards, magic cards, back, foil
   js/art/sprites.js     opponents (animated), mascot, icons, dialogue
   js/art/map.js         the top-down crypt room for the progression map
+  js/art/mapHD.js       a detailed full-resolution version of that room (on trial)
   js/art/logo.js        the BONEHEAD wordmark (title and HUD), title link icons, depth-of-field blur
   js/audio/sfx.js       synthesized sound effects and mix bus
   js/audio/music.js     generative lo-fi soundtrack with intensity layers
@@ -61,6 +62,8 @@ A run is four tables, defined in `js/game/rounds.js`:
 4. The Pit Boss, Pick Your Table again.
 
 Between rounds, the **Midnight Circuit** map shows a crypt from above (in the spirit of The Binding of Isaac's rooms), with the four opponents as cards on a candle-lit card table, joined by a chalk path. Beaten tables are stamped BONEHEAD. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal.
+
+A detailed version of the room is on trial (`js/art/mapHD.js`). It is painted at full resolution instead of 2x pixels, with textured flagstones, a rug, a grained and studded table, perspective walls with torches, banners and a barred door, props, and banded 16-bit style lighting. It also moves GO to the bottom centre. Preview it with `?map=detailed` (or `?map=classic`), or choose MAP ART in the dev panel, where OPEN MAP jumps straight to the map. Players still see the classic room.
 
 ## Title screen
 

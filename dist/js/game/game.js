@@ -1020,6 +1020,11 @@ export const Game = {
 
   // Dev-mode art trials. Players only ever see 'classic' unless they open the dev panel.
   setDev(key, value) { this.dev[key] = value; store.set('bh2-dev', this.dev); Audio.play('ui'); },
+  // Map room on trial: ?map=detailed|classic in the URL wins, then the dev panel choice.
+  mapStyle() {
+    const q = new URLSearchParams(location.search).get('map');
+    return ['classic', 'detailed'].includes(q) ? q : this.dev.map === 'detailed' ? 'detailed' : 'classic';
+  },
   mascotSpr(state = 'idle') { const m = Sprites.mascots[this.dev.mascot] || Sprites.mascots.classic; return m[state]; },
 
   devKey(code) {
