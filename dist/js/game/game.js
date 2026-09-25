@@ -16,6 +16,7 @@ import { ROUNDS, RULES, roundOf, seatsFor } from './rounds.js';
 import { Audio } from '../audio/sfx.js';
 import { Music } from '../audio/music.js';
 import { UI } from './ui.js';
+import { miniLogo } from '../art/logo.js';
 import { Screens } from './screens.js';
 
 const DEG = Math.PI / 180;
@@ -76,7 +77,7 @@ export const Game = {
   started: false, busy: false, moving: false, token: 0, hidden: new Set(), revealing: new Set(), slot: new Map(),
   config: { minHand: 3, aiDelay: 1.05, timeBonus: 8, extraMagic: 0, aiSkill: 0 },
   settings: { music: 0.55, sfx: 0.8, crt: true, shake: true, fast: false, reduced: false, hints: true },
-  unlocked: {}, dev: { mascot: 'classic', logo: 'classic' }, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
+  unlocked: {}, dev: { mascot: 'classic' }, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
   panel: { chips: 0, mult: 1, label: '', total: 0, showTotal: false, flame: 0, pop: 0, mpop: 0, bonus: [] },
   speech: null, cine: null, portraitState: 'idle', blinkT: 2, tellMsg: '', tellT: 0, tellBad: false,
   turnStart: 0, submittedAt: 0, ruleKey: '', rulePop: 0, turnPulse: 0, lastTurn: '', stats: {},
@@ -1015,12 +1016,6 @@ export const Game = {
   // Dev-mode art trials. Players only ever see 'classic' unless they open the dev panel.
   setDev(key, value) { this.dev[key] = value; store.set('bh2-dev', this.dev); Audio.play('ui'); },
   mascotSpr(state = 'idle') { const m = Sprites.mascots[this.dev.mascot] || Sprites.mascots.classic; return m[state]; },
-  // Title concept: ?title=crypt|sketch|classic in the URL wins, then the dev panel choice.
-  titleStyle() {
-    const q = new URLSearchParams(location.search).get('title');
-    return ['classic', 'crypt', 'sketch'].includes(q) ? q : ['classic', 'crypt', 'sketch'].includes(this.dev.title) ? this.dev.title : 'classic';
-  },
-  logoSkull() { return Sprites.logoSkulls[this.dev.logo] || Sprites.logoSkulls.classic; },
 
   devKey(code) {
     if (code === 'KeyD') { if (this.modal?.kind === 'dev') this.closeModal(); else this.openModal('dev'); return; }
@@ -1581,17 +1576,11 @@ export const Game = {
     R.text(tip, L.guide.x, y, { color: P.bone2, align: 'center', alpha: 0.8 + Math.sin(R.t * 3) * 0.2, ...(big ? TINY_OPTS : {}) });
   },
 
+  // The HUD wordmark: the title logo's letterforms at one pixel a cell.
   drawLogo(x, y, size = 1) {
-    const letters = 'BONEHEAD';
-    let cx = x;
-    for (let i = 0; i < letters.length; i++) {
-      const ch = letters[i], dy = Math.sin(R.t * 3 + i * 0.6) * 0.8 * size;
-      if (ch === 'O') { const sk = this.logoSkull(); R.spr(sk, cx + 4 * size, y + 3.5 * size + dy, { sc: size * 7.9 / sk.h }); cx += 9 * size; continue; }
-      const col = i < 4 ? P.bone0 : P.gold1;
-      R.text(ch, cx, y + dy, { size, color: col });
-      cx += (R.measure(ch) + 1) * size;
-    }
-    return cx - x;
+    this.miniLogo ??= miniLogo();
+    R.spr(this.miniLogo, x - 1, y - 1, { sc: size, ax: 0, ay: 0 });
+    return this.miniLogo.w * size;
   },
 
   drawCine() {

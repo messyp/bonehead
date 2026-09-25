@@ -4,7 +4,7 @@ import { Input } from '../core/input.js';
 import { FX, CONFETTI } from '../core/fx.js';
 import { Post } from '../core/post.js';
 import { ease, clamp } from '../core/tween.js';
-import { P } from '../art/palette.js';
+import { P, THEMES } from '../art/palette.js';
 import { Cards } from '../art/cards.js';
 import { Sprites, OPPONENTS, portrait, oppIndex } from '../art/sprites.js';
 import { Audio } from '../audio/sfx.js';
@@ -15,37 +15,12 @@ import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
 import { ROUNDS, RULES, ROUND_LOCKS } from './rounds.js';
 import { mapRoom, crownIcon } from '../art/map.js';
-import * as Titles from './titles.js';
+import { drawTitle, titleKey } from './title.js';
 import { cardsLeft } from '../../engine.js';
 
 const T = { font: TINY };
 const card = (r, s) => Cards.face({ r, s }, Math.floor(R.t * 8));
 
-function bigLogo(cx, cy, size, skull = Sprites.skull) {
-  const letters = 'BONEHEAD', widths = [...letters].map(ch => (ch === 'O' ? 9 : R.measure(ch) + 1) * size);
-  const total = widths.reduce((a, b) => a + b, 0);
-  let x = cx - total / 2;
-  const ctx = R.ctx;
-  for (let i = 0; i < letters.length; i++) {
-    const ch = letters[i], dy = Math.sin(R.t * 2.6 + i * 0.7) * size * 0.9, rot = Math.sin(R.t * 2 + i) * 0.03;
-    const col = [P.bone0, P.bone0, P.bone0, P.bone0, P.gold1, P.gold1, P.gold2, P.gold2][i];
-    ctx.save();
-    ctx.translate(x + widths[i] / 2, cy + dy); ctx.rotate(rot);
-    if (ch === 'O') {
-      const chomp = Math.sin(R.t * 4) > 0.7;
-      const sc = size * 8.6 / skull.h;
-      for (let k = 3; k >= 1; k--) R.spr(skull, 0, 3.5 * size + k * size * 0.6, { sc, alpha: 0.35 });
-      R.spr(skull, 0, 3.5 * size + (chomp ? -size * 0.3 : 0), { sc });
-    } else {
-      for (let k = 3; k >= 1; k--) R.text(ch, 0, k * size * 0.6, { size, color: k === 1 ? P.red3 : P.red4, align: 'center', outline: P.ink0, shadow: null });
-      R.text(ch, 0, 0, { size, color: col, align: 'center' });
-    }
-    ctx.restore();
-    x += widths[i];
-  }
-}
-
-let devTaps = 0, devTapT = 0;
 
 // Progression map state that only matters for drawing.
 const mapCache = { key: '', room: null, spr: null, crown: null };
@@ -70,68 +45,9 @@ function snake(pts) {
   return out;
 }
 
-const floaters = Array.from({ length: 14 }, (_, i) => ({ x: Math.random(), y: Math.random(), sp: 0.015 + Math.random() * 0.03, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.6, c: { r: 2 + Math.floor(Math.random() * 13), s: i % 4 }, sc: 0.5 + Math.random() * 0.4, back: Math.random() < 0.35 }));
 
 export const Screens = {
-  title(game) {
-    const vw = R.vw, vh = R.vh, land = R.land, dt = UI.dt;
-    Music.set(0, 0);
-    const style = game.titleStyle();
-    if (style === 'crypt') return Titles.crypt(game, id => titleAct(game, id));
-    if (style === 'sketch') return Titles.sketch(game, id => titleAct(game, id));
-    // Drifting cards in the background.
-    for (const f of floaters) {
-      f.y -= f.sp * dt; f.r += f.vr * dt;
-      if (f.y < -0.2) { f.y = 1.2; f.x = Math.random(); }
-      R.spr(f.back ? Cards.back : card(f.c.r, f.c.s), f.x * vw, f.y * vh, { rot: f.r, sc: f.sc, alpha: 0.28 });
-    }
-    const logoY = land ? vh * 0.2 : vh * 0.17, size = land ? Math.min(7, Math.floor(vw / 80)) : 4;
-    bigLogo(vw / 2, logoY - 3.5 * size, size, game.logoSkull());
-    // Five quick taps on the logo open the dev panel (Ctrl+Shift+D on keyboards).
-    if (Input.released && !game.modal && Math.abs(Input.x - vw / 2) < 40 * size && Math.abs(Input.y - logoY) < 6 * size) {
-      const now = performance.now();
-      devTaps = now - devTapT < 600 ? devTaps + 1 : 1; devTapT = now;
-      if (devTaps >= 5) { devTaps = 0; game.openModal('dev'); }
-    }
-    R.text('Lose your cards.  ^gDon\'t be the Bonehead.', vw / 2, logoY + 7 * size, { align: 'center', color: P.bone1 });
-    // Mascot with orbiting cards.
-    const tagBottom = logoY + 7 * size + 12, menuTop = land ? vh * 0.74 : vh * 0.66;
-    const ms = clamp((menuTop - tagBottom - 8) / 62, 1, 2.2), mx = vw / 2, my = (tagBottom + menuTop) / 2;
-    const orbit = [{ r: 14, s: 0 }, { r: 10, s: 1 }, { r: 8, s: 2 }, { r: 2, s: 3 }, { r: 13, s: 1 }];
-    const drawOrbit = front => orbit.forEach((c, i) => {
-      const a = R.t * 0.7 + i * Math.PI * 2 / orbit.length, depth = Math.sin(a);
-      if ((depth > 0) !== front) return;
-      const x = mx + Math.cos(a) * (land ? 110 : 90), y = my + depth * 10 - 2, sc = (0.6 + depth * 0.15) * clamp(ms / 1.6, 0.8, 1.25), sx = Math.cos(R.t * 1.3 + i);
-      R.spr(Cards.shadow, x + 3, y + 5, { sx: sc * Math.abs(sx), sy: sc, alpha: 0.3 });
-      R.spr(sx > 0 ? card(c.r, c.s) : Cards.back, x, y, { sx: sc * Math.max(0.05, Math.abs(sx)), sy: sc, rot: Math.sin(a) * 0.15, alpha: 0.75 + depth * 0.25 });
-    });
-    drawOrbit(false);
-    const wink = (R.t % 4) > 3.75, chomp = Math.sin(R.t * 3) > 0.85;
-    R.spr(Cards.shadow, mx, my + 34 * ms / 2 + 8, { sx: 1.1, sy: 0.18, alpha: 0.35 });
-    R.spr(game.mascotSpr(wink ? 'wink' : chomp ? 'chomp' : 'idle'), mx, my + Math.sin(R.t * 2) * 3, { sc: ms, rot: Math.sin(R.t * 1.3) * 0.04 });
-    drawOrbit(true);
-    // Menu
-    const hasSave = game.hasSave(), bw = land ? 118 : 150, bh = 28;
-    let by = land ? vh * 0.74 : vh * 0.66;
-    const bx = vw / 2 - bw / 2;
-    if (UI.button('t-play', bx, by, bw, bh, hasSave ? 'CONTINUE' : 'PLAY', { size: 2, pulse: true, color: 'gold' })) { if (hasSave) game.transition(() => game.continueRun()); else startFresh(game); }
-    by += bh + 8;
-    const sw = land ? 76 : 72, row = land ? [['t-new', 'NEW RUN'], ['t-rules', 'HOW TO PLAY'], ['t-opts', 'OPTIONS'], ['t-troph', 'TROPHIES']] : [['t-new', 'NEW RUN'], ['t-rules', 'RULES'], ['t-opts', 'OPTIONS'], ['t-troph', 'TROPHIES']];
-    const items = row.filter(([id]) => id !== 't-new' || hasSave);
-    const cols = land ? items.length : Math.min(2, items.length), gap = 6;
-    items.forEach(([id, label], i) => {
-      const inRow = land ? items.length : Math.min(cols, items.length - Math.floor(i / cols) * cols), rowW = inRow * sw + (inRow - 1) * gap;
-      const x = vw / 2 - rowW / 2 + (i % cols) * (sw + gap), y = by + Math.floor(i / cols) * 22;
-      if (UI.button(id, x, y, sw, 17, label, { color: 'ink' })) {
-        if (id === 't-new') game.openModal('confirm');
-        if (id === 't-rules') game.openModal('rules', { page: 0 });
-        if (id === 't-opts') game.openModal('options');
-        if (id === 't-troph') game.openModal('trophies');
-      }
-    });
-    R.text(`BEST RUN ${game.best.toLocaleString()}`, vw / 2, vh - 22, { color: P.gold2, align: 'center' });
-    R.text('A SHEDDING ROGUELITE · SOUND ON', vw / 2, vh - 11, { color: P.ink6, align: 'center', outline: null, ...T });
-  },
+  title(game) { drawTitle(game, id => titleAct(game, id)); },
 
   // Between rounds: the Midnight Circuit, seen from above: four opponent cards on a
   // crypt card table (after The Binding of Isaac's rooms). Pick a table, then GO.
@@ -237,13 +153,7 @@ export const Screens = {
     if (fn) fn.call(this, game, m);
   },
 
-  // Keyboard for the new title menus: up/down to move, Enter to go.
-  titleKey(game, k) {
-    if (game.titleStyle() === 'classic') return;
-    const n = Titles.menuItems(game).length;
-    if (k.key === 'ArrowDown' || k.key === 'ArrowUp') { game.titleSel = ((game.titleSel ?? 0) + (k.key === 'ArrowDown' ? 1 : n - 1)) % n; Audio.play('hover', game.titleSel + 2); }
-    if (k.key === 'Enter' || k.key === ' ') { Audio.play('ui'); titleAct(game, Titles.menuItems(game)[game.titleSel ?? 0][0]); }
-  },
+  titleKey(game, k) { titleKey(game, k, id => titleAct(game, id)); },
 
   key(game, k) {
     const m = game.modal;
@@ -262,7 +172,7 @@ export const Screens = {
     const w = 170, h = 206, b = UI.modal('pause', w, h, m.t);
     UI.title('PAUSED', b.x + w / 2, b.y + 12, { size: 2 });
     R.text('The house can wait.', b.x + w / 2, b.y + 32, { color: P.ink6, align: 'center' });
-    const items = [['RESUME', 'gold', () => game.closeModal()], ['HOW TO PLAY', 'ink', () => game.openModal('rules', { page: 0 })], ['SCORING', 'ink', () => game.openModal('scoring')], ['OPTIONS', 'ink', () => game.openModal('options')], ['TROPHIES', 'ink', () => game.openModal('trophies')], ['NEW RUN', 'red', () => game.openModal('confirm')], ['TITLE SCREEN', 'ink', () => { game.save(); game.modal = null; Audio.muffle(false); game.transition(() => { game.token++; game.scene = 'title'; Post.theme(THEMES_TITLE()); }); }]];
+    const items = [['RESUME', 'gold', () => game.closeModal()], ['HOW TO PLAY', 'ink', () => game.openModal('rules', { page: 0 })], ['SCORING', 'ink', () => game.openModal('scoring')], ['OPTIONS', 'ink', () => game.openModal('options')], ['TROPHIES', 'ink', () => game.openModal('trophies')], ['NEW RUN', 'red', () => game.openModal('confirm')], ['TITLE SCREEN', 'ink', () => { game.save(); game.modal = null; Audio.muffle(false); game.transition(() => { game.token++; game.scene = 'title'; Post.theme(THEMES[3]); }); }]];
     items.forEach(([label, color, act], i) => { if (UI.button('p-' + label, b.x + 20, b.y + 46 + i * 22, w - 40, 17, label, { color, ignoreBlock: true })) act(); });
     b.restore();
   },
@@ -326,7 +236,7 @@ export const Screens = {
       return Input.button('dv-' + id, x, y, tw, th, true);
     };
     let y = b.y + 30;
-    R.text('TITLE MASCOT', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    R.text('MASCOT (LOSS SCREEN)', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const styles = ['classic', 'brand'], tw = Math.floor((w - 24 - 8) / 2), th = 64;
     styles.forEach((st, i) => {
       const x = b.x + 12 + i * (tw + 8), wink = (R.t + i) % 4 > 3.7;
@@ -334,10 +244,6 @@ export const Screens = {
       if (tile('m-' + st, x, y, tw, th, game.dev.mascot === st, (cx, cy) => R.spr(spr, cx, cy + Math.sin(R.t * 2 + i) * 1.5, { sc: Math.min((tw - 8) / 64, (th - 14) / 60) }), st.toUpperCase())) game.setDev('mascot', st);
     });
     y += th + 10;
-    R.text('TITLE SCREEN', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
-    const styles2 = ['classic', 'crypt', 'sketch'], sw2 = Math.floor((w - 24 - 8) / 3);
-    styles2.forEach((st, i) => { if (UI.button('dts-' + st, b.x + 12 + i * (sw2 + 4), y, sw2, 20, st.toUpperCase(), { color: game.titleStyle() === st ? 'gold' : 'ink', ignoreBlock: true })) { game.setDev('title', st); game.closeModal(); game.transition(() => { game.scene = 'title'; }); } });
-    y += 30;
     R.text('TEST TABLES' + (game.started && game.scene === 'table' ? '' : ' · START A RUN FIRST'), b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const tests = [['KeyB', 'BURN'], ['KeyQ', 'QUADS'], ['KeyR', 'RUN'], ['KeyL', 'BLIND'], ['KeyW', 'WIN']];
     const bw = Math.floor((w - 24 - 4 * 4) / 5), can = game.started && game.scene === 'table' && !game.moving;
@@ -516,7 +422,6 @@ export const Screens = {
   },
 };
 
-function THEMES_TITLE() { return { a: '#43195c', b: '#0e1230', c: '#b0305a' }; }
 
 function resultAction(game) {
   const g = game.g, win = g.winner === 'player';

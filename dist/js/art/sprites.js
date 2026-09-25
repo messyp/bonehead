@@ -313,16 +313,6 @@ export function mascotBrand(wink = false, chomp = 0) {
 }
 
 // The skull-faced O from the original wordmark.
-export function brandSkull() {
-  const p = new Pix(13, 13), bone = P.bone0, dark = P.ink0;
-  p.ell(6.5, 6.3, 6.3, 6.3, bone);
-  p.ell(4.3, 6, 1.7, 2.7, dark); p.ell(8.7, 6, 1.7, 2.7, dark);
-  p.set(4, 5, P.white); p.set(8, 5, P.white);
-  p.set(6, 9, dark); p.set(5, 10, dark); p.set(7, 10, dark);
-  p.outline(dark);
-  return p;
-}
-
 const MASCOTS = { classic: mascot, brand: mascotBrand };
 
 // ---------- Icons ----------
@@ -393,7 +383,7 @@ export function trickIcon(id) {
 }
 
 export const Sprites = {
-  mascots: {}, logoSkulls: {}, flame: [], trophy: null, trophyDim: null, lock: null, check: null, uncheck: null, tricks: {}, skull: null,
+  mascots: {}, flame: [], trophy: null, trophyDim: null, lock: null, check: null, uncheck: null, tricks: {}, skull: null,
   init(skullIconFn) {
     for (const [k, f] of Object.entries(MASCOTS)) this.mascots[k] = { idle: f(false, 0).spr(), wink: f(true, 0).spr(), chomp: f(false, 2).spr() };
     this.flame = [0, 1, 2].map(f => flameIcon(f).spr());
@@ -401,7 +391,6 @@ export const Sprites = {
     this.lock = lockIcon().spr(); this.check = checkIcon(true).spr(); this.uncheck = checkIcon(false).spr();
     for (const id of ['reshuffle', 'swap', 'wild', 'chain', 'insurance', 'embers']) this.tricks[id] = trickIcon(id).spr();
     const sk = skullIconFn(); sk.outline(P.ink0); this.skull = sk.spr();
-    this.logoSkulls = { classic: this.skull, brand: brandSkull().spr() };
     for (let i = 0; i < OPPONENTS.length; i++) for (const st of ['idle', 'blink', 'talk']) portrait(i, st, 0);
   },
 };

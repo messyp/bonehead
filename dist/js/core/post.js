@@ -59,7 +59,10 @@ void main(){
   vec3 col = bg*(1.0 - sc.a) + vec3(r, sc.g, b)*(1.0 - smoothstep(0.55, 0.8, length(c))*0.15);
   vec3 bl = textureLod(uScene, suv, 4.0).rgb*0.55 + textureLod(uScene, suv, 6.0).rgb*0.45;
   float lum = dot(bl, vec3(0.3, 0.59, 0.11));
-  col += bl*smoothstep(0.35, 0.95, lum)*uBloom;
+  // Only coloured light blooms (gold, fire, glows). White card faces would otherwise
+  // haze over their own red pips and wash them out.
+  float sat = max(bl.r, max(bl.g, bl.b)) - min(bl.r, min(bl.g, bl.b));
+  col += bl*smoothstep(0.35, 0.95, lum)*smoothstep(0.15, 0.45, sat)*uBloom;
   float sl = 0.5 + 0.5*cos(gl_FragCoord.y*6.2831/max(2.0, uPix));
   col *= 1.0 - uCRT*0.06*sl;
   col = mix(col, uFlash.rgb, uFlash.a);

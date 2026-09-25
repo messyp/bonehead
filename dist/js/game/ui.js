@@ -55,6 +55,45 @@ export const UI = {
     return clicked;
   },
 
+  // Hero call-to-action: bright yellow face, dark label and arrow, chunky lip,
+  // breathing halo and a shine that sweeps across now and then.
+  cta(id, x, y, w, h, label, o = {}) {
+    const clicked = Input.button(id, x, y, w, h, !this.blocked);
+    const s = st(id), mouse = Input.hot === id, hot = mouse || o.focus, down = Input.active === id && mouse;
+    if (mouse && !s.was) Audio.play('hover', 5);
+    s.was = mouse;
+    s.h = approach(s.h, hot ? 1 : 0, 18, this.dt);
+    s.p = approach(s.p, down ? 1 : 0, 30, this.dt);
+    s.pop = Math.max(0, s.pop - this.dt * 4);
+    const pulse = Math.sin(R.t * 3.5) * 0.5 + 0.5, lip = 6, lift = Math.round(s.h * 2), press = Math.round(s.p * 4);
+    const fy = y - lift + press, fh = h - lip, sc = 1 + s.pop * 0.1 + s.h * 0.025, ctx = R.ctx;
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2); ctx.scale(sc, sc); ctx.translate(-(x + w / 2), -(y + h / 2));
+    R.box(x - 7, y - 7, w + 14, h + 14, P.gold2, 6, 0.08 + pulse * 0.1 + s.h * 0.08);
+    R.box(x - 3, y - 3, w + 6, h + 6, P.gold1, 4, 0.18 + pulse * 0.16);
+    R.box(x, y + 5, w, h, P.ink0, 3, 0.5);
+    R.box(x - 2, fy - 2, w + 4, y + h - fy + 4, P.ink0, 4);
+    R.box(x, fy, w, y + h - fy, P.gold3, 3);
+    R.box(x, fy, w, fh, hot ? '#ffe070' : P.gold1, 3);
+    R.rect(x + 3, fy + fh - 4, w - 6, 3, P.gold2, 0.55);
+    R.rect(x + 3, fy + 2, w - 6, 2, P.gold0);
+    // Shine sweep
+    const sw = ((R.t % 3.2) / 0.7) * (w + 40) - 20;
+    if (sw < w + 20) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x + 2, fy + 1, w - 4, fh - 2); ctx.clip();
+      ctx.globalAlpha *= 0.35; ctx.fillStyle = P.white;
+      ctx.beginPath(); ctx.moveTo(x + sw, fy); ctx.lineTo(x + sw + 10, fy); ctx.lineTo(x + sw, fy + fh); ctx.lineTo(x + sw - 10, fy + fh); ctx.fill();
+      ctx.restore();
+    }
+    const size = o.size ?? 2, tw = R.measure(label, { size }), aw = 6, gap = 10, lx = x + w / 2 - (tw + gap + aw) / 2, ty = fy + Math.round(fh / 2 - 3.5 * size);
+    R.text(label, lx, ty, { size, color: P.ink0, outline: null, shadow: null });
+    const ax = Math.round(lx + tw + gap + (hot ? Math.sin(R.t * 10) * 1.5 + 1 : 0)), ay = fy + Math.round(fh / 2);
+    for (let i = 0; i < aw; i++) R.rect(ax + i, ay - (aw - i) + 1, 1, (aw - i) * 2 - 1, P.ink0);
+    ctx.restore();
+    if (clicked) { s.pop = 1; Audio.play(o.sound || 'ui'); }
+    return clicked;
+  },
+
   // Tiny icon button, e.g. menu burger.
   iconButton(id, x, y, w, h, draw, o = {}) {
     const clicked = Input.button(id, x, y, w, h, !(this.blocked && !o.ignoreBlock));
