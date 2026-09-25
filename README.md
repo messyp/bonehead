@@ -38,8 +38,8 @@ dist/
   js/core/pixel.js      pixel painter used to generate every sprite
   js/art/cards.js       card faces, skeleton court cards, magic cards, back, foil
   js/art/sprites.js     opponents (animated), mascot, icons, dialogue
-  js/art/map.js         the top-down crypt room for the progression map
-  js/art/mapHD.js       a detailed full-resolution version of that room (on trial)
+  js/art/mapHD.js       the top-down crypt room for the progression map
+  js/art/map.js         the map's crown icon
   js/art/logo.js        the BONEHEAD wordmark (title and HUD), title link icons, depth-of-field blur
   js/audio/sfx.js       synthesized sound effects and mix bus
   js/audio/music.js     generative lo-fi soundtrack with intensity layers
@@ -61,17 +61,13 @@ A run is four tables, defined in `js/game/rounds.js`:
 3. **The Twins** (Tibia and Fibula), two opponents at once. Go out first to win. If a twin goes out, beat the other. The last one holding cards is the Bonehead.
 4. The Pit Boss, Pick Your Table again.
 
-Between rounds, the **Midnight Circuit** map shows a crypt from above (in the spirit of The Binding of Isaac's rooms), with the four opponents as cards on a candle-lit card table, joined by a chalk path. Beaten tables are stamped BONEHEAD. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal.
+Between rounds, the **Midnight Circuit** map shows a crypt from above, in the spirit of The Binding of Isaac's rooms. It is painted at full resolution:
+- textured flagstones and a red and gold rug
+- a card table with a grained, brass-studded rim
+- perspective walls with torches, banners and a barred door
+- props, and banded 16-bit style lighting
 
-A detailed version of the room is on trial (`js/art/mapHD.js`). It is painted at full resolution instead of 2x pixels, with textured flagstones, a rug, a grained and studded table, perspective walls with torches, banners and a barred door, props, and banded 16-bit style lighting. It also moves GO to the bottom centre. Preview it with `?map=detailed` (or `?map=classic`), or choose MAP ART in the dev panel, where OPEN MAP jumps straight to the map. Players still see the classic room.
-
-## Title screen
-
-The BONEHEAD wordmark sits centre stage in a magenta void, and cards drift past at different depths. The logo's chunky letters are drawn in code with a bevel, a plum 3D side and a heavy outline, and the O is a blocky skull with smouldering red eyes. The distant cards are blurred like a camera's depth of field, and the four nearest are placed like a poster, turning over now and then. Letters drop in one by one when the screen opens. After that, a glint sweeps across the logo and the skull chomps.
-
-On a first play, PLAY opens the five-page HOW TO PLAY (SKIP on page one, LET'S GO at the end). Then comes the map, with a pointer to GO, and then the first deal (`bh2-onboarded` in storage). Any click or key during the intro finishes it, so an eager first click still lands on the button. Near cards swing further than far ones as the pointer moves, which gives the scene depth.
-
-There is one big CTA (PLAY, or CONTINUE with a save). Under it are quiet links: NEW RUN, HOW TO PLAY, TROPHIES, OPTIONS. Your best run and trophy count sit centred along the top. The arrow keys move between the button and the links, and Enter picks. The HUD draws the very same wordmark, flattened into one sprite and scaled down (`wordmark()` in `js/art/logo.js`).
+The four opponents are cards on the table, joined by a chalk path, and beaten tables are stamped BONEHEAD. The round's name and rules sit on the rug's top edge, and GO sits on its bottom edge. A "← TITLE" link is at top left, with progress and score at top right. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal. In the dev panel, OPEN MAP jumps straight here.
 
 ## Bonus goals and trophies
 

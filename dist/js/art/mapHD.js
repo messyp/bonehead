@@ -125,9 +125,11 @@ export function mapRoomHD(w, h, land) {
   const img = raster(w, h), r = rng(7171);
   const T = Math.round(h * (land ? 0.16 : 0.1)), B = Math.round(h * 0.06), S = Math.round(w * (land ? 0.06 : 0.08));
   const inner = h - T - B;
-  // Same table as the classic map (a touch higher, leaving room for GO below)
-  const cx = w / 2, cy = T + inner * (land ? 0.47 : 0.47);
-  const rx = land ? w * 0.29 : w * 0.34, ry = land ? inner * 0.31 : inner * 0.3;
+  // The rug runs from just below the back wall to where GO sits (on its bottom edge).
+  // Its top holds the round's name; the table sits between, as large as fits.
+  const cx = w / 2, rugTop = Math.round(T + h * (land ? 0.035 : 0.02)), rugBot = Math.round(h * (land ? 0.85 : 0.88));
+  const rimTop = rugTop + h * (land ? 0.1 : 0.07), rimBot = rugBot - h * (land ? 0.063 : 0.04);
+  const cy = (rimTop + rimBot) / 2, ry = (rimBot - rimTop) / 2 - 9, rx = land ? w * 0.31 : w * 0.36;
 
   // ---- floor: flagstones with bevels, grain, cracks and moss in the joints
   const tones = ['#3d3338', '#372e33', '#43383d', '#342b30', '#3f3539'].map(C);
@@ -172,13 +174,13 @@ export function mapRoomHD(w, h, land) {
   }
 
   // ---- rug under the table: deep red, gold diamond border, tasselled ends
-  const rw = Math.round(rx * 1.1 + 8), rh = Math.round(ry * 1.2 + 6), rx0 = Math.round(cx - rw), ry0 = Math.round(cy - rh);
-  for (let j = 0; j < rh * 2; j++) for (let i = 0; i < rw * 2; i++) {
-    const px = rx0 + i, py = ry0 + j, e = Math.min(i, j, rw * 2 - 1 - i, rh * 2 - 1 - j);
+  const rw = Math.round(rx * 1.1 + 8), rx0 = Math.round(cx - rw), ry0 = rugTop, RW = rw * 2, RH = rugBot - rugTop;
+  for (let j = 0; j < RH; j++) for (let i = 0; i < RW; i++) {
+    const px = rx0 + i, py = ry0 + j, e = Math.min(i, j, RW - 1 - i, RH - 1 - j);
     let c;
     if (e < 2) c = C('#2a0a16');
     else if (e < 9) {
-      const along = (e === j || e === rh * 2 - 1 - j) ? i : j, m = (along + 4) % 10, band = Math.abs(e - 5.5);
+      const along = (e === j || e === RH - 1 - j) ? i : j, m = (along + 4) % 10, band = Math.abs(e - 5.5);
       c = Math.abs(m - 5) + band < 3.5 ? C('#c98f36') : C('#3e0f1e');
       if (Math.abs(m - 5) + band < 1.5) c = C('#f0c060');
     } else if (e === 9) c = C('#d9a444');
@@ -189,8 +191,8 @@ export function mapRoomHD(w, h, land) {
     }
     img.set(px, py, c);
   }
-  for (let j = 2; j < rh * 2 - 2; j += 2) for (const side of [-1, 1]) {
-    const ex = side < 0 ? rx0 - 1 : rx0 + rw * 2;
+  for (let j = 2; j < RH - 2; j += 2) for (const side of [-1, 1]) {
+    const ex = side < 0 ? rx0 - 1 : rx0 + RW;
     for (let k = 0; k < 4; k++) img.set(ex + side * k, ry0 + j, k === 3 ? C('#b8a882') : C('#e0d2ae'));
   }
 
@@ -324,7 +326,7 @@ export function mapRoomHD(w, h, land) {
   }
 
   // ---- floor props away from the table: barrels, a crate, bones, skulls, cards
-  const clear = (px, py, pad = 10) => Math.hypot((px - cx) / (rw + pad), (py - cy) / (rh + pad)) > 1.05 && Math.abs(px - cx) > rw * 0.1;
+  const clear = (px, py, pad = 10) => px < rx0 - pad || px > rx0 + RW + pad || py < ry0 - pad || py > ry0 + RH + pad;
   const fx0 = S + 12, fx1 = w - S - 12, fy0 = T + 12, fy1 = h - B - 10;
   barrel(img, fx0 + 10, fy1 - 16, 8); barrel(img, fx0 + 26, fy1 - 10, 7);
   crate(img, fx1 - 22, fy0 + 20, 16); barrel(img, fx1 - 12, fy0 + 48, 7);
@@ -376,5 +378,5 @@ export function mapRoomHD(w, h, land) {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   cv.getContext('2d').putImageData(new ImageData(px2, w, h), 0, 0);
-  return { spr: new Spr(cv), candles, torches, table: { cx, cy, rx, ry } };
+  return { spr: new Spr(cv), candles, torches, table: { cx, cy, rx, ry }, rug: { x: rx0, y: ry0, w: RW, h: RH } };
 }
