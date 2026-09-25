@@ -117,6 +117,17 @@ function finish(g, who) {
   }
 }
 
+// Per-round stats for the player; bonus goals and trophies read these.
+export function pstats(g) {
+  return (g.pstats ??= { plays: 0, maxPlay: 0, maxSame: 0, maxBurn: 0, quadBurns: 0, infernoBurns: 0, magic: [], magicPlays: 0, blindHits: 0, pickedUp: 0, maxHeld: 0 });
+}
+function trackPickup(g, who, n) {
+  if (who !== 'player') return;
+  const st = pstats(g);
+  st.pickedUp += n;
+  st.maxHeld = Math.max(st.maxHeld, g.player.hand.length);
+}
+
 export function play(g, who, ids, min = 3, protect = false) {
   const p = g[who], src = source(p), cards = ids.map(id => p[src].find(c => c.id === id));
   if (!cards.length || cards.some(c => !c) || new Set(ids).size !== ids.length) return { error: 'Choose your cards first.' };
@@ -126,14 +137,25 @@ export function play(g, who, ids, min = 3, protect = false) {
   g.moves++;
   if (src === 'blind' && !legal(cards[0], g.pile)) {
     if (protect) return { protected: true, cards, src };
+    const n = g.pile.length + cards.length;
     p.hand.push(...g.pile, ...cards);
     if (who === 'player') g.playerPickups = (g.playerPickups || 0) + 1;
+    trackPickup(g, who, n);
     g.pile = [];
     g.turn = nextSeat(g, who);
     return { pickup: true, cards, src };
   }
   g.pile.push(...cards);
   const burn = burned(g.pile), size = g.pile.length, burnedCards = burn ? [...g.pile] : [];
+  if (who === 'player') {
+    const st = pstats(g), counts = {};
+    cards.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; if ([2, 8, 9, 10].includes(c.r)) { st.magicPlays++; if (!st.magic.includes(c.r)) st.magic.push(c.r); } });
+    st.plays++;
+    st.maxPlay = Math.max(st.maxPlay, cards.length);
+    st.maxSame = Math.max(st.maxSame, ...Object.values(counts));
+    if (src === 'blind') st.blindHits++;
+    if (burn) { st.maxBurn = Math.max(st.maxBurn, size); if (cards.at(-1).r === 10) st.infernoBurns++; else st.quadBurns++; }
+  }
   if (burn) {
     g.pile = []; g.burns++;
     g.cardsBurned = (g.cardsBurned || 0) + size;
@@ -148,7 +170,9 @@ export function play(g, who, ids, min = 3, protect = false) {
 export function pickup(g, who) {
   if (g.ended || g.turn !== who || !g.pile.length || options(g, who).length) return false;
   if (who === 'player') g.playerPickups = (g.playerPickups || 0) + 1;
+  const n = g.pile.length;
   g[who].hand.push(...g.pile);
+  trackPickup(g, who, n);
   g.pile = [];
   g.turn = nextSeat(g, who);
   g.moves++;

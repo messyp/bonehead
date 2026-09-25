@@ -22,7 +22,7 @@ No build step, no dependencies, no external requests. The whole game is about 85
 for t in *.test.mjs; do node $t; done
 ```
 
-`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
+`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `goals.test.mjs` covers bonus goals, per-round stats and trophies. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
 
 ## Structure
 
@@ -38,6 +38,7 @@ dist/
   js/core/pixel.js      pixel painter used to generate every sprite
   js/art/cards.js       card faces, skeleton court cards, magic cards, back, foil
   js/art/sprites.js     opponents (animated), title mascot, icons, dialogue
+  js/art/map.js         the Midnight Circuit backdrop for the progression map
   js/audio/sfx.js       synthesized sound effects and mix bus
   js/audio/music.js     generative lo-fi soundtrack with intensity layers
   js/game/game.js       table layout, card physics, turn flow, scoring, AI
@@ -57,7 +58,11 @@ A run is four tables, defined in `js/game/rounds.js`:
 3. **The Twins** (Tibia and Fibula), two opponents at once. Go out first to win. If a twin goes out, beat the other. The last one holding cards is the Bonehead.
 4. The Pit Boss, Pick Your Table again.
 
-A rule-change card explains each twist before the deal. The engine supports any number of seats (`deal(round, extra, min, { seats, choose })`), and two-seat behaviour is unchanged.
+Between rounds, the **Midnight Circuit** map shows every table on a path. Beaten opponents are stamped BONEHEAD, the next one flies a flag, later ones are locked, and your skull token hops along the path. Hover a table for its venue and any rule change. A rule-change card then explains the twist before the deal.
+
+## Bonus goals and trophies
+
+Round 1 always shows Double Cremation and Clean Getaway. Later rounds draw three goals from a pool of 11 (`GOALS` in `scoring.js`), such as Hat Trick, Long Run, Bonfire, Quad Squad, Conjurer, Old School, Blind Luck, Comeback Kid and Speed Run. Hover a goal for what it asks, your progress, and whether it pays immediately or on a win. The engine keeps per-round player stats (`pstats`) that drive both goals and the 16 trophies. The engine supports any number of seats (`deal(round, extra, min, { seats, choose })`), and two-seat behaviour is unchanged.
 
 All art is generated in code at startup from the palette in `js/art/palette.js`. There are no image files apart from the favicon.
 
@@ -77,6 +82,7 @@ Everything is synthesized with Web Audio. The music is a generative lo-fi jazz l
 
 - Click or tap a card to select it; select more to build a run, in any order. The game arranges the play order, and if a run isn't finished yet it tells you which card is missing. Press PLAY, or drag the card onto the pile, or flick it upward.
 - Double-tap a card to auto-select the best run through it.
+- **Card hints** (checkbox bottom-left, or Options) darken cards you can't play and show run helpers. Turn them off to judge every card yourself.
 - When nothing beats the pile, your cards shake, then the pile lights up with a PICK UP button and says what beats you. Tap the pile or the button.
 - Keyboard: ←/→ move focus, Space selects, Enter plays, S sorts, Esc pauses.
 - Hover a card for its value and, for magic cards, what it does.

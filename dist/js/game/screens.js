@@ -14,6 +14,7 @@ import { trophies } from '../../progression.js';
 import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
 import { ROUNDS, RULES } from './rounds.js';
+import { mapBackdrop, crownIcon } from '../art/map.js';
 import { cardsLeft } from '../../engine.js';
 
 const T = { font: TINY };
@@ -44,6 +45,32 @@ function bigLogo(cx, cy, size, skull = Sprites.skull) {
 }
 
 let devTaps = 0, devTapT = 0;
+
+// Progression map state that only matters for drawing.
+const mapCache = { key: '', spr: null, crown: null };
+const fireflies = Array.from({ length: 26 }, () => ({ x: Math.random(), y: 0.35 + Math.random() * 0.6, ph: Math.random() * 6, sp: 0.2 + Math.random() * 0.5, c: Math.random() < 0.7 ? P.gold0 : P.teal0 }));
+
+function mapNodes(vw, vh, land) {
+  if (land) return ROUNDS.map((_, i) => ({ x: vw * (0.17 + i * 0.22), y: vh * (i % 2 ? 0.46 : 0.7) }));
+  return ROUNDS.map((_, i) => ({ x: vw * (i % 2 ? 0.72 : 0.28), y: vh * (0.8 - i * 0.155) }));
+}
+// S-shaped path between two nodes: out of the side (landscape) or the top (portrait).
+const elbow = (a, b, land) => {
+  if (land) { const mx = (a.x + b.x) / 2; return [a, { x: mx, y: a.y }, { x: mx, y: b.y }, b]; }
+  const my = (a.y + b.y) / 2; return [a, { x: a.x, y: my }, { x: b.x, y: my }, b];
+};
+// Where the skull token stands: on the path just outside a table.
+const spot = (n, land, tw, th) => (land ? { x: n.x - tw / 2 - 11, y: n.y + 2 } : { x: n.x - tw / 2 - 11, y: n.y + 6 });
+function along(pts, t) {
+  const segs = []; let total = 0;
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); segs.push(l); total += l; }
+  let d = t * total;
+  for (let i = 0; i < segs.length; i++) {
+    if (d <= segs[i] || i === segs.length - 1) { const k = segs[i] ? Math.min(1, d / segs[i]) : 0; return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * k, y: pts[i].y + (pts[i + 1].y - pts[i].y) * k }; }
+    d -= segs[i];
+  }
+  return pts.at(-1);
+}
 
 const floaters = Array.from({ length: 14 }, (_, i) => ({ x: Math.random(), y: Math.random(), sp: 0.015 + Math.random() * 0.03, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.6, c: { r: 2 + Math.floor(Math.random() * 13), s: i % 4 }, sc: 0.5 + Math.random() * 0.4, back: Math.random() < 0.35 }));
 
@@ -105,6 +132,111 @@ export const Screens = {
     R.text('A SHEDDING ROGUELITE · SOUND ON', vw / 2, vh - 11, { color: P.ink6, align: 'center', outline: null, ...T });
   },
 
+  // Between rounds: the Midnight Circuit map (after Super Meat Boy's world maps).
+  map(game) {
+    const vw = R.vw, vh = R.vh, land = R.land, mp = game.map, t = mp.t, next = mp.next;
+    const key = `${Math.ceil(vw / 2)}x${Math.ceil(vh / 2)}`;
+    if (mapCache.key !== key) { mapCache.key = key; mapCache.spr = mapBackdrop(Math.ceil(vw / 2), Math.ceil(vh / 2), land).spr(); mapCache.crown ??= crownIcon().spr(); }
+    R.spr(mapCache.spr, 0, 0, { sc: 2, ax: 0, ay: 0 });
+    // Fireflies
+    for (const f of fireflies) {
+      const x = ((f.x + Math.sin(R.t * f.sp + f.ph) * 0.02) % 1) * vw, y = f.y * vh + Math.cos(R.t * f.sp * 1.3 + f.ph) * 6, a = 0.3 + 0.7 * Math.max(0, Math.sin(R.t * 2 + f.ph));
+      R.rect(Math.round(x), Math.round(y), 1, 1, f.c, a);
+    }
+    const nodes = mapNodes(vw, vh, land), pathW = land ? 9 : 8;
+    // Path, cleared sections a little brighter
+    for (let i = 1; i < nodes.length; i++) {
+      const pts = elbow(nodes[i - 1], nodes[i], land), done = i < next;
+      for (let j = 1; j < pts.length; j++) {
+        const a = pts[j - 1], b = pts[j], x0 = Math.min(a.x, b.x) - pathW / 2, y0 = Math.min(a.y, b.y) - pathW / 2;
+        R.rect(x0 - 1, y0 - 1, Math.abs(b.x - a.x) + pathW + 2, Math.abs(b.y - a.y) + pathW + 2, P.ink0, 0.9);
+      }
+      for (let j = 1; j < pts.length; j++) {
+        const a = pts[j - 1], b = pts[j], x0 = Math.min(a.x, b.x) - pathW / 2, y0 = Math.min(a.y, b.y) - pathW / 2;
+        R.rect(x0, y0, Math.abs(b.x - a.x) + pathW, Math.abs(b.y - a.y) + pathW, done ? '#d8c79c' : '#8a7a5c');
+      }
+    }
+    // Nodes
+    const tw = land ? 58 : 56, th = land ? 70 : 66;
+    let hover = null;
+    ROUNDS.forEach((rd, i) => {
+      const n = nodes[i], round = i + 1, beaten = round < next, current = round === next, locked = round > next;
+      const bob = current ? Math.sin(R.t * 3) * 1.5 : 0, x = Math.round(n.x - tw / 2), y = Math.round(n.y - th / 2 + bob);
+      const lead = OPPONENTS[oppIndex(rd.opps[0])];
+      if (current) R.box(x - 3, y - 3, tw + 6, th + 6, P.gold1, 3, 0.5 + Math.sin(R.t * 6) * 0.35);
+      R.panel(x, y, tw, th, { fill: beaten ? P.ink2 : current ? P.ink3 : P.ink1, rim: beaten ? P.grn2 : current ? P.gold1 : P.ink0, hi: P.ink4, depth: 3 });
+      const ps = rd.opps.length > 1 ? 0.55 : 1;
+      rd.opps.forEach((id, k) => {
+        const px = x + tw / 2 + (rd.opps.length > 1 ? (k - 0.5) * 25 : 0), py = y + 4 + 22 * ps + (rd.opps.length > 1 ? 10 : 0);
+        R.spr(portrait(oppIndex(id), current && (R.t + k) % 3.5 < 0.12 ? 'blink' : 'idle', Math.floor(R.t * 6)), px, py, { sc: ps, alpha: locked ? 0.5 : 1 });
+      });
+      if (locked) { R.box(x + 3, y + 3, tw - 6, th - 20, P.ink0, 2, 0.45); R.spr(Sprites.lock, x + tw / 2, y + 26); }
+      const name = (rd.name || lead.name).replace('The ', '').toUpperCase();
+      R.text(name, x + tw / 2, y + th - 13, { font: R.measure(name) > tw - 6 ? TINY : undefined, color: locked ? P.ink6 : rd.name ? P.teal1 : lead.color, align: 'center' });
+      R.text(`ROUND ${round}`, x + tw / 2, y - 9, { font: TINY, color: current ? P.gold1 : P.ink6, align: 'center' });
+      if (rd.rule) { const tag = 'NEW RULE'; const ww = R.measure(tag, { font: TINY }) + 6; R.box(x + tw - ww + 3, y + th - 4, ww, 8, P.ink0, 1); R.box(x + tw - ww + 4, y + th - 3, ww - 2, 6, RULES[rd.rule].color, 1); R.text(tag, x + tw - ww / 2 + 3, y + th - 2, { font: TINY, color: P.ink0, outline: null, shadow: null, align: 'center' }); }
+      if (beaten) {
+        R.ctx.save(); R.ctx.translate(x + tw / 2, y + 26); R.ctx.rotate(-0.25);
+        R.box(-26, -5, 52, 11, P.red2, 1, 0.95); R.text('BONEHEAD', 0, -2, { font: TINY, color: P.white, align: 'center', outline: null });
+        R.ctx.restore();
+        R.spr(Sprites.check, x + tw - 6, y + 6);
+      }
+      if (current) {
+        // A little flag, waving, planted above the next table.
+        const fx = x + tw - 8, fy = y - 18;
+        R.rect(fx, fy, 1, 18, P.bone2);
+        for (let k = 0; k < 9; k++) R.rect(fx + 1 + k, fy + Math.round(Math.sin(R.t * 6 - k * 0.7) * 1), 1, 6, k < 8 ? P.bone0 : P.bone2);
+      }
+      if (Input.over(x, y, tw, th) && !UI.blocked) hover = { rd, round, x: x + tw / 2, y, beaten, locked, lead };
+    });
+    // Player token: hops along the path from the last table to the next.
+    const to = nodes[next - 1], from = mp.from ? nodes[mp.from - 1] : null, hopT = clamp(t / 1.3), end = spot(to, land, tw, th);
+    let tx = end.x, ty = end.y - 10;
+    if (from && hopT < 1) {
+      const route = elbow(from, to, land); route[0] = spot(from, land, tw, th); route[route.length - 1] = end;
+      const pos = along(route, ease.inOutCubic(hopT));
+      tx = pos.x; ty = pos.y - 10 - Math.abs(Math.sin(hopT * Math.PI * 4)) * 10;
+      if (!mp.hops) mp.hops = 0;
+      const hopIdx = Math.floor(hopT * 4);
+      if (hopIdx > mp.hops) { mp.hops = hopIdx; Audio.play('land', 0.4); }
+    } else if (!from && t < 0.6) ty -= (1 - ease.outCubic(t / 0.6)) * 60;
+    if ((hopT >= 1 || !from) && !mp.landed && t > (from ? 1.3 : 0.6)) { mp.landed = true; Audio.play('thud'); FX.burst(tx, ty + 12, 10, { colors: [P.bone1, P.ink5], speed: [20, 60], angle: -Math.PI / 2, spread: 1.2, grav: 150, life: [0.3, 0.5], top: true }); }
+    R.spr(Cards.shadow, tx, end.y + 2, { sx: 0.5, sy: 0.08, alpha: 0.4 });
+    R.spr(game.mascotSpr((R.t % 4) > 3.8 ? 'wink' : 'idle'), tx, ty, { sc: land ? 0.42 : 0.38 });
+    // Header banner
+    const bw = Math.min(vw - 16, land ? 290 : 236), bx = vw / 2 - bw / 2, by = 6;
+    R.box(bx - 2, by - 2, bw + 4, 37, P.ink0, 2);
+    R.box(bx, by, bw, 33, P.bone0, 2);
+    for (let k = 0; k < 3; k++) { R.rect(bx + 5, by + 8 + k * 6, 10 - k * 2, 2, P.ink0); R.rect(bx + bw - 15 + k * 2, by + 8 + k * 6, 10 - k * 2, 2, P.ink0); }
+    const title = 'THE MIDNIGHT CIRCUIT', tsize = R.measure(title, { size: 2 }) < bw - 40 ? 2 : 1;
+    R.text(title, vw / 2, by + (tsize === 2 ? 2 : 6), { size: tsize, color: P.ink0, align: 'center', outline: null, shadow: null });
+    const pct = `${Math.round((next - 1) / ROUNDS.length * 100)}%`;
+    R.spr(mapCache.crown, vw / 2 - R.measure(pct) / 2 - 7, by + 26);
+    R.text(pct, vw / 2 + 3, by + 23, { color: P.ink0, align: 'center', outline: null, shadow: null });
+    // Name strip: who's next, with a brushed black band
+    const nr = ROUNDS[next - 1], nlead = OPPONENTS[oppIndex(nr.opps[0])], label = `${(nr.name || nlead.name).toUpperCase()} · ${nr.venue || nlead.venue}`;
+    const sw = Math.min(vw - 8, R.measure(label) + 40), sy = by + 41;
+    R.rect(vw / 2 - sw / 2, sy, sw, 13, P.ink0);
+    for (let k = 0; k < 8; k++) { const jl = (k * 7) % 5 + 2; R.rect(vw / 2 - sw / 2 - jl, sy + k * 1.6, jl, 1.6, P.ink0); R.rect(vw / 2 + sw / 2, sy + k * 1.6, (k * 5) % 6 + 2, 1.6, P.ink0); }
+    R.text(label, vw / 2, sy + 3, { color: P.gold2, align: 'center', outline: null, ...(R.measure(label) > vw - 20 ? { font: TINY } : {}) });
+    const stats = `SCORE ${game.score.toLocaleString()} · ${fmtTime(game.elapsed)} · BEST ${game.best.toLocaleString()}`;
+    const stw = R.measure(stats, { font: TINY }) + 12;
+    R.box(vw / 2 - stw / 2, sy + 15, stw, 10, P.ink0, 1, 0.85);
+    R.text(stats, vw / 2, sy + 17, { font: TINY, color: P.bone1, align: 'center', outline: null });
+    if (nr.rule) R.text(`RULE CHANGE: ${RULES[nr.rule].title}`, vw / 2, sy + 29, { font: TINY, color: RULES[nr.rule].color, align: 'center', alpha: 0.7 + Math.sin(R.t * 5) * 0.3 });
+    // Tricks in your bag
+    const items = Object.entries(mp.items || {}).filter(([, n]) => n > 0).map(([id]) => id), owned = [...game.tricks, ...items];
+    owned.forEach((id, i) => R.spr(Sprites.tricks[id], vw / 2 + (i - (owned.length - 1) / 2) * 16, vh - 16, { sc: 0.7 }));
+    // Footer
+    if (UI.button('map-title', 8, vh - 28, 56, 20, 'TITLE', { color: 'ink' })) game.transition(() => { game.scene = 'title'; });
+    if (UI.button('map-go', vw - 78, vh - 30, 70, 24, 'GO!', { size: 2, pulse: t > 1.2, color: 'gold' })) game.startMapRound();
+    if (hover) {
+      const st = hover.beaten ? '^lBEATEN. Officially a Bonehead.' : hover.locked ? '^dLocked until you clear the tables before it.' : '^gUp next.';
+      const who = hover.rd.opps.map(id => OPPONENTS[oppIndex(id)].name).join(' & ');
+      UI.tooltip(who, `${hover.rd.venue || hover.lead.venue}${hover.rd.rule ? `\n^o${RULES[hover.rd.rule].title}` : ''}\n${st}`, hover.x, hover.y - 6, { color: hover.rd.name ? P.teal1 : hover.lead.color, w: 150 });
+    }
+  },
+
   modal(game) {
     const m = game.modal, fn = this[m.kind];
     if (fn) fn.call(this, game, m);
@@ -133,7 +265,7 @@ export const Screens = {
   },
 
   options(game, m) {
-    const w = 210, h = 240, b = UI.modal('opts', w, h, m.t), s = game.settings;
+    const w = 210, h = 257, b = UI.modal('opts', w, h, m.t), s = game.settings;
     UI.title('OPTIONS', b.x + w / 2, b.y + 12, { size: 2 });
     UI.blocked = false;
     const x = b.x + 16, iw = w - 32;
@@ -141,10 +273,10 @@ export const Screens = {
     const sv = UI.slider('o-sfx', x, b.y + 76, iw, s.sfx, 'SOUND FX');
     if (mv !== s.music) { s.music = mv; game.applySettings(); }
     if (sv !== s.sfx) { s.sfx = sv; game.applySettings(); }
-    const toggles = [['crt', 'CRT GLOW'], ['shake', 'SCREEN SHAKE'], ['reduced', 'REDUCED MOTION'], ['fast', 'FAST ANIMATIONS']];
+    const toggles = [['hints', 'CARD HINTS'], ['crt', 'CRT GLOW'], ['shake', 'SCREEN SHAKE'], ['reduced', 'REDUCED MOTION'], ['fast', 'FAST ANIMATIONS']];
     toggles.forEach(([key, label], i) => { const v = UI.toggle('o-' + key, x, b.y + 94 + i * 17, iw, label, s[key]); if (v !== s[key]) { s[key] = v; game.applySettings(); } });
     // Switching renderer needs a fresh canvas, so it reloads the page (the run is saved).
-    const safe = UI.toggle('o-safe', x, b.y + 94 + 4 * 17, iw, 'SAFE RENDERING', !!s.safe);
+    const safe = UI.toggle('o-safe', x, b.y + 94 + 5 * 17, iw, 'SAFE RENDERING', !!s.safe);
     if (safe !== !!s.safe) { s.safe = safe; game.applySettings(); game.save(); setTimeout(() => location.reload(), 250); }
     R.text('Try Safe Rendering if graphics glitch.', b.x + w / 2, b.y + h - 52, { color: P.ink6, align: 'center', outline: null, ...T });
     R.text('All music & sound is synthesised live.', b.x + w / 2, b.y + h - 42, { color: P.ink6, align: 'center', outline: null, ...T });
@@ -250,18 +382,32 @@ export const Screens = {
   },
 
   trophies(game, m) {
-    const list = Object.entries(trophies), w = Math.min(R.vw - 16, 250), h = 60 + list.length * 28 + 28, b = UI.modal('trophies', w, h, m.t);
-    UI.title('TROPHIES', b.x + w / 2, b.y + 10, { size: 2 });
+    const list = Object.entries(trophies), cols = 2, rowH = 21, rows = Math.ceil(list.length / cols);
+    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 8, 66 + rows * rowH + 50), b = UI.modal('trophies', w, h, m.t);
+    const rarityCol = { BRONZE: P.gold3, SILVER: P.bone2, GOLD: P.gold1, RARE: P.vio1 };
+    UI.title('TROPHIES', b.x + w / 2, b.y + 8, { size: 2 });
     const got = list.filter(([id]) => game.unlocked[id]).length;
-    R.text(`${got} / ${list.length} UNLOCKED`, b.x + w / 2, b.y + 30, { color: P.ink6, align: 'center' });
+    R.text(`${got} / ${list.length} UNLOCKED`, b.x + w / 2, b.y + 27, { color: P.ink6, align: 'center' });
+    const cw = Math.floor((w - 24 - 6) / cols);
+    let pick = m.data.pick ?? null;
     list.forEach(([id, t], i) => {
-      const y = b.y + 44 + i * 28, on = !!game.unlocked[id];
-      R.panel(b.x + 10, y, w - 20, 24, { fill: on ? P.ink3 : P.ink1, hi: on ? P.ink4 : null, rim: P.ink0 });
-      R.spr(on ? Sprites.trophy : Sprites.trophyDim, b.x + 22, y + 12, { sc: on ? 1 + Math.sin(R.t * 4 + i) * 0.05 : 1 });
-      R.text(t.name, b.x + 34, y + 4, { color: on ? P.gold1 : P.ink6 });
-      R.text(`${t.rarity} · ${t.detail}`, b.x + 34, y + 14, { color: on ? P.bone1 : P.ink5, outline: null, ...T });
+      const x = b.x + 12 + (i % cols) * (cw + 6), y = b.y + 40 + Math.floor(i / cols) * rowH, on = !!game.unlocked[id];
+      const hot = Input.over(x, y, cw, rowH - 3) || pick === id;
+      if (Input.over(x, y, cw, rowH - 3)) pick = id;
+      R.panel(x, y, cw, rowH - 3, { fill: hot ? P.ink4 : on ? P.ink3 : P.ink1, hi: on ? P.ink4 : null, rim: on ? rarityCol[t.rarity] : P.ink0, shadow: false });
+      R.spr(on ? Sprites.trophy : Sprites.trophyDim, x + 10, y + (rowH - 3) / 2, { sc: on ? 0.9 + Math.sin(R.t * 4 + i) * 0.05 : 0.9 });
+      R.text(on ? t.name : '???', x + 19, y + 5, { color: on ? P.bone0 : P.ink5, ...(R.measure(t.name) > cw - 24 ? { font: TINY } : {}) });
+      if (Input.button('tr-' + id, x, y, cw, rowH - 3, true)) { m.data.pick = id; Audio.play('ui'); }
     });
-    if (UI.button('tr-back', b.x + w / 2 - 40, b.y + h - 26, 80, 18, 'BACK', { ignoreBlock: true })) game.closeModal();
+    const dy = b.y + 44 + rows * rowH;
+    const sel = pick && trophies[pick];
+    if (sel) {
+      const on = !!game.unlocked[pick];
+      R.text(`${sel.rarity}${on ? ' · UNLOCKED' : ''}`, b.x + w / 2, dy, { font: TINY, color: rarityCol[sel.rarity], align: 'center' });
+      R.text(on ? sel.name : 'LOCKED TROPHY', b.x + w / 2, dy + 8, { color: on ? P.gold1 : P.ink6, align: 'center' });
+      R.text(sel.detail, b.x + w / 2, dy + 19, { color: P.bone1, align: 'center', ...(R.measure(sel.detail) > w - 20 ? { font: TINY } : {}) });
+    } else R.text('Hover or tap a trophy to see how to earn it.', b.x + w / 2, dy + 10, { color: P.ink6, align: 'center', font: TINY });
+    if (UI.button('tr-back', b.x + w / 2 - 40, b.y + h - 24, 80, 18, 'BACK', { ignoreBlock: true })) game.closeModal();
     b.restore();
   },
 

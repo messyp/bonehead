@@ -1,5 +1,5 @@
 import { deal, rule, legal, source, options, play, pickup, SUITS, seatsOf, cardsLeft, chooseTable, aiTable } from '../../engine.js';
-import { scorePlay, comboReward, cardPoints, roundGoals } from '../../scoring.js';
+import { scorePlay, comboReward, cardPoints, roundGoals, pickGoals } from '../../scoring.js';
 import { claimGoals, trophies, earnedTrophies, exchangeHand } from '../../progression.js';
 import { guidance } from '../../guidance.js';
 import { allChains, containing, exactly, bestChain, completion } from '../../runs.js';
@@ -75,7 +75,7 @@ export const Game = {
   selected: [], score: 0, shownScore: 0, best: 0, tricks: [], shields: 0, rewardChoices: [], pending: null, elapsed: 0,
   started: false, busy: false, moving: false, token: 0, hidden: new Set(), revealing: new Set(), slot: new Map(),
   config: { minHand: 3, aiDelay: 1.05, timeBonus: 8, extraMagic: 0, aiSkill: 0 },
-  settings: { music: 0.55, sfx: 0.8, crt: true, shake: true, fast: false, reduced: false },
+  settings: { music: 0.55, sfx: 0.8, crt: true, shake: true, fast: false, reduced: false, hints: true },
   unlocked: {}, dev: { mascot: 'classic', logo: 'classic' }, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
   panel: { chips: 0, mult: 1, label: '', total: 0, showTotal: false, flame: 0, pop: 0, mpop: 0, bonus: [] },
   speech: null, cine: null, portraitState: 'idle', blinkT: 2, tellMsg: '', tellT: 0, tellBad: false,
@@ -187,6 +187,7 @@ export const Game = {
     if (!this.selected.length) return false;
     return source(this.g.player) === 'blind' ? this.selected.length === 1 : !!exactly(this.runIndex(), this.selected);
   },
+  runHint() { return this.settings.hints ? `Add ${this.missingCards().map(cardName).join(' ')} to finish the run.` : 'That run isn\'t finished yet.'; },
   missingCards() { return this.selected.length && !this.selectionReady() ? completion(this.runIndex(), this.selected) || [] : []; },
   tell(msg, bad = false) { this.tellMsg = msg; this.tellT = 2.6; this.tellBad = bad; this.announce(msg); },
   announce(msg) { const el = document.getElementById('live'); if (el && el.textContent !== msg) el.textContent = msg; },
@@ -217,9 +218,9 @@ export const Game = {
   },
   save() {
     if (!this.started || this.moving || !this.g) return;
-    store.set('bh2-save', { g: this.g, score: this.score, tricks: this.tricks, shields: this.shields, rewardChoices: this.rewardChoices, pending: this.pending, elapsed: this.elapsed, slot: [...this.slot] });
+    store.set('bh2-save', { g: this.g, score: this.score, tricks: this.tricks, shields: this.shields, rewardChoices: this.rewardChoices, pending: this.pending, elapsed: this.elapsed, slot: [...this.slot], map: this.pending === 'map' ? { next: this.map.next, items: this.map.items } : null });
   },
-  hasSave() { const s = store.get('bh2-save', null); return !!(s?.g && (!s.g.ended || ['upgrade', 'result'].includes(s.pending))); },
+  hasSave() { const s = store.get('bh2-save', null); return !!(s?.g && (!s.g.ended || ['upgrade', 'result', 'map'].includes(s.pending))); },
 
   say(kind, chance = 1, seat) {
     if (Math.random() > chance) return;
@@ -232,18 +233,39 @@ export const Game = {
   },
 
   // ---------- run flow ----------
-  newRun(round = 1) {
+  // viaMap: show the Midnight Circuit map first (normal play); the dev skipper deals straight away.
+  newRun(round = 1, viaMap = true) {
     this.token++;
     this.score = 0; this.shownScore = 0; this.elapsed = 0; this.tricks = []; this.rewardChoices = []; this.shields = 0; this.pending = null;
     this.selected = []; this.swapMode = false; this.drag = null;
     this.stats = { maxBurn: 0 };
-    this.beginRound(round, {});
+    this.g = null; this.started = true;
+    if (viaMap) this.showMap(round, 0, {});
+    else this.beginRound(round, {});
   },
 
   // Dev: jump straight into any round, keeping the run's tricks.
   jumpToRound(n) {
     this.modal = null;
-    this.transition(() => { if (!this.started || this.scene !== 'table') this.newRun(n); else this.beginRound(n); });
+    this.transition(() => { if (!this.started || !this.g) this.newRun(n, false); else this.beginRound(n); });
+  },
+
+  // ---------- progression map ----------
+  showMap(next, from, items) {
+    this.token++;
+    Clock.clear(); FX.clear(); this.views.clear();
+    this.modal = null; Audio.muffle(false);
+    this.map = { t: 0, next, from, items: items || {} };
+    this.scene = 'map';
+    if (this.g) { this.pending = 'map'; this.save(); }
+    Post.theme(THEMES[roundOf(next).theme]);
+    Music.set(0, roundOf(next).key);
+  },
+  startMapRound() {
+    const mp = this.map;
+    if (!mp || this.trans) return;
+    Audio.play('coin');
+    this.transition(() => { this.pending = null; this.beginRound(mp.next, mp.items); });
   },
 
   resetPanel() { Object.assign(this.panel, { chips: 0, mult: 1, label: '', total: 0, showTotal: false, flame: 0, bonus: [] }); },
@@ -252,6 +274,8 @@ export const Game = {
   dealRound(n, items = {}) {
     const rd = roundOf(n), g = deal(n, this.config.extraMagic, this.config.minHand, { seats: seatsFor(n), choose: rd.rule === 'choose' });
     g.finalRound = ROUNDS.length;
+    g.goals = pickGoals(n);
+    g.opps = [...rd.opps];
     g.items = items;
     if (this.tricks.includes('wild')) g.player.hand.push({ r: 2, s: 1, id: `gift-${n}-2` }, { r: 10, s: 0, id: `gift-${n}-10` });
     return g;
@@ -392,7 +416,7 @@ export const Game = {
     if (this.g.choosing) { this.confirmChoice(); return; }
     if (this.mustPickUp()) { this.selected = []; this.animatePickup('player'); return; }
     if (!this.selected.length) { this.tell('Pick a card first.', true); Audio.play('bad'); return; }
-    if (!this.selectionReady()) { this.tell(`Add ${this.missingCards().map(cardName).join(' ')} to finish the run.`, true); Audio.play('bad'); return; }
+    if (!this.selectionReady()) { this.tell(this.runHint(), true); Audio.play('bad'); return; }
     this.submittedAt = Clock.t;
     this.noteRun(this.selected.length);
     this.animatePlay('player', [...this.selected]);
@@ -468,7 +492,7 @@ export const Game = {
       if (token !== this.token) return;
       this.g = next;
       this.afterMove(who, result);
-      if (you) { this.checkTrophies(result); const earned = this.payGoals(); if (earned.length) await wait(0.9); }
+      if (you) { this.checkTrophies(award ? { ...result, points: award.points } : result); const earned = this.payGoals(); if (earned.length) await wait(0.9); }
     } catch (err) {
       console.error('Turn animation failed', err);
       this.g = next;
@@ -708,7 +732,7 @@ export const Game = {
     if (!UPGRADES[id] || this.tricks.includes(id) || this.pending !== 'upgrade' || !this.rewardChoices.includes(id)) return;
     const items = { ...(this.g.items || {}) };
     if (['reshuffle', 'swap'].includes(id)) items[id] = (items[id] || 0) + 1; else this.tricks.push(id);
-    this.beginRound(this.g.round + 1, items);
+    this.showMap(this.g.round + 1, this.g.round, items);
   },
 
   continueRun() {
@@ -719,6 +743,7 @@ export const Game = {
     Object.assign(this, { g: s.g, score: s.score, shownScore: s.score, tricks: s.tricks || [], shields: s.shields || 0, rewardChoices: s.rewardChoices || [], pending: s.pending, elapsed: s.elapsed || 0 });
     this.slot = new Map(s.slot || []);
     this.started = true; this.selected = []; this.busy = false; this.moving = false; this.scene = 'table'; this.modal = null;
+    if (this.pending === 'map' && s.map) { this.showMap(s.map.next, s.map.next - 1, s.map.items); this.map.t = 2; return; }
     this.resetPanel();
     this.g.order ??= ['player', 'house'];
     this.g.out ??= [];
@@ -788,9 +813,9 @@ export const Game = {
         let r = t * k * 2.2 * DEG;
         if (this.focus === i && myTurn) y -= 3;
         const v = put(c, x, y, sel || hov ? r * 0.4 : r, (hov ? 1.1 : 1) * hs, true, 300 + i + (hov ? 60 : 0), 'hand', true);
-        const ok = g.choosing || this.canPlay(c);
-        v.dim = myTurn && !sel && !this.swapMode && !ok ? 1 : 0;
-        v.link = myTurn && !sel && !this.swapMode && !g.choosing && ok && this.selected.length > 0;
+        const ok = g.choosing || this.canPlay(c), hints = this.settings.hints;
+        v.dim = hints && myTurn && !sel && !this.swapMode && !ok ? 1 : 0;
+        v.link = hints && myTurn && !sel && !this.swapMode && !g.choosing && ok && this.selected.length > 0;
       });
       // Reserve cards on the table.
       const picking = g.choosing, parked = picking ? 0 : 0.8;
@@ -807,9 +832,9 @@ export const Game = {
       for (const c of g.player.face) {
         const i = this.slot.get(c.id) ?? 0, sel = this.selected.includes(c.id), hov = this.hoverId === c.id && !sel;
         const v = put(c, slotX(i), hy - 6 - (sel ? 14 : 0) - (hov ? 6 : 0), (i - 1) * 2 * DEG, (hov ? 1.08 : 1) * L.handSc, true, 301 + i * 2 + (hov ? 60 : 0), 'pslot', true);
-        const ok = this.canPlay(c);
-        v.dim = myTurn && !sel && !ok ? 1 : 0;
-        v.link = myTurn && !sel && ok && this.selected.length > 0;
+        const ok = this.canPlay(c), hints = this.settings.hints;
+        v.dim = hints && myTurn && !sel && !ok ? 1 : 0;
+        v.link = hints && myTurn && !sel && ok && this.selected.length > 0;
         this.handOrder.push(c.id);
       }
     }
@@ -965,6 +990,7 @@ export const Game = {
       if (k.ctrl && k.shift) { this.devKey(k.code); continue; }
       if (this.cine && (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape')) { this.cine.skip = true; continue; }
       if (this.modal) { Screens.key?.(this, k); continue; }
+      if (this.scene === 'map') { if (k.key === 'Enter' || k.key === ' ') this.startMapRound(); if (k.key === 'Escape') this.transition(() => { this.scene = 'title'; }); continue; }
       if (this.scene !== 'table') continue;
       if (k.key === 'Escape') { if (this.selected.length) { this.selected = []; Audio.play('deselect'); } else this.openModal('pause'); continue; }
       if (!this.myTurn()) continue;
@@ -1067,6 +1093,7 @@ export const Game = {
     for (const t of this.toasts) t.t += dt;
     this.toasts = this.toasts.filter(t => t.t < 3.2);
     if (this.modal) this.modal.t += dt;
+    if (this.scene === 'map' && this.map) this.map.t += R.dt || dt;
     this.handleKeys();
   },
 
@@ -1074,6 +1101,7 @@ export const Game = {
   draw() {
     UI.frame(R.dt || 0.016);
     if (this.scene === 'title') { Screens.title(this); }
+    else if (this.scene === 'map') Screens.map(this);
     else this.drawTable();
     FX.drawTop();
     if (this.cine) this.drawCine();
@@ -1354,12 +1382,29 @@ export const Game = {
     R.text('BONUS GOALS', x + 6, y + 4, { color: P.ink6 });
     goals.forEach((gl, i) => {
       const gy = y + 15 + i * 12;
+      if (Input.over(x + 2, gy - 2, w - 4, 12) && !UI.blocked) { R.rect(x + 3, gy - 2, w - 6, 11, P.ink3); this.goalTip(gl, x + w + 82, gy - 4); }
       R.spr(gl.complete ? Sprites.check : Sprites.uncheck, x + 10, gy + 3);
       R.text(gl.name, x + 18, gy, { color: gl.complete ? P.grn1 : P.bone1, ...(R.measure(gl.name) > w - 50 ? TINY_OPTS : {}) });
       R.text(`+${gl.points}`, x + w - 6, gy, { color: gl.complete ? P.grn1 : P.gold2, align: 'right', outline: null });
     });
     y += 20 + goals.length * 12;
-    this.drawTricks(x, y, w, S.y + S.h - y);
+    this.drawTricks(x, y, w, S.y + S.h - y - 16);
+    this.drawHintsToggle(x + 2, S.y + S.h - 11);
+  },
+
+  // Card hints: dimmed unplayable cards and run helpers. Off means you judge every card yourself.
+  drawHintsToggle(x, y) {
+    const on = this.settings.hints, label = 'CARD HINTS', w = 14 + R.measure(label, { font: TINY }) + 4;
+    const hot = Input.over(x - 2, y - 3, w + 4, 13) && !UI.blocked;
+    R.spr(on ? Sprites.check : Sprites.uncheck, x + 5, y + 3);
+    R.text(label, x + 13, y + 1, { font: TINY, color: hot ? P.bone0 : on ? P.bone1 : P.ink6, outline: null });
+    if (hot) UI.tooltip('Card hints', on ? 'On: cards you can\'t play are darkened and run helpers show. Turn off to judge every card yourself.' : 'Off: no darkened cards or run helpers. Tick to turn them back on.', x + w / 2 + 60, y - 4, { w: 150 });
+    if (Input.button('hints-toggle', x - 2, y - 3, w + 4, 13, !UI.blocked)) { this.settings.hints = !on; this.applySettings(); Audio.play(on ? 'back' : 'ui'); }
+  },
+
+  goalTip(gl, x, y) {
+    const pays = gl.complete ? `^lDONE · +${gl.points} paid` : gl.win ? `^gPays +${gl.points} if you win the round` : `^gPays +${gl.points} the moment you do it`;
+    UI.tooltip(gl.name, `${gl.desc}\n^d${gl.detail}\n${pays}`, x, y + 14, { color: gl.complete ? P.grn1 : P.gold1, w: 172 });
   },
 
   drawHandPanel(x, y, w) {
@@ -1432,7 +1477,11 @@ export const Game = {
     R.text(this.shownScore.toLocaleString(), T.x + T.w / 2, T.y + 13, { size: 2, color: rolling ? P.gold0 : P.gold1, align: 'center' });
     if (UI.iconButton('menu', T.x + T.w - 22, T.y + 4, 18, 16, (bx, by) => { for (let i = 0; i < 3; i++) R.rect(bx + 4, by + 4 + i * 3, 10, 2, P.bone0); })) this.openModal('pause');
     const goals = roundGoals(g);
-    goals.forEach((gl, i) => R.spr(gl.complete ? Sprites.check : Sprites.uncheck, T.x + T.w - 50 + i * 11, T.y + 26));
+    goals.forEach((gl, i) => {
+      const gx = T.x + T.w - 26 - (goals.length - i) * 11;
+      R.spr(gl.complete ? Sprites.check : Sprites.uncheck, gx, T.y + 26);
+      if (Input.over(gx - 6, T.y + 19, 12, 14) && !UI.blocked) this.goalTip(gl, R.vw / 2, T.y + T.h + 60);
+    });
     // Chips x mult strip under the pile
     const H = this.L.hud, p = this.panel, bw = 60;
     const label = p.label || '';
@@ -1467,7 +1516,10 @@ export const Game = {
     if (UI.button('play', L.btn.x, L.btn.y, bw, bh, label, { color: must ? 'red' : 'gold', enabled, pulse: enabled && (picking || prompted || (!must && this.selected.length > 0)), size: L.land ? 2 : 2, sound: 'ui' })) this.playerPlay();
     if (L.land) {
       if (UI.button('sort', L.btn.x, L.btn.y + bh + 6, bw, 16, this.sortSuit ? 'SORT: SUIT' : 'SORT: RANK', { color: 'ink', enabled: this.started && src === 'hand' })) { this.sortSuit = !this.sortSuit; Audio.play('shuffle'); }
-    } else if (UI.button('sort', 8, L.btn.y + 4, 40, 18, 'SORT', { color: 'ink', enabled: this.started && src === 'hand' })) { this.sortSuit = !this.sortSuit; Audio.play('shuffle'); }
+    } else {
+      if (UI.button('sort', 8, L.btn.y + 4, 40, 18, 'SORT', { color: 'ink', enabled: this.started && src === 'hand' })) { this.sortSuit = !this.sortSuit; Audio.play('shuffle'); }
+      this.drawHintsToggle(8, L.btn.y - 12);
+    }
     // Turn lamp
     const yourTurn = g.turn === 'player' && !g.ended;
     const lampX = L.land ? L.btn.x + bw / 2 : L.cx, lampY = L.land ? L.btn.y - 12 : L.btn.y - 12;
@@ -1488,7 +1540,7 @@ export const Game = {
       if (g.choosing) msg = left > 0 ? `PICK YOUR TABLE: tap ${left} more card${left > 1 ? 's' : ''} to lay face-up for later.` : 'Happy with your table? Tap LOCK IN. Tap a table card to swap it back.';
       else if (this.swapMode) msg = 'SWITCHEROO: pick a hand card to trade.';
       else if (this.mustPickUp()) { msg = this.pickPrompt?.t > 0.95 ? 'Tap the pile to pick it up.' : 'Nothing in your hand beats the pile...'; bad = true; }
-      else if (this.myTurn() && this.selected.length && !this.selectionReady()) msg = `Add ${this.missingCards().map(cardName).join(' ')} to finish the run.`;
+      else if (this.myTurn() && this.selected.length && !this.selectionReady()) msg = this.runHint();
       else if (this.myTurn()) msg = guidance(g, this.selected);
     }
     this.drawRunTip(!!msg && this.tellT > 0);
@@ -1503,7 +1555,7 @@ export const Game = {
     const L = this.L, g = this.g;
     if (telling || !this.myTurn() || this.swapMode || this.mustPickUp() || source(g.player) === 'blind') return;
     let tip = '';
-    if (this.selected.length) { if ([...this.views.values()].some(v => v.link)) tip = 'Tap a ^t+^0 card to add it to your run, or hit PLAY.'; }
+    if (this.selected.length) { if (this.settings.hints && [...this.views.values()].some(v => v.link)) tip = 'Tap a ^t+^0 card to add it to your run, or hit PLAY.'; }
     else if ((this.runsPlayed ??= store.get('bh-runs-played', 0)) < 3) {
       const key = g.moves + ':' + g.player.hand.length + ':' + g.pile.length;
       if (this.runKey !== key) { this.runKey = key; this.runAvail = options(g, 'player').some(o => o.length > 1); }
