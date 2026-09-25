@@ -1,4 +1,4 @@
-import { Pix } from '../core/pixel.js';
+import { Pix, Spr } from '../core/pixel.js';
 import { P } from './palette.js';
 
 // The BONEHEAD wordmark: chunky 6x8-cell letters with 2-cell strokes, a blocky
@@ -88,32 +88,16 @@ export function buildLogo() {
   return { letters, skull, chomp, gap: LOGO_Q, h: 8 * LOGO_Q };
 }
 
-// One-piece mini wordmark for the HUD: the same letterforms at 1px a cell, the
-// title skull redrawn at letter height (square sockets, inward red pupils, gapped
-// teeth), a 1px plum side and the same ink outline.
-const MINI_SKULL = ['.######.', '########', '#kk##kk#', '#kr##rk#', '########', '###kk###', '.#k##k#.', '..####..'];
-export function miniLogo() {
-  const word = 'BONEHEAD', widths = [...word].map(ch => (ch === 'O' ? 8 : 6));
-  const W = widths.reduce((a, b) => a + b, 0) + word.length - 1, body = new Pix(W, 8);
+// The title wordmark flattened into one sprite (no animation), so the HUD shows the
+// very same artwork, just smaller.
+export function wordmark(L = buildLogo()) {
+  const W = L.letters.reduce((a, l) => a + l.w, 0) + L.gap * (L.letters.length - 1) + M * 2;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = L.h + M * 2 + EXTRUDE;
+  const ctx = cv.getContext('2d');
   let x = 0;
-  [...word].forEach((ch, i) => {
-    const pal = i < 4 ? BONE : GOLD, col = j => pal.grad[Math.min(6, Math.round(j * 6 / 7))];
-    const rows = ch === 'O' ? MINI_SKULL : GLYPHS[ch];
-    rows.forEach((r, j) => [...r].forEach((c, k) => {
-      if (c === '#') body.set(x + k, j, ch === 'O' ? BONE.grad[Math.min(6, j)] : col(j));
-      else if (c === 'k') body.set(x + k, j, P.ink0);
-      else if (c === 'r') body.set(x + k, j, P.red1);
-    }));
-    x += widths[i] + 1;
-  });
-  const p = new Pix(W + 4, 8 + 5);
-  p.paste(body, 2, 2);
-  p.outline(P.ink0);
-  const filled = [];
-  p.each((px, py) => { filled.push(px, py); });
-  for (let i = 0; i < filled.length; i += 2) if (!p.get(filled[i], filled[i + 1] + 1)) p.set(filled[i], filled[i + 1] + 1, SIDE);
-  p.outline(P.ink0);
-  return p.spr();
+  for (const l of L.letters) { ctx.drawImage(l.spr.c, x, 0); x += l.w + L.gap; }
+  return new Spr(cv);
 }
 
 // 9x9 icons for the title links, in a resting and a highlighted colour.

@@ -68,7 +68,7 @@ The BONEHEAD wordmark sits centre stage in a magenta void, and cards drift past 
 
 On a first play, PLAY opens the five-page HOW TO PLAY (SKIP on page one, LET'S GO at the end). Then comes the map, with a pointer to GO, and then the first deal (`bh2-onboarded` in storage). Any click or key during the intro finishes it, so an eager first click still lands on the button. Near cards swing further than far ones as the pointer moves, which gives the scene depth.
 
-There is one big CTA (PLAY, or CONTINUE with a save). Under it are quiet links: NEW RUN, HOW TO PLAY, TROPHIES, OPTIONS. Your best run and trophy count sit centred along the top. The arrow keys move between the button and the links, and Enter picks. The HUD uses the same wordmark at one pixel a cell, with the skull redrawn at letter height.
+There is one big CTA (PLAY, or CONTINUE with a save). Under it are quiet links: NEW RUN, HOW TO PLAY, TROPHIES, OPTIONS. Your best run and trophy count sit centred along the top. The arrow keys move between the button and the links, and Enter picks. The HUD draws the very same wordmark, flattened into one sprite and scaled down (`wordmark()` in `js/art/logo.js`).
 
 ## Bonus goals and trophies
 

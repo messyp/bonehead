@@ -16,7 +16,7 @@ import { ROUNDS, RULES, roundOf, seatsFor } from './rounds.js';
 import { Audio } from '../audio/sfx.js';
 import { Music } from '../audio/music.js';
 import { UI } from './ui.js';
-import { miniLogo } from '../art/logo.js';
+import { wordmark } from '../art/logo.js';
 import { Screens } from './screens.js';
 
 const DEG = Math.PI / 180;
@@ -1369,7 +1369,7 @@ export const Game = {
     let y = S.y;
     // Logo + menu
     R.panel(x, y, w, 22, { fill: P.ink2, hi: P.ink4 });
-    this.drawLogo(x + 4, y + 11, Math.min(1.5, (w - 30) / 61));
+    this.drawLogo(x + 3, y + 11, w - 26);
     if (UI.iconButton('menu', x + w - 20, y + 3, 17, 15, (bx, by) => { for (let i = 0; i < 3; i++) R.rect(bx + 4, by + 4 + i * 3, 9, 2, P.bone0); })) this.openModal('pause');
     y += 26;
     // Round block
@@ -1580,12 +1580,13 @@ export const Game = {
     R.text(tip, L.guide.x, y, { color: P.bone2, align: 'center', alpha: 0.8 + Math.sin(R.t * 3) * 0.2, ...(big ? TINY_OPTS : {}) });
   },
 
-  // The HUD wordmark: the title logo's letterforms at one pixel a cell. x is the left
-  // edge, y the vertical centre.
-  drawLogo(x, y, size = 1) {
-    this.miniLogo ??= miniLogo();
-    R.spr(this.miniLogo, x, y, { sc: size, ax: 0, ay: 0.5 });
-    return this.miniLogo.w * size;
+  // The HUD wordmark: the title logo itself, scaled to fit. x is the left edge, y the
+  // vertical centre, w the width available.
+  drawLogo(x, y, w) {
+    this.wordmark ??= wordmark();
+    const sc = Math.min(0.56, w / this.wordmark.w);
+    R.spr(this.wordmark, x, y, { sc, ax: 0, ay: 0.5 });
+    return this.wordmark.w * sc;
   },
 
   drawCine() {
