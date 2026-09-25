@@ -88,18 +88,30 @@ export function buildLogo() {
   return { letters, skull, chomp, gap: LOGO_Q, h: 8 * LOGO_Q };
 }
 
-// One-piece mini wordmark for the HUD: same letterforms at 1px a cell, no depth.
+// One-piece mini wordmark for the HUD: the same letterforms at 1px a cell, the
+// title skull redrawn at letter height (square sockets, inward red pupils, gapped
+// teeth), a 1px plum side and the same ink outline.
+const MINI_SKULL = ['.######.', '########', '#kk##kk#', '#kr##rk#', '########', '###kk###', '.#k##k#.', '..####..'];
 export function miniLogo() {
-  const word = 'BONEHEAD', skull = ['.#######.', '#########', '#kkk#kkk#', '#krk#krk#', '#########', '####k####', '.#######.', '.#k#k#k#.', '..#####..'];
-  const widths = [...word].map(ch => (ch === 'O' ? 9 : 6));
-  const W = widths.reduce((a, b) => a + b, 0) + word.length - 1 + 2, p = new Pix(W, 11);
-  let x = 1;
+  const word = 'BONEHEAD', widths = [...word].map(ch => (ch === 'O' ? 8 : 6));
+  const W = widths.reduce((a, b) => a + b, 0) + word.length - 1, body = new Pix(W, 8);
+  let x = 0;
   [...word].forEach((ch, i) => {
-    const pal = i < 4 ? BONE : GOLD;
-    if (ch === 'O') p.map(skull, x, 1, { '#': BONE.grad[1], k: P.ink0, r: P.red1 });
-    else GLYPHS[ch].forEach((r, j) => [...r].forEach((c, k) => { if (c === '#') p.set(x + k, 1 + j, pal.grad[Math.min(6, j)]); }));
+    const pal = i < 4 ? BONE : GOLD, col = j => pal.grad[Math.min(6, Math.round(j * 6 / 7))];
+    const rows = ch === 'O' ? MINI_SKULL : GLYPHS[ch];
+    rows.forEach((r, j) => [...r].forEach((c, k) => {
+      if (c === '#') body.set(x + k, j, ch === 'O' ? BONE.grad[Math.min(6, j)] : col(j));
+      else if (c === 'k') body.set(x + k, j, P.ink0);
+      else if (c === 'r') body.set(x + k, j, P.red1);
+    }));
     x += widths[i] + 1;
   });
+  const p = new Pix(W + 4, 8 + 5);
+  p.paste(body, 2, 2);
+  p.outline(P.ink0);
+  const filled = [];
+  p.each((px, py) => { filled.push(px, py); });
+  for (let i = 0; i < filled.length; i += 2) if (!p.get(filled[i], filled[i + 1] + 1)) p.set(filled[i], filled[i + 1] + 1, SIDE);
   p.outline(P.ink0);
   return p.spr();
 }

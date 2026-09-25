@@ -66,7 +66,9 @@ Between rounds, the **Midnight Circuit** map shows a crypt from above (in the sp
 
 The BONEHEAD wordmark sits centre stage in a magenta void, and cards drift past at different depths. The logo's chunky letters are drawn in code with a bevel, a plum 3D side and a heavy outline, and the O is a blocky skull with smouldering red eyes. The distant cards are blurred like a camera's depth of field, and the four nearest are placed like a poster, turning over now and then. Letters drop in one by one when the screen opens. After that, a glint sweeps across the logo and the skull chomps.
 
-There is one big CTA (PLAY, or CONTINUE with a save). Under it are quiet links: NEW RUN, HOW TO PLAY, TROPHIES, OPTIONS. Your best run and trophy count sit centred along the top. The arrow keys move between the button and the links, and Enter picks. The HUD uses the same wordmark at one pixel a cell.
+On a first play, PLAY opens the five-page HOW TO PLAY (SKIP on page one, LET'S GO at the end). Then comes the map, with a pointer to GO, and then the first deal (`bh2-onboarded` in storage). Any click or key during the intro finishes it, so an eager first click still lands on the button. Near cards swing further than far ones as the pointer moves, which gives the scene depth.
+
+There is one big CTA (PLAY, or CONTINUE with a save). Under it are quiet links: NEW RUN, HOW TO PLAY, TROPHIES, OPTIONS. Your best run and trophy count sit centred along the top. The arrow keys move between the button and the links, and Enter picks. The HUD uses the same wordmark at one pixel a cell, with the skull redrawn at letter height.
 
 ## Bonus goals and trophies
 

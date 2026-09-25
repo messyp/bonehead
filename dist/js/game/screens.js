@@ -141,6 +141,15 @@ export const Screens = {
     // Footer
     if (UI.button('map-title', 8, vh - 28, 56, 20, 'TITLE', { color: 'ink' })) game.transition(() => { game.scene = 'title'; });
     if (UI.button('map-go', vw - 78, vh - 30, 70, 24, 'GO!', { size: 2, pulse: t > 0.8, color: 'gold' })) game.startMapRound();
+    // First run: point at GO so a new player knows how to take their seat
+    if (game.onboardMap && t > 0.6) {
+      const tip = land ? 'Beat all four tables. Start here!' : 'Start here!', tw = R.measure(tip) + 12, bob = Math.round(Math.sin(R.t * 5) * 2);
+      const tx = vw - 86 - tw + bob, ty = vh - 25;
+      R.box(tx - 1, ty - 1, tw + 2, 15, P.ink0, 3);
+      R.box(tx, ty, tw, 13, P.gold1, 3);
+      R.text(tip, tx + tw / 2, ty + 3, { color: P.ink0, align: 'center', outline: null, shadow: null });
+      for (let i = 0; i < 4; i++) R.rect(tx + tw + i, ty + 3 + i, 1, 7 - i * 2, P.gold1);
+    }
     if (hover) {
       const st = hover.done ? '^lBeaten. Officially a Bonehead.' : hover.round === sel ? '^gSelected. Tap again or GO to play.' : '^dTap to select.';
       const who = hover.rd.opps.map(id => OPPONENTS[oppIndex(id)].name).join(' & ');
@@ -344,8 +353,8 @@ export const Screens = {
     if (p.art === 'blind') [4, 7, 12].forEach((r, i) => { deal(i, ax + (i - 1) * 52, ay + 4, Cards.back, { sc: 0.9 }); deal(i + 0.5, ax + (i - 1) * 52 + 2, ay - 4, card(r, i), { sc: 0.9 }); });
     R.para(p.body, b.x + 16, b.y + h - 76, w - 32, { align: 'center', color: P.bone1 });
     for (let i = 0; i < 5; i++) R.box(b.x + w / 2 - 22 + i * 10, b.y + h - 38, 6, 6, i === d.page ? P.gold1 : P.ink4, 1);
-    if (UI.button('r-back', b.x + 12, b.y + h - 30, 60, 20, d.page ? 'BACK' : 'CLOSE', { color: 'ink', ignoreBlock: true })) { if (d.page) { d.page--; d.pt = 0; } else finishRules(game); }
-    if (UI.button('r-next', b.x + w - 72, b.y + h - 30, 60, 20, d.page < 4 ? 'NEXT' : 'DEAL!', { ignoreBlock: true })) { if (d.page < 4) { d.page++; d.pt = 0; } else finishRules(game); }
+    if (UI.button('r-back', b.x + 12, b.y + h - 30, 60, 20, d.page ? 'BACK' : d.startsRun ? 'SKIP' : 'CLOSE', { color: 'ink', ignoreBlock: true })) { if (d.page) { d.page--; d.pt = 0; } else finishRules(game); }
+    if (UI.button('r-next', b.x + w - 72, b.y + h - 30, 60, 20, d.page < 4 ? 'NEXT' : d.startsRun ? "LET'S GO" : 'GOT IT', { ignoreBlock: true, pulse: d.page === 4 })) { if (d.page < 4) { d.page++; d.pt = 0; } else finishRules(game); }
     b.restore();
   },
 
@@ -440,13 +449,14 @@ function titleAct(game, id) {
 
 function startFresh(game) {
   game.modal = null; Audio.muffle(false);
-  if (!store.get('bh-tutorial-seen', false)) { game.openModal('rules', { page: 0, startsRun: true }); return; }
+  if (!store.get('bh2-onboarded', false)) { game.openModal('rules', { page: 0, startsRun: true }); return; }
   game.transition(() => game.newRun());
 }
 
 function finishRules(game) {
   const starts = game.modal?.data?.startsRun;
-  store.set('bh-tutorial-seen', true);
+  store.set('bh2-onboarded', true);
   game.modal = null; Audio.muffle(false);
-  if (starts) game.transition(() => game.newRun());
+  // Onboarding: rules, then the map (with a pointer to GO), then the first deal
+  if (starts) { game.onboardMap = true; game.transition(() => game.newRun()); }
 }

@@ -39,7 +39,7 @@ const SPARKS = Array.from({ length: 34 }, (_, i) => ({
   sz: [1, 2, 2, 3][i % 4], col: [P.red1, '#ff4f8b', P.gold2, P.gold1, P.fire2][i % 5], rr: 0.9 + ((i * 13) % 7) * 0.05,
 }));
 
-const state = { last: -1, enter: 0, landed: 0, mouse: null, kbd: false, hot: new Set() };
+const state = { enter: 0, px: 0, py: 0, landed: 0, mouse: null, kbd: false, hot: new Set() };
 let devTaps = 0, devTapT = 0;
 
 function cardSprite(f, far) {
@@ -52,7 +52,7 @@ function cardSprite(f, far) {
 }
 
 function drawField(t, front) {
-  const vw = R.vw, vh = R.vh, mx = (Input.x - vw / 2) / vw, my = (Input.y - vh / 2) / vh;
+  const vw = R.vw, vh = R.vh, mx = state.px, my = state.py;
   const base = R.land ? 1 : 0.85;
   for (const f of FIELD) {
     if ((f.z >= 0.75) !== front) continue;
@@ -60,8 +60,9 @@ function drawField(t, front) {
     const [fx, fy] = !R.land && f.pt ? f.pt : [f.x, f.y], span = 2.8;
     const y = f.z >= 0.75 ? fy + Math.sin(t * 0.9 + f.i) * 0.035 : ((fy + 1.4 - t * f.sp * (0.5 + f.z)) % span + span) % span - 1.4;
     const x = fx + Math.sin(t * 0.21 + f.i * 1.3) * 0.03;
-    const X = vw / 2 + x * vw * 0.52 - mx * f.z * 16, Y = vh / 2 + y * vh * 0.55 - my * f.z * 10;
-    const sc = base * (0.3 + f.z * 0.85), rot = f.rot + Math.sin(t * 0.33 + f.i) * 0.22;
+    // Parallax: the nearer the card, the further it swings against the pointer
+    const X = vw / 2 + x * vw * 0.52 - mx * (6 + f.z * f.z * 90), Y = vh / 2 + y * vh * 0.55 - my * (4 + f.z * f.z * 50);
+    const sc = base * (0.3 + f.z * 0.85), rot = f.rot + Math.sin(t * 0.33 + f.i) * 0.22 - mx * f.z * 0.12;
     const far = f.z < 0.4 ? 3 : f.z < 0.6 ? 2 : f.z < 0.75 ? 1 : 0;
     const alpha = f.z < 0.4 ? 0.45 : f.z < 0.6 ? 0.7 : 0.9;
     if (!far) {
@@ -145,19 +146,26 @@ function items(game) {
 
 export function drawTitle(game, act) {
   const vw = R.vw, vh = R.vh, land = R.land, t = R.t, a = getArt();
-  if (t - state.last > 0.3) { state.enter = t; state.landed = 0; Post.theme(THEMES[3]); }
-  state.last = t;
+  // Entry comes from the scene change, not a time gap: the first click unlocks audio,
+  // which can stall a frame, and must not restart the intro under the pointer.
+  if (game.titleEntered) { game.titleEntered = false; state.enter = t; state.landed = 0; Post.theme(THEMES[3]); }
+  // Any press or key during the intro finishes it, so an eager first click still lands on PLAY
+  if (t - state.enter < 1.6 && (Input.pressed || Input.keys.length) && !game.modal) { state.enter = t - 1.6; state.landed = 8; }
   const tt = t - state.enter;
   Music.set(0, 0);
   // Mouse movement hands focus back from the keyboard
   if (!state.mouse || state.mouse.x !== Input.x || state.mouse.y !== Input.y) { if (state.mouse) state.kbd = false; state.mouse = { x: Input.x, y: Input.y }; }
   const menu = items(game), sel = game.titleSel ?? 0, focus = i => state.kbd && sel === i;
 
+  // Smoothed pointer offset from the centre (-0.5..0.5) for parallax; eases home when the pointer leaves
+  const inside = Input.x > -900, dt = Math.min(0.05, UI.dt);
+  state.px += ((inside ? clamp(Input.x / vw, 0, 1) - 0.5 : 0) - state.px) * (1 - Math.exp(-dt * 5));
+  state.py += ((inside ? clamp(Input.y / vh, 0, 1) - 0.5 : 0) - state.py) * (1 - Math.exp(-dt * 5));
   drawField(t, false);
   const L = a.logo, raw = L.letters.reduce((s, l) => s + l.w, 0) + L.gap * 7;
   const sc = Math.min(land ? Math.min(vw * 0.66, 400) : vw * 0.92, raw * 3) / raw;
   const logoCY = land ? vh * 0.39 : vh * 0.31;
-  const lg = drawLogo(game, vw / 2, logoCY, sc, tt);
+  const lg = drawLogo(game, vw / 2 + state.px * 8, logoCY + state.py * 5, sc, tt);
   // Five quick taps on the logo open the dev panel (Ctrl+Shift+D on keyboards)
   if (Input.released && !game.modal && Math.abs(Input.x - vw / 2) < lg.w / 2 && Math.abs(Input.y - logoCY) < lg.h / 2 + 6) {
     const now = performance.now();

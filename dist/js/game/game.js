@@ -270,6 +270,7 @@ export const Game = {
     const mp = this.map;
     if (!mp || this.trans) return;
     Audio.play('coin');
+    this.onboardMap = false;
     this.transition(() => { this.pending = null; this.beginRound(mp.sel, mp.items); });
   },
 
@@ -1110,6 +1111,9 @@ export const Game = {
   // ---------- drawing ----------
   draw() {
     UI.frame(R.dt || 0.016);
+    // The title replays its intro whenever it's entered from another scene
+    if (this.scene === 'title' && this.drawnScene !== 'title') this.titleEntered = true;
+    this.drawnScene = this.scene;
     if (this.scene === 'title') { Screens.title(this); }
     else if (this.scene === 'map') Screens.map(this);
     else this.drawTable();
@@ -1365,7 +1369,7 @@ export const Game = {
     let y = S.y;
     // Logo + menu
     R.panel(x, y, w, 22, { fill: P.ink2, hi: P.ink4 });
-    this.drawLogo(x + 6, y + 5, 1);
+    this.drawLogo(x + 4, y + 11, Math.min(1.5, (w - 30) / 61));
     if (UI.iconButton('menu', x + w - 20, y + 3, 17, 15, (bx, by) => { for (let i = 0; i < 3; i++) R.rect(bx + 4, by + 4 + i * 3, 9, 2, P.bone0); })) this.openModal('pause');
     y += 26;
     // Round block
@@ -1576,10 +1580,11 @@ export const Game = {
     R.text(tip, L.guide.x, y, { color: P.bone2, align: 'center', alpha: 0.8 + Math.sin(R.t * 3) * 0.2, ...(big ? TINY_OPTS : {}) });
   },
 
-  // The HUD wordmark: the title logo's letterforms at one pixel a cell.
+  // The HUD wordmark: the title logo's letterforms at one pixel a cell. x is the left
+  // edge, y the vertical centre.
   drawLogo(x, y, size = 1) {
     this.miniLogo ??= miniLogo();
-    R.spr(this.miniLogo, x - 1, y - 1, { sc: size, ax: 0, ay: 0 });
+    R.spr(this.miniLogo, x, y, { sc: size, ax: 0, ay: 0.5 });
     return this.miniLogo.w * size;
   },
 
