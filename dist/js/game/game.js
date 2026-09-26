@@ -7,7 +7,7 @@ import { R } from '../core/render.js';
 import { Input } from '../core/input.js';
 import { FX, Dissolve, Sliced, Slash, Flames, FIRE, CONFETTI } from '../core/fx.js';
 import { Post } from '../core/post.js';
-import { Clock, wait, spring, ease, clamp } from '../core/tween.js';
+import { Clock, wait, spring, ease, clamp, approach } from '../core/tween.js';
 import { hash } from '../core/pixel.js';
 import { P, THEMES } from '../art/palette.js';
 import { Cards, CW, CH, MAGIC, rankLabel } from '../art/cards.js';
@@ -116,6 +116,24 @@ export const Game = {
     return { portrait, table, hand, slots: { cx: hand.x, gap: Math.round(CW * sc + 8) }, sc };
   },
 
+  // Phone seat: portrait on the left, hand centred, table cards on a small centred
+  // rail just under the hand (the player's rail mirrors it just above their hand).
+  seatLayoutTall(x, y, w, h, twins) {
+    const pw = twins ? 32 : 40, ph = twins ? 46 : 56, sc = twins ? 0.42 : 0.5, tsc = twins ? 0.36 : 0.42;
+    const portrait = { x: x + 2, y: y + 2, w: pw, h: ph };
+    const hx = twins ? x + pw + 4 + (w - pw - 8) / 2 : R.vw / 2, hw = twins ? w - pw - 12 : R.vw - 2 * (pw + 16);
+    const gap = Math.round(CW * tsc + 3);
+    return { portrait, hand: { x: hx, y: y + 18, w: hw }, table: { x: hx - gap, y: y + h - 18, gap }, slots: { cx: hx, gap: Math.round(CW * sc + 6) }, sc, tsc };
+  },
+
+  // Where the player's table cards wait. On phones the rail grows while picking your table.
+  ptable() {
+    const L = this.L;
+    if (L.land || !this.g?.choosing) return { ...L.playerTable, sc: L.tableSc };
+    const sc = L.chooseSc, gap = Math.round(CW * sc + 4);
+    return { x: L.cx - gap, y: L.playerTable.y - 8, gap, sc };
+  },
+
   computeLayout() {
     const vw = R.vw, vh = R.vh, L = this.L = { land: R.land, seats: {} };
     const cpu = this.g ? seatsOf(this.g).filter(s => s !== 'player') : ['house'], twins = cpu.length > 1;
@@ -141,24 +159,26 @@ export const Game = {
       L.guide = { x: L.hand.cx, y: L.handY - 50 };
       L.handSc = 1;
     } else {
+      // Phone: everything centred. Opponent up top with their table rail under their
+      // hand; your rail sits just above your hand; the deck, pile and burn heap are
+      // centred in the space between. Chips x mult lives in the top bar.
       L.top = { x: 4, y: 4, w: vw - 8, h: 36 };
-      const cx = L.cx = vw / 2;
+      const cx = L.cx = vw / 2, seatY = 44, seatH = 72;
       L.play = { x: 4, y: 44, w: vw - 8, h: vh - 48 };
-      if (twins) cpu.forEach((seat, i) => { L.seats[seat] = this.seatLayout(4, 44 + i * 56, vw - 8, 54, 0.46, 36, 52); });
-      else L.seats.house = this.seatLayout(4, 44, vw - 8, 64, 0.58, 44, 58);
-      L.pile = { x: Math.round(cx), y: Math.round(clamp(vh * 0.34, twins ? 200 : 148, 230)) };
-      L.deck = { x: Math.round(cx - 70), y: L.pile.y };
-      L.ash = { x: Math.round(cx + 70), y: L.pile.y };
-      L.hud = { x: 8, y: L.pile.y + 60, w: vw - 16, h: 30 };
+      if (twins) cpu.forEach((seat, i) => { L.seats[seat] = this.seatLayoutTall(4 + i * (vw - 8) / 2, seatY, (vw - 8) / 2, seatH, true); });
+      else L.seats.house = this.seatLayoutTall(4, seatY, vw - 8, seatH, false);
+      L.handSc = vh > 500 ? 1.22 : 1.1;
       L.handY = vh - 94;
       L.btn = { x: vw / 2 - 50, y: vh - 34, w: 100 };
-      L.tableSc = 0.7;
-      const tg = Math.round(CW * 0.7 + 3);
-      L.playerTable = { x: 8 + Math.round(CW * 0.35), y: L.handY - 64, gap: tg };
+      L.tableSc = 0.5; L.chooseSc = 0.72;
+      const tg = Math.round(CW * L.tableSc + 4);
+      L.playerTable = { x: cx - tg, y: Math.round(L.handY - CH * L.handSc / 2 - 28), gap: tg };
       L.hand = { x0: 8, x1: vw - 8, cx, w: vw - 16 };
-      L.handSc = vh > 500 ? 1.22 : 1.1;
       L.slots = { cx, gap: Math.round(52 * L.handSc) };
-      L.guide = { x: cx, y: Math.min(L.hud.y + L.hud.h + 4, L.playerTable.y - 32) };
+      L.guide = { x: cx, y: L.playerTable.y - 36 };
+      L.pile = { x: Math.round(cx), y: Math.round((seatY + seatH + L.guide.y - 8) / 2 - 9) };
+      L.deck = { x: Math.round(cx - 70), y: L.pile.y };
+      L.ash = { x: Math.round(cx + 70), y: L.pile.y };
     }
     L.portrait = L.seats[cpu[0]].portrait;
   },
@@ -831,9 +851,9 @@ export const Game = {
         v.link = hints && myTurn && !sel && !this.swapMode && !g.choosing && ok && this.selected.length > 0;
       });
       // Reserve cards on the table.
-      const picking = g.choosing, parked = picking ? 0 : 0.8;
-      for (const c of vis(g.player.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, L.playerTable.x + i * L.playerTable.gap, L.playerTable.y, 0, L.tableSc, false, 200 + i * 2, 'ptable').dim = parked; }
-      for (const c of vis(g.player.face)) { const i = this.slot.get(c.id) ?? 0; put(c, L.playerTable.x + i * L.playerTable.gap + 2, L.playerTable.y - 6, -2 * DEG, L.tableSc * (picking && this.hoverId === c.id ? 1.08 : 1), true, 201 + i * 2, 'ptable', picking && myTurn).dim = parked; }
+      const picking = g.choosing, parked = picking ? 0 : L.land ? 0.8 : 0.45, pt = this.ptable(), off = pt.sc / 0.7;
+      for (const c of vis(g.player.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, pt.x + i * pt.gap, pt.y, 0, pt.sc, false, 200 + i * 2, 'ptable').dim = parked; }
+      for (const c of vis(g.player.face)) { const i = this.slot.get(c.id) ?? 0; put(c, pt.x + i * pt.gap + 2 * off, pt.y - 6 * off, -2 * DEG, pt.sc * (picking && this.hoverId === c.id ? 1.08 : 1), true, 201 + i * 2, 'ptable', picking && myTurn).dim = parked; }
     } else {
       this.handOrder = [];
       const slotX = i => L.slots.cx + (i - 1) * L.slots.gap;
@@ -872,8 +892,9 @@ export const Game = {
           const t = i - (m - 1) / 2, jig = this.thinking === seat && i % 2 ? Math.sin(R.t * 8 + i) : 0;
           put(c, S.hand.x + t * sp, S.hand.y - (t * k) * (t * k) * 0.6 + jig, -t * k * 1.8 * DEG, hsc, false, 20 + zb + i, 'hhand');
         });
-        for (const c of vis(p.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, S.table.x + i * S.table.gap, S.table.y, 0, hsc, false, 10 + zb + i * 2, 'htable').dim = 0.6; }
-        for (const c of vis(p.face)) { const i = this.slot.get(c.id) ?? 0; put(c, S.table.x + i * S.table.gap - 2, S.table.y + 5 * hsc, 2 * DEG, hsc, true, 11 + zb + i * 2, 'htable').dim = 0.6; }
+        const tsc = S.tsc ?? hsc, tdim = L.land ? 0.6 : 0.45;
+        for (const c of vis(p.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, S.table.x + i * S.table.gap, S.table.y, 0, tsc, false, 10 + zb + i * 2, 'htable').dim = tdim; }
+        for (const c of vis(p.face)) { const i = this.slot.get(c.id) ?? 0; put(c, S.table.x + i * S.table.gap - 2, S.table.y + 5 * tsc, 2 * DEG, tsc, true, 11 + zb + i * 2, 'htable').dim = tdim; }
       } else {
         const slotX = i => S.slots.cx + (i - 1) * S.slots.gap;
         for (const c of p.blind) { const i = this.slot.get(c.id) ?? 0; put(c, slotX(i), S.hand.y - 4 * hsc, 0, hsc, false, 20 + zb + i * 2, 'hslot'); }
@@ -952,8 +973,9 @@ export const Game = {
 
   handleInput(dt) {
     // Hover
+    if (this.trayOpen && Input.pressed && !this.overTray(Input.downX, Input.downY)) this.trayOpen = false;
     const canAct = this.myTurn() && !UI.blocked;
-    const hit = canAct && !this.drag?.active ? this.hitCard(Input.x, Input.y) : null;
+    const hit = canAct && !this.drag?.active && !this.overTray(Input.x, Input.y) ? this.hitCard(Input.x, Input.y) : null;
     const newHover = hit ? hit.id : null;
     if (newHover !== this.hoverId) { this.hoverId = newHover; this.hoverT = 0; if (newHover) Audio.play('hover', this.handOrder.indexOf(newHover) + 2); }
     else this.hoverT += dt;
@@ -961,7 +983,7 @@ export const Game = {
 
     // Press / drag / release. Hit-test where the pointer went down: a fast flick
     // can deliver down, move and up before the next frame.
-    const pressHit = canAct && Input.pressed && !this.drag?.active ? this.hitCard(Input.downX, Input.downY) : null;
+    const pressHit = canAct && Input.pressed && !this.drag?.active && !this.overTray(Input.downX, Input.downY) ? this.hitCard(Input.downX, Input.downY) : null;
     if (pressHit) {
       Input.pressed = false;
       this.drag = { id: pressHit.id, ids: [], ox: Input.downX - pressHit.x, oy: Input.downY - pressHit.y, x0: Input.downX, y0: Input.downY, active: false };
@@ -1155,7 +1177,8 @@ export const Game = {
     this.drawGuide();
     // Tooltip for hovered card
     const hv = this.hoverId && this.views.get(this.hoverId);
-    if (hv && this.hoverT > 0.45 && !this.drag?.active && hv.face && !this.selected.includes(hv.id)) {
+    if (!L.land) this.drawTray();
+    if (hv && this.hoverT > 0.45 && !this.drag?.active && hv.face && !this.selected.includes(hv.id) && !this.overTray(Input.x, Input.y)) {
       const c = hv.c, m = MAGIC[c.r];
       UI.tooltip(`${rankLabel(c.r)} of ${SUIT_NAMES[c.s]}`, (m ? `^${c.r === 10 ? 'o' : c.r === 2 ? 't' : 'v'}${m.name}^0 · ${m.desc} ` : '') + `^b${cardPoints(c)} chips`, hv.x, hv.y - CH * 0.55, { color: m ? P.gold1 : P.bone0, w: m ? 140 : 100 });
     }
@@ -1325,6 +1348,14 @@ export const Game = {
     const L = this.L, g = this.g;
     if (g.choosing && this.myTurn()) { this.drawChooseSlots(); return; }
     if (this.playerPhase() !== 'hand' || !(g.player.face.length + g.player.blind.length) || this.hidden.size) return;
+    if (!L.land) {
+      const pt = this.ptable(), half = CW * pt.sc / 2, tx = pt.x + pt.gap * 2 + half + 8, ty = pt.y - 5;
+      R.spr(Sprites.lock, tx + 3, ty + 2, { sc: 0.7, alpha: 0.8 });
+      R.text('FOR LATER', tx + 9, ty, { font: TINY, color: P.ink6, outline: null });
+      if (Input.over(pt.x - half - 4, pt.y - CH * pt.sc / 2 - 8, pt.gap * 2 + half * 2 + 60, CH * pt.sc + 10) && !UI.blocked && !this.overTray(Input.x, Input.y))
+        UI.tooltip('Your table cards', 'Saved for later. Once the deck and your hand are gone, these move into your hand: face-up ones first, then the blind ones.', L.cx, pt.y - CH * pt.sc / 2, { color: P.gold1, w: 170 });
+      return;
+    }
     const x = L.playerTable.x + L.playerTable.gap, y = L.playerTable.y + 4, label = 'FOR LATER';
     const w = R.measure(label, { font: TINY }) + 18;
     R.box(x - w / 2 - 1, y - 6, w + 2, 13, P.ink0, 2, 0.9);
@@ -1338,15 +1369,15 @@ export const Game = {
 
   // Pick-your-table: glowing empty slots and a counter over the player's table.
   drawChooseSlots() {
-    const L = this.L, p = this.g.player, sc = L.tableSc, used = new Set(p.face.map(c => this.slot.get(c.id)));
+    const p = this.g.player, pt = this.ptable(), sc = pt.sc, off = sc / 0.7, used = new Set(p.face.map(c => this.slot.get(c.id)));
     for (let i = 0; i < 3; i++) {
       if (used.has(i)) continue;
-      const x = L.playerTable.x + i * L.playerTable.gap + 2, y = L.playerTable.y - 6, w = CW * sc, h = CH * sc, a = 0.45 + Math.sin(R.t * 6 + i) * 0.35;
+      const x = pt.x + i * pt.gap + 2 * off, y = pt.y - 6 * off, w = CW * sc, h = CH * sc, a = 0.45 + Math.sin(R.t * 6 + i) * 0.35;
       R.box(x - w / 2 - 2, y - h / 2 - 2, w + 4, h + 4, P.gold1, 3, a);
       R.box(x - w / 2, y - h / 2, w, h, P.ink1, 3, 0.85);
       R.text('+', x, y - 7, { size: 2, color: P.gold1, align: 'center', alpha: a + 0.2 });
     }
-    const x = L.playerTable.x + L.playerTable.gap, y = L.playerTable.y - CH * sc / 2 - 16, label = `FOR LATER ${p.face.length}/3`;
+    const x = pt.x + pt.gap, y = pt.y - CH * sc / 2 - 16, label = `FOR LATER ${p.face.length}/3`;
     const w = R.measure(label) + 12;
     R.panel(x - w / 2, y - 6, w, 13, { fill: p.face.length === 3 ? P.grn2 : P.gold3, rim: P.ink0, hi: p.face.length === 3 ? P.grn1 : P.gold2 });
     R.text(label, x, y - 3, { color: P.white, align: 'center' });
@@ -1485,44 +1516,105 @@ export const Game = {
   },
 
   drawTopBar() {
-    const T = this.L.top, g = this.g, opp = this.opp();
+    const T = this.L.top, g = this.g, opp = this.opp(), p = this.panel;
     R.panel(T.x, T.y, T.w, T.h, { fill: P.ink2, hi: P.ink4 });
     R.text(`ROUND ${g.round}/${ROUNDS.length}`, T.x + 6, T.y + 5, { color: opp.color });
     R.text(this.venue(), T.x + 6, T.y + 16, { color: P.ink6, outline: null, ...TINY_OPTS });
     R.text(fmtTime(this.elapsed), T.x + 6, T.y + 25, { color: P.ink6, outline: null, ...TINY_OPTS });
-    const rolling = this.shownScore < this.score;
-    R.text('SCORE', T.x + T.w / 2, T.y + 4, { color: P.ink6, align: 'center', ...TINY_OPTS });
-    R.text(this.shownScore.toLocaleString(), T.x + T.w / 2, T.y + 13, { size: 2, color: rolling ? P.gold0 : P.gold1, align: 'center' });
-    if (UI.iconButton('menu', T.x + T.w - 22, T.y + 4, 18, 16, (bx, by) => { for (let i = 0; i < 3; i++) R.rect(bx + 4, by + 4 + i * 3, 10, 2, P.bone0); })) this.openModal('pause');
-    const goals = roundGoals(g);
-    goals.forEach((gl, i) => {
-      const gx = T.x + T.w - 26 - (goals.length - i) * 11;
-      R.spr(gl.complete ? Sprites.check : Sprites.uncheck, gx, T.y + 26);
-      if (Input.over(gx - 6, T.y + 19, 12, 14) && !UI.blocked) this.goalTip(gl, R.vw / 2, T.y + T.h + 60);
-    });
-    // Chips x mult strip under the pile
-    const H = this.L.hud, p = this.panel, bw = 60;
-    const label = p.label || '';
-    if (label || p.showTotal || this.selected.length) {
-      R.box(H.x + H.w / 2 - bw - 6, H.y + 2, bw, 16, P.ink0, 2); R.box(H.x + H.w / 2 - bw - 5, H.y + 3, bw - 2, 14, P.blue2, 2);
-      R.text(String(p.chips), H.x + H.w / 2 - bw / 2 - 6, H.y + 6, { color: P.white, align: 'center' });
-      R.text('×', H.x + H.w / 2, H.y + 6, { color: P.red1, align: 'center' });
-      R.box(H.x + H.w / 2 + 6, H.y + 2, bw, 16, P.ink0, 2); R.box(H.x + H.w / 2 + 7, H.y + 3, bw - 2, 14, P.red2, 2);
-      R.text(String(Number(p.mult.toFixed(2))), H.x + H.w / 2 + 6 + bw / 2, H.y + 6, { color: P.white, align: 'center' });
-      R.text(p.showTotal ? `= +${p.total}` : label, H.x + H.w / 2, H.y + 21, { color: p.showTotal ? P.gold1 : P.bone1, align: 'center', ...TINY_OPTS });
+    // The centre shows your score, or chips x mult while a play is being built and
+    // counted, then flips back as the score rolls up.
+    // (the panel keeps its last total around, so the counted play only holds the
+    // spot for a couple of seconds before the score comes back)
+    this.totalAge = p.showTotal || p.bonus.length ? (this.totalAge || 0) + UI.dt : 0;
+    const tally = this.selected.length > 0 || ((p.showTotal || p.bonus.length > 0) && this.totalAge < 2);
+    this.tallyK = approach(this.tallyK ?? 0, tally ? 1 : 0, 16, UI.dt);
+    const cx = T.x + T.w / 2, k = this.tallyK;
+    if (k < 0.5) {
+      const a = 1 - k * 2, rolling = this.shownScore < this.score;
+      R.text('SCORE', cx, T.y + 4, { color: P.ink6, align: 'center', alpha: a, ...TINY_OPTS });
+      R.text(this.shownScore.toLocaleString(), cx, T.y + 13, { size: 2, color: rolling ? P.gold0 : P.gold1, align: 'center', alpha: a });
+    } else {
+      const a = k * 2 - 1, bw = 46, label = p.showTotal ? `= +${p.total.toLocaleString()}` : p.bonus.length ? p.bonus.map(b => `${b[0]} +${b[1]}`).join(' ') : p.label || 'SELECT CARDS';
+      R.ctx.save(); R.ctx.globalAlpha *= a;
+      R.text(label, cx, T.y + 4, { color: p.showTotal ? P.gold1 : p.bonus.length ? P.fire1 : P.bone1, align: 'center', ...TINY_OPTS, wave: p.showTotal && p.pop > 0 ? 1 : 0 });
+      const cs = 1 + p.pop * 0.15, ms = 1 + p.mpop * 0.2;
+      R.ctx.save(); R.ctx.translate(cx - 5 - bw / 2, T.y + 21); R.ctx.scale(cs, cs);
+      R.panel(-bw / 2, -8, bw, 16, { fill: P.blue2, rim: P.ink0, hi: P.blue1, lo: P.blue3 });
+      R.text(String(p.chips), 0, -4, { color: P.white, align: 'center' });
+      R.ctx.restore();
+      R.text('×', cx, T.y + 17, { color: P.red1, align: 'center' });
+      R.ctx.save(); R.ctx.translate(cx + 5 + bw / 2, T.y + 21); R.ctx.scale(ms, ms);
+      R.panel(-bw / 2, -8, bw, 16, { fill: P.red2, rim: P.ink0, hi: P.red1, lo: P.red3 });
+      R.text(String(Number(p.mult.toFixed(2))), 0, -4, { color: P.white, align: 'center' });
+      R.ctx.restore();
+      R.ctx.restore();
     }
-    // Consumable tricks as small buttons beside the player's table
-    const items = g.items || {};
-    let bx = this.L.playerTable.x + this.L.playerTable.gap * 2 + 26;
-    for (const [id, n] of Object.entries(items)) {
-      if (!(n > 0) || !UPGRADES[id]) continue;
-      const ok = this.myTurn() && g.deck.length >= (id === 'reshuffle' ? g.player.hand.length : 1);
-      if (UI.button('trick-' + id, bx, this.L.playerTable.y - 10, 24, 20, `×${n}`, { color: ok ? 'teal' : 'ink', enabled: !!ok, size: 1 })) {
+    if (UI.iconButton('menu', T.x + T.w - 22, T.y + 4, 18, 16, (bx, by) => { for (let i = 0; i < 3; i++) R.rect(bx + 4, by + 4 + i * 3, 10, 2, P.bone0); })) this.openModal('pause');
+  },
+
+  trickUsable(id) { const g = this.g; return this.myTurn() && g.player.hand.length > 0 && g.deck.length >= (id === 'reshuffle' ? g.player.hand.length : 1); },
+  overTray(x, y) {
+    const r = this.trayOpen && this.trayRect, ic = this.trayIcon;
+    return !!((r && x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h) || (ic && x >= ic.x && y >= ic.y && x < ic.x + ic.w && y < ic.y + ic.h));
+  },
+
+  // Phone: a quiet "..." button bottom left opens a tray with sort, card hints, this
+  // round's bonus goals and your tricks, so the table itself stays clear.
+  drawTray() {
+    const L = this.L, g = this.g, src = source(g.player);
+    const ic = this.trayIcon = { x: 6, y: L.btn.y + 1, w: 30, h: 22 }, open = !!this.trayOpen;
+    const hot = Input.over(ic.x, ic.y, ic.w, ic.h) && !UI.blocked;
+    const items = g.items || {}, consum = Object.entries(items).filter(([id, n]) => n > 0 && UPGRADES[id]);
+    const usable = consum.some(([id]) => this.trickUsable(id)), a = open || hot ? 1 : 0.5;
+    R.box(ic.x, ic.y, ic.w, ic.h, P.ink0, 3, 0.35 + a * 0.3);
+    R.box(ic.x + 1, ic.y + 1, ic.w - 2, ic.h - 2, open ? P.ink4 : P.ink3, 3, a);
+    for (let i = 0; i < 3; i++) R.rect(ic.x + 8 + i * 6, ic.y + ic.h / 2 - 1, 3, 3, P.bone0, a);
+    if (usable && !open) { const pb = 0.6 + Math.sin(R.t * 5) * 0.4; R.box(ic.x + ic.w - 6, ic.y - 3, 8, 8, P.ink0, 2); R.box(ic.x + ic.w - 5, ic.y - 2, 6, 6, P.teal1, 2, pb); }
+    if (Input.button('tray', ic.x, ic.y, ic.w, ic.h, !UI.blocked)) { this.trayOpen = !open; this.trayT = 0; Audio.play(open ? 'back' : 'ui'); }
+    if (!this.trayOpen) { this.trayRect = null; return; }
+    this.trayT = (this.trayT || 0) + UI.dt;
+    const goals = roundGoals(g), nT = consum.length + this.tricks.length;
+    const w = Math.min(R.vw - 12, 200), h = 34 + 10 + goals.length * 21 + 12 + Math.max(1, nT) * 17 + 4;
+    const x = 6, y = ic.y - 6 - h;
+    this.trayRect = { x, y, w, h };
+    const k = ease.outBack(clamp(this.trayT / 0.22), 1.5);
+    R.ctx.save(); R.ctx.translate(x + 14, y + h); R.ctx.scale(k, k); R.ctx.translate(-(x + 14), -(y + h));
+    R.panel(x, y, w, h, { fill: P.ink1, rim: P.ink0, hi: P.ink3, depth: 3 });
+    let yy = y + 7;
+    if (UI.button('sort', x + 6, yy, 78, 17, this.sortSuit ? 'SORT: SUIT' : 'SORT: RANK', { color: 'ink', enabled: this.started && src === 'hand' })) { this.sortSuit = !this.sortSuit; Audio.play('shuffle'); }
+    this.drawHintsToggle(x + 94, yy + 5);
+    yy += 27;
+    R.rect(x + 6, yy - 4, w - 12, 1, P.ink3);
+    R.text('BONUS GOALS', x + 6, yy, { color: P.ink6, outline: null, ...TINY_OPTS }); yy += 10;
+    for (const gl of goals) {
+      R.spr(gl.complete ? Sprites.check : Sprites.uncheck, x + 11, yy + 4);
+      const nm = R.measure(gl.name) > w - 64 ? TINY_OPTS : {};
+      R.text(gl.name, x + 20, yy, { color: gl.complete ? P.grn1 : P.bone0, ...nm });
+      R.text(`+${gl.points}`, x + w - 6, yy, { color: gl.complete ? P.grn1 : P.gold1, align: 'right' });
+      R.text(gl.complete ? 'Done!' : gl.detail, x + 20, yy + 10, { color: P.ink6, outline: null, ...TINY_OPTS });
+      if (Input.over(x, yy - 2, w, 20) && !UI.blocked) this.goalTip(gl, x + w / 2, y - 14);
+      yy += 21;
+    }
+    R.rect(x + 6, yy - 1, w - 12, 1, P.ink3);
+    R.text('TRICKS', x + 6, yy + 2, { color: P.ink6, outline: null, ...TINY_OPTS }); yy += 12;
+    if (!nT) R.text('Win a round to earn one.', x + 20, yy + 2, { color: P.ink5, outline: null, ...TINY_OPTS });
+    for (const [id, cnt] of consum) {
+      const u = UPGRADES[id], ok = this.trickUsable(id);
+      if (UI.button('trick-' + id, x + 6, yy, w - 12, 15, `${u.name.toUpperCase()} ×${cnt}`, { color: ok ? 'teal' : 'ink', enabled: !!ok, icon: Sprites.tricks[id], iconScale: 0.6 })) {
+        this.trayOpen = false;
         if (id === 'swap') { this.swapMode = !this.swapMode; this.tell(this.swapMode ? 'Pick a hand card to trade away.' : 'Switcheroo cancelled.'); } else this.useTrick(id);
       }
-      R.spr(Sprites.tricks[id], bx + 12, this.L.playerTable.y - 16, { sc: 0.7 });
-      bx += 28;
+      if (Input.hot === 'trick-' + id) UI.tooltip(u.name, u.desc, x + w / 2, y - 14, { color: u.color, w: 150 });
+      yy += 17;
     }
+    for (const id of this.tricks) {
+      const u = UPGRADES[id], label = u.name.toUpperCase() + (id === 'insurance' ? ` ${this.shields}` : '');
+      R.spr(Sprites.tricks[id], x + 12, yy + 6, { sc: 0.6 });
+      R.text(label, x + 22, yy + 3, { color: u.color, ...(R.measure(label) > w - 28 ? TINY_OPTS : {}) });
+      if (Input.over(x, yy, w, 15) && !UI.blocked) UI.tooltip(u.name, u.desc, x + w / 2, y - 14, { color: u.color, w: 150 });
+      yy += 17;
+    }
+    R.ctx.restore();
   },
 
   drawControls() {
@@ -1535,8 +1627,7 @@ export const Game = {
     if (L.land) {
       if (UI.button('sort', L.btn.x, L.btn.y + bh + 6, bw, 16, this.sortSuit ? 'SORT: SUIT' : 'SORT: RANK', { color: 'ink', enabled: this.started && src === 'hand' })) { this.sortSuit = !this.sortSuit; Audio.play('shuffle'); }
     } else {
-      if (UI.button('sort', 8, L.btn.y + 4, 40, 18, 'SORT', { color: 'ink', enabled: this.started && src === 'hand' })) { this.sortSuit = !this.sortSuit; Audio.play('shuffle'); }
-      this.drawHintsToggle(8, L.btn.y - 12);
+      // (the tray itself is drawn last, over the table; see drawTable)
     }
     // Turn lamp
     const yourTurn = g.turn === 'player' && !g.ended;
@@ -1555,7 +1646,8 @@ export const Game = {
     let msg = this.tellT > 0 ? this.tellMsg : '', bad = this.tellBad && this.tellT > 0;
     if (!msg && this.started && !g.ended && !this.cine) {
       const left = 3 - g.player.face.length;
-      if (g.choosing) msg = left > 0 ? `PICK YOUR TABLE: tap ${left} more card${left > 1 ? 's' : ''} to lay face-up for later.` : 'Happy with your table? Tap LOCK IN. Tap a table card to swap it back.';
+      if (g.choosing) msg = !L.land ? (left > 0 ? `Tap ${left} more card${left > 1 ? 's' : ''} to save for later.` : 'Happy? Tap LOCK IN, or tap one to swap back.')
+        : left > 0 ? `PICK YOUR TABLE: tap ${left} more card${left > 1 ? 's' : ''} to lay face-up for later.` : 'Happy with your table? Tap LOCK IN. Tap a table card to swap it back.';
       else if (this.swapMode) msg = 'SWITCHEROO: pick a hand card to trade.';
       else if (this.mustPickUp()) { msg = this.pickPrompt?.t > 0.95 ? 'Tap the pile to pick it up.' : 'Nothing in your hand beats the pile...'; bad = true; }
       else if (this.myTurn() && this.selected.length && !this.selectionReady()) msg = this.runHint();
@@ -1565,19 +1657,21 @@ export const Game = {
     if (!msg) return;
     const a = this.tellT > 0 ? clamp(this.tellT / 0.3) : 1;
     const shake = bad && this.tellT > 2.3 ? Math.sin(R.t * 50) * 2 : 0;
-    R.text(msg, L.guide.x + shake, L.guide.y, { color: bad ? P.red0 : P.bone1, align: 'center', alpha: a, ...(R.measure(msg) > (L.land ? L.hand.w + 60 : R.vw - 12) ? TINY_OPTS : {}) });
+    // While picking your table on a phone the rail grows, so the line sits above its badge
+    const pt = this.ptable(), gy = !L.land && g.choosing ? pt.y - CH * pt.sc / 2 - 34 : L.guide.y;
+    R.text(msg, L.guide.x + shake, gy, { color: bad ? P.red0 : P.bone1, align: 'center', alpha: a, ...(R.measure(msg) > (L.land ? L.hand.w + 60 : R.vw - 12) ? TINY_OPTS : {}) });
   },
 
   // Nudge players toward multi-card runs until they've played a few themselves.
   drawRunTip(telling) {
     const L = this.L, g = this.g;
-    if (telling || !this.myTurn() || this.swapMode || this.mustPickUp() || source(g.player) === 'blind') return;
+    if (telling || !this.myTurn() || this.swapMode || this.mustPickUp() || source(g.player) === 'blind' || g.choosing) return;
     let tip = '';
     if (this.selected.length) { if (this.settings.hints && [...this.views.values()].some(v => v.link)) tip = 'Tap a ^t+^0 card to add it to your run, or hit PLAY.'; }
     else if ((this.runsPlayed ??= store.get('bh-runs-played', 0)) < 3) {
       const key = g.moves + ':' + g.player.hand.length + ':' + g.pile.length;
       if (this.runKey !== key) { this.runKey = key; this.runAvail = options(g, 'player').some(o => o.length > 1); }
-      if (this.runAvail) tip = '^tTIP:^0 double-tap a card to build a run. Pairs, or climbs like 4♥ 5♥ 6♥.';
+      if (this.runAvail) tip = L.land ? '^tTIP:^0 double-tap a card to build a run. Pairs, or climbs like 4♥ 5♥ 6♥.' : '^tTIP:^0 double-tap a card to build a run.';
     }
     if (!tip) return;
     const y = L.land ? L.guide.y - 11 : L.guide.y + 10, big = R.measure(tip) > (L.land ? L.hand.w + 60 : R.vw - 12);

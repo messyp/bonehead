@@ -83,6 +83,15 @@ If frames run slow for a few seconds, the render resolution steps down automatic
 
 Firefox always renders the 2D scene on a CPU-backed canvas (`willReadFrequently`), with a lower pixel budget. Its GPU canvas can drop images drawn from many small source canvases, which is how every glyph and sprite here is drawn. Options → Safe Rendering does the same in any browser and also turns off the WebGL effects.
 
+## Phone layout
+
+In portrait everything is centred:
+- The opponent is up top: portrait on the left, hand centred, and their table cards on a small row just under the hand.
+- Your table cards mirror that on a small row just above your hand. They're dimmed, with a quiet "FOR LATER" caption, and slide into your hand at full size once they're in play. During pick-your-table rounds the row grows so it's easy to tap.
+- The deck, pile and burn heap are centred in the space between.
+- The top bar shows your score. While you build a play, and for a couple of seconds after it's counted, chips × mult take its place, then the score rolls up.
+- A faded "•••" button at bottom left opens a tray with SORT, CARD HINTS, the round's bonus goals with progress, and your tricks. A teal dot appears on it when a trick is usable.
+
 ## Audio
 
 Everything is synthesized with Web Audio. The music is a generative lo-fi jazz loop: FM electric piano, walking bass, brushed drums, vinyl crackle, and a chiptune lead that joins when a round gets tense. It changes key per opponent and is muffled whenever a menu is open. The v1 MP3 is no longer used.
