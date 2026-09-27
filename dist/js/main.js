@@ -31,11 +31,16 @@ window.addEventListener('resize', resize);
 resize();
 
 Input.onFirst = () => { Audio.unlock(); Music.start(); };
+// iOS only lets audio start inside certain gestures, and suspends it after calls or
+// switching apps, so keep nudging it on every tap until it's really running.
+for (const type of ['pointerup', 'touchend', 'click', 'keydown']) {
+  window.addEventListener(type, () => { if (!Audio.ctx || Audio.ctx.state !== 'running') { Audio.unlock(); Music.start(); } }, { passive: true });
+}
 
 document.addEventListener('visibilitychange', () => {
   if (!Audio.ctx) return;
   if (document.hidden) {
-    Audio.ctx.suspend();
+    Audio.ctx.suspend(); Audio.silent?.pause();
     if (Game.scene === 'table' && Game.started && !Game.modal && !Game.g?.ended) Game.openModal('pause');
   } else Audio.ctx.resume();
 });
@@ -51,18 +56,28 @@ function frame(now) {
   R.dt = dt;
   let gdt = dt;
   if (Game.hitstop > 0) { Game.hitstop -= dt; gdt = 0; }
-  Clock.update(gdt);
-  Post.update(dt);
-  FX.update(gdt);
-  Game.update(gdt);
-  R.begin(dt);
-  Game.draw();
-  view.style.cursor = Input.cursor;
-  Input.cursor = 'default';
-  Input.endFrame();
-  Post.render(R.scene, R.S, R.t);
+  // One bad frame must never stop the loop (that's a black screen). If frames keep
+  // failing, show the error with a reload option.
+  try {
+    Clock.update(gdt);
+    Post.update(dt);
+    FX.update(gdt);
+    Game.update(gdt);
+    R.begin(dt);
+    Game.draw();
+    view.style.cursor = Input.cursor;
+    Input.cursor = 'default';
+    Input.endFrame();
+    Post.render(R.scene, R.S, R.t);
+    failures = 0;
+  } catch (err) {
+    console.error(err);
+    try { R.ctx.restore(); Input.endFrame(); } catch { /* best effort */ }
+    if (++failures === 30) window.__bootFail?.(err?.message || String(err));
+  }
   requestAnimationFrame(frame);
 }
+let failures = 0;
 requestAnimationFrame(t => { last = t; document.body.classList.add('ready'); requestAnimationFrame(frame); });
 
 // Handy for debugging from the console.

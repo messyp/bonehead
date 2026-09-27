@@ -2,6 +2,10 @@ import { Pix } from './pixel.js';
 import { FONT, TINY, glyph } from './font.js';
 import { P } from '../art/palette.js';
 
+// iPhone and iPad (iPadOS reports itself as a Mac with touch). Safari there caps
+// total canvas memory, so we render a little leaner.
+export const IOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
 // Everything is laid out in virtual pixels. R.S converts to device pixels.
 export const R = {
   scene: null, ctx: null, W: 1, H: 1, S: 1, vw: 480, vh: 300, k: 1, dpr: 1, land: true, t: 0,
@@ -11,7 +15,7 @@ export const R = {
   // many small source canvases (our glyphs and sprites), so it renders in software.
   init(soft = false) {
     this.soft = soft;
-    this.maxPixels = soft ? 3.2e6 : 9e6;
+    this.maxPixels = soft ? 3.2e6 : IOS ? 4.2e6 : 9e6;
     this.scene = document.createElement('canvas');
     this.ctx = this.scene.getContext('2d', { alpha: true, willReadFrequently: soft });
   },
@@ -27,7 +31,9 @@ export const R = {
     if (S >= 2 && S - Math.floor(S) < 0.25) S = Math.floor(S);
     S = Math.max(0.5, S);
     this.S = S; this.vw = W / S; this.vh = H / S;
-    this.k = Math.max(1, Math.min(8, Math.ceil(S - 0.01)));
+    // Sprites are cached at an integer upscale k. Capping it keeps memory sane on big,
+    // dense screens (a 12.9" iPad would otherwise cache everything at 6x).
+    this.k = Math.max(1, Math.min(IOS ? 4 : 6, Math.ceil(S - 0.01)));
     this.scene.width = W; this.scene.height = H;
   },
 

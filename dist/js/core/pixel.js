@@ -6,6 +6,8 @@ export class Spr {
   constructor(canvas) { this.c = canvas; this.w = canvas.width; this.h = canvas.height; this.u = null; this.uk = 0; }
   up(k) {
     if (this.uk !== k) {
+      // Zeroing the old canvas hands its memory back at once (iOS Safari is slow to)
+      if (this.u) { this.u.width = 0; this.u.height = 0; }
       const u = document.createElement('canvas');
       u.width = this.w * k; u.height = this.h * k;
       const x = u.getContext('2d');

@@ -122,8 +122,8 @@ function drawLogo(game, cx, cy, sc, tt) {
 }
 
 // Small link: icon + label, underline on hover. Returns true when clicked.
-function link(id, x, y, label, icon, focus) {
-  const tw = R.measure(label), w = 15 + tw, clicked = Input.button(id, x - 5, y - 4, w + 10, 16, !UI.blocked);
+function link(id, x, y, label, icon, focus, hitH = 16) {
+  const tw = R.measure(label), w = 15 + tw, pad = hitH > 16 ? 24 : 5, clicked = Input.button(id, x - pad, y + 4 - hitH / 2, w + pad * 2, hitH, !UI.blocked);
   const mouse = Input.hot === id, hot = mouse || focus;
   if (mouse && !state.hot.has(id)) Audio.play('hover', id.length);
   if (mouse) state.hot.add(id); else state.hot.delete(id);
@@ -178,14 +178,16 @@ export function drawTitle(game, act) {
 
   // The one big button
   const [ctaId, ctaLabel] = menu[0], bw = land ? 164 : 176, bh = 34;
-  const ci = ease.outBack(intro(1.1), 1.4), by = (land ? vh * 0.69 : vh * 0.6) - bh / 2 + (1 - ci) * 40;
+  // On phones the button sits closer under the logo instead of floating mid-screen
+  const ctaY = land ? vh * 0.69 : Math.min(vh * 0.52, lg.top + lg.h + 8 * sc + 52);
+  const ci = ease.outBack(intro(1.1), 1.4), by = ctaY - bh / 2 + (1 - ci) * 40;
   R.ctx.save(); R.ctx.globalAlpha = intro(1.1);
   if (UI.cta('t-cta', vw / 2 - bw / 2, by, bw, bh, ctaLabel, { focus: focus(0) })) act(ctaId);
   R.ctx.restore();
 
   // Quiet links underneath, split by thin rules; two rows when the screen is narrow
   const links = menu.slice(1), sep = 18, rowW = links.reduce((s, [, l]) => s + linkW(l), 0) + sep * (links.length - 1);
-  const oneRow = rowW <= vw - 24, ly = land ? vh * 0.87 : vh * 0.74;
+  const oneRow = land && rowW <= vw - 24, ly = land ? vh * 0.87 : ctaY + bh / 2 + 30;
   R.ctx.save(); R.ctx.globalAlpha = intro(1.3);
   if (oneRow) {
     let x = vw / 2 - rowW / 2;
@@ -195,10 +197,9 @@ export function drawTitle(game, act) {
       if (k < links.length - 1) R.rect(Math.round(x - sep / 2), ly - 1, 1, 10, P.bone2, 0.3);
     });
   } else {
-    const colW = Math.floor((vw - 24) / 2);
+    // Phones: one centred column with room between, easy to hit with a thumb
     links.forEach(([id, label, icon], k) => {
-      const col = k % 2, row = Math.floor(k / 2), cx = 12 + col * colW + colW / 2;
-      if (link('t-' + id, cx - linkW(label) / 2, ly + row * 22, label, a.icons[icon], focus(k + 1))) act(id);
+      if (link('t-' + id, vw / 2 - linkW(label) / 2, ly + k * 30, label, a.icons[icon], focus(k + 1), 26)) act(id);
     });
   }
   R.ctx.restore();
@@ -223,8 +224,8 @@ export function drawTitle(game, act) {
 export function titleKey(game, k, act) {
   const menu = items(game), n = menu.length, sel = game.titleSel ?? 0;
   let next = sel;
-  if (k.key === 'ArrowDown') next = sel === 0 ? 1 : sel;
-  if (k.key === 'ArrowUp') next = 0;
+  if (k.key === 'ArrowDown') next = R.land ? (sel === 0 ? 1 : sel) : Math.min(n - 1, sel + 1);
+  if (k.key === 'ArrowUp') next = R.land ? 0 : Math.max(0, sel - 1);
   if (k.key === 'ArrowRight') next = sel === 0 ? 1 : Math.min(n - 1, sel + 1);
   if (k.key === 'ArrowLeft') next = sel <= 1 ? 0 : sel - 1;
   if (next !== sel || (!state.kbd && k.key.startsWith('Arrow'))) { game.titleSel = next; state.kbd = true; Audio.play('hover', next + 2); }

@@ -1,13 +1,28 @@
+import { IOS } from '../core/render.js';
+
 // Synthesised sound design. Everything is generated at runtime; no samples needed.
 export const Audio = {
   ctx: null, master: null, sfxBus: null, musicBus: null, musicFilter: null, verb: null, verbSend: null, noiseBuf: null,
   sfxVol: 0.8, musicVol: 0.55, ready: false, onReady: [],
 
+  // Called from user gestures (and again on later taps until audio is running).
   unlock() {
-    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
+    this.iosSession();
+    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    const ctx = this.ctx = new AC({ latencyHint: 'interactive' });
+    let ctx = new AC({ latencyHint: 'interactive' });
+    // iOS Safari can open a context at a different rate from the hardware, which
+    // plays everything slow and deep. Prime the device at 44.1k and reopen.
+    if (IOS && ctx.sampleRate !== 44100) {
+      try {
+        const b = ctx.createBufferSource();
+        b.buffer = ctx.createBuffer(1, 1, 44100); b.connect(ctx.destination); b.start(0); b.disconnect();
+        ctx.close(); ctx = new AC({ latencyHint: 'interactive' });
+      } catch { /* keep the first context */ }
+    }
+    this.ctx = ctx;
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.18;
     this.master = ctx.createGain(); this.master.gain.value = 0.9;
@@ -29,6 +44,22 @@ export const Audio = {
     this.noiseBuf = nb;
     this.ready = true;
     this.onReady.forEach(f => f()); this.onReady = [];
+  },
+
+  // iPhones mute web audio when the ringer switch is on silent unless the page asks
+  // for playback like a game or music app. Safari 17+ has an API for it; older iOS
+  // switches over once any media element plays, so a silent looping clip does it.
+  iosSession() {
+    if (!IOS) return;
+    try { if (navigator.audioSession) { navigator.audioSession.type = 'playback'; return; } } catch { /* fall through */ }
+    if (this.silent) { if (this.silent.paused) this.silent.play().catch(() => {}); return; }
+    const n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf), w = (o, str) => [...str].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    const el = this.silent = document.createElement('audio');
+    el.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })); el.loop = true; el.setAttribute('playsinline', ''); el.setAttribute('x-webkit-airplay', 'deny');
+    el.play().catch(() => {});
   },
 
   setSfx(v) { this.sfxVol = v; if (this.sfxBus) this.sfxBus.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02); },

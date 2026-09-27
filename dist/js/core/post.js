@@ -84,6 +84,32 @@ export const Post = {
       if (!allowGL) throw new Error('safe rendering: WebGL off');
       const gl = view.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
       if (!gl) throw new Error('no webgl2');
+      this.setup(gl);
+      // Under memory pressure (iPad Safari especially) the GPU context can be lost.
+      // Rebuild when it comes back; if it doesn't, show the plain scene instead of black.
+      view.addEventListener('webglcontextlost', e => { e.preventDefault(); this.ok = false; this.lostAt = performance.now(); });
+      view.addEventListener('webglcontextrestored', () => { try { this.setup(this.gl); this.direct(false); } catch (err) { console.warn('WebGL restore failed', err); } });
+      this.gl = gl;
+    } catch (err) {
+      console.warn('WebGL post-processing unavailable, using 2D fallback.', err);
+      this.ok = false;
+      this.ctx2d = view.getContext('2d');
+    }
+  },
+
+  // Show the 2D scene canvas itself over the (dead) GL canvas. Pointer events pass
+  // through to the canvas underneath, which keeps handling input.
+  direct(on) {
+    const sc = this.scene;
+    if (!sc) return;
+    if (on && !sc.parentNode) {
+      sc.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;pointer-events:none;background:radial-gradient(circle,#1f3a4a,#0b0f22)';
+      document.body.appendChild(sc);
+    } else if (!on && sc.parentNode) sc.remove();
+  },
+
+  setup(gl) {
+    {
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
       const prog = gl.createProgram();
       gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
@@ -104,12 +130,7 @@ export const Post = {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
       gl.uniform1i(this.u.uScene, 0);
-      view.addEventListener('webglcontextlost', e => { e.preventDefault(); this.ok = false; });
-      this.gl = gl; this.ok = true;
-    } catch (err) {
-      console.warn('WebGL post-processing unavailable, using 2D fallback.', err);
-      this.ok = false;
-      this.ctx2d = view.getContext('2d');
+      this.ok = true;
     }
   },
 
@@ -131,6 +152,12 @@ export const Post = {
 
   render(scene, S, time) {
     const s = this.state;
+    this.scene = scene;
+    if (!this.ok && this.gl) {
+      // GPU context lost: after a moment without a restore, show the plain scene
+      if (performance.now() - (this.lostAt || 0) > 1200) this.direct(true);
+      return;
+    }
     if (!this.ok) {
       const ctx = this.ctx2d; if (!ctx) return;
       const W = this.view.width, H = this.view.height;

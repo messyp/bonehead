@@ -22,6 +22,17 @@
 <div id="boot">SHUFFLING…</div>
 <div id="live" class="sr" aria-live="polite"></div>
 <noscript><p style="color:#fff;font-family:monospace;padding:2em">Bonehead needs JavaScript to deal the cards.</p></noscript>
+<script>
+  // If anything fails while loading, say so on screen (with a way out) rather than sit on black.
+  window.__bootFail = function (msg) {
+    var b = document.getElementById('boot'); if (!b) return;
+    document.body.classList.remove('ready');
+    b.style.pointerEvents = 'auto'; b.style.textAlign = 'center'; b.style.padding = '2em'; b.style.letterSpacing = '0';
+    b.textContent = 'Something went wrong: ' + msg + '. Tap to reload.';
+    b.onclick = function () { location.reload(); };
+  };
+  window.addEventListener('error', function (e) { if (!document.body.classList.contains('ready')) window.__bootFail(e.message || 'script error'); });
+</script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

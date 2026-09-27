@@ -160,7 +160,7 @@ export function blurSprite(s, rad = 2) {
     if (!u) {
       u = document.createElement('canvas'); u.width = Math.round(out.w * k); u.height = Math.round(out.h * k);
       const x = u.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(cv, 0, 0, u.width, u.height);
-      out.cache.clear(); out.cache.set(k, u);
+      out.cache.forEach(c => { c.width = 0; c.height = 0; }); out.cache.clear(); out.cache.set(k, u);
     }
     return u;
   };
