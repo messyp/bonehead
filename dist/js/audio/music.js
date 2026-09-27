@@ -1,3 +1,4 @@
+import { IOS } from '../core/render.js';
 import { Audio } from './sfx.js';
 
 // Generative lo-fi casino jazz. Layers fade in with game intensity:
@@ -82,8 +83,11 @@ export const Music = {
   },
 
   schedule() {
-    const ctx = Audio.ctx, s16 = 60 / this.bpm / 4;
-    while (this.next < ctx.currentTime + 0.14) {
+    const ctx = Audio.ctx, s16 = 60 / this.bpm / 4, ahead = IOS ? 0.3 : 0.14;
+    // After a stall (a slow frame, the app in the background) skip the missed steps
+    // instead of firing them all at once
+    if (this.next < ctx.currentTime - 0.05) { const miss = Math.ceil((ctx.currentTime - this.next) / s16); this.next += miss * s16; this.step += miss; }
+    while (this.next < ctx.currentTime + ahead) {
       const bar = Math.floor(this.step / 16), st = this.step % 16;
       if (st === 0) this.onBar(bar);
       const swing = st % 2 === 1 ? s16 * 0.28 : 0;

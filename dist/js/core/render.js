@@ -15,7 +15,7 @@ export const R = {
   // many small source canvases (our glyphs and sprites), so it renders in software.
   init(soft = false) {
     this.soft = soft;
-    this.maxPixels = soft ? 3.2e6 : IOS ? 4.2e6 : 9e6;
+    this.maxPixels = soft ? 3.2e6 : IOS ? 3e6 : 9e6;
     this.scene = document.createElement('canvas');
     this.ctx = this.scene.getContext('2d', { alpha: true, willReadFrequently: soft });
   },
@@ -33,7 +33,7 @@ export const R = {
     this.S = S; this.vw = W / S; this.vh = H / S;
     // Sprites are cached at an integer upscale k. Capping it keeps memory sane on big,
     // dense screens (a 12.9" iPad would otherwise cache everything at 6x).
-    this.k = Math.max(1, Math.min(IOS ? 4 : 6, Math.ceil(S - 0.01)));
+    this.k = Math.max(1, Math.min(IOS ? 3 : 6, Math.ceil(S - 0.01)));
     this.scene.width = W; this.scene.height = H;
   },
 

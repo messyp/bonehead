@@ -11,14 +11,17 @@ export const Audio = {
     if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    let ctx = new AC({ latencyHint: 'interactive' });
+    // iOS gets a roomier buffer: older iPads can't keep up with the smallest one, and the
+    // audio then slows and warps
+    const opts = { latencyHint: IOS ? 'playback' : 'interactive' };
+    let ctx = new AC(opts);
     // iOS Safari can open a context at a different rate from the hardware, which
     // plays everything slow and deep. Prime the device at 44.1k and reopen.
     if (IOS && ctx.sampleRate !== 44100) {
       try {
         const b = ctx.createBufferSource();
         b.buffer = ctx.createBuffer(1, 1, 44100); b.connect(ctx.destination); b.start(0); b.disconnect();
-        ctx.close(); ctx = new AC({ latencyHint: 'interactive' });
+        ctx.close(); ctx = new AC(opts);
       } catch { /* keep the first context */ }
     }
     this.ctx = ctx;
@@ -33,7 +36,7 @@ export const Audio = {
     this.musicBus.connect(this.musicFilter); this.musicFilter.connect(this.master);
     // Shared plate-ish reverb from a decaying stereo noise impulse.
     this.verb = ctx.createConvolver();
-    const len = Math.floor(ctx.sampleRate * 2.6), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    const len = Math.floor(ctx.sampleRate * (IOS ? 1.3 : 2.6)), ir = ctx.createBuffer(2, len, ctx.sampleRate);
     for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (t < 0.01 ? t / 0.01 : 1); } }
     this.verb.buffer = ir;
     const verbOut = ctx.createGain(); verbOut.gain.value = 0.5;

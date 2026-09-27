@@ -81,7 +81,9 @@ The game lays out in virtual pixels (a 480×300 minimum in landscape, 250×440 i
 
 If frames run slow for a few seconds, the render resolution steps down automatically.
 
-On iPhone and iPad, Safari caps total canvas memory, so the game renders leaner there: a lower pixel budget and a 4× cap on the sprite upscale cache (`IOS` in `render.js`). Old sprite canvases are zeroed so their memory comes back at once. If the WebGL context is lost, it is rebuilt when restored; until then the plain 2D scene is shown instead of a black screen. A failing frame never stops the loop, and if frames keep failing (or loading fails), the error is shown on screen with tap to reload.
+On iPhone and iPad, Safari caps total canvas memory, so the game renders leaner there: a lower pixel budget and a 4× cap on the sprite upscale cache (`IOS` in `render.js`). Old sprite canvases are zeroed so their memory comes back at once. If the WebGL context is lost, it is rebuilt when restored; until then the plain 2D scene is shown instead of a black screen. A failing frame never stops the loop, and if frames keep failing (or loading fails), the error is shown on screen with tap to reload. A watchdog also samples the WebGL output on a few early frames. Where the scene is see-through, the background is never pure black, so an all-black result means WebGL is silently not drawing (seen on an older iPad in Safari), and the game switches to the plain scene.
+
+Two URL switches help on devices: `?safe=1` forces Safe Rendering for that visit, and `?debug=1` shows a small readout: WebGL state, canvas size, scale, fps, audio state and sample rate, user agent and the last error.
 
 Firefox always renders the 2D scene on a CPU-backed canvas (`willReadFrequently`), with a lower pixel budget. Its GPU canvas can drop images drawn from many small source canvases, which is how every glyph and sprite here is drawn. Options → Safe Rendering does the same in any browser and also turns off the WebGL effects.
 
@@ -96,7 +98,7 @@ In portrait everything is centred:
 
 ## Audio
 
-Everything is synthesized with Web Audio. The music is a generative lo-fi jazz loop: FM electric piano, walking bass, brushed drums, vinyl crackle, and a chiptune lead that joins when a round gets tense. It changes key per opponent and is muffled whenever a menu is open. The v1 MP3 is no longer used. On iOS, audio is unlocked on any tap until it's actually running (and resumed after calls or app switches). The page asks for playback so sound plays with the ringer switch on silent: `navigator.audioSession` where available, else a silent looping clip. A context opened at the wrong sample rate (which plays slow and deep) is reopened.
+Everything is synthesized with Web Audio. The music is a generative lo-fi jazz loop: FM electric piano, walking bass, brushed drums, vinyl crackle, and a chiptune lead that joins when a round gets tense. It changes key per opponent and is muffled whenever a menu is open. The v1 MP3 is no longer used. On iOS, audio is unlocked on any tap until it's actually running (and resumed after calls or app switches). The page asks for playback so sound plays with the ringer switch on silent: `navigator.audioSession` where available, else a silent looping clip. A context opened at the wrong sample rate (which plays slow and deep) is reopened. iOS also gets a roomier audio buffer, a shorter reverb and a longer music lookahead, and the music skips steps missed during a stall instead of bunching them up, so older iPads don't slow and warp.
 
 ## Controls
 

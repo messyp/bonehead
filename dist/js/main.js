@@ -1,4 +1,4 @@
-import { R } from './core/render.js';
+import { R, IOS } from './core/render.js';
 import { Post } from './core/post.js';
 import { Input } from './core/input.js';
 import { FX } from './core/fx.js';
@@ -13,9 +13,11 @@ const view = document.getElementById('view');
 // Firefox always uses the software canvas; Safe Rendering also drops WebGL effects.
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem('bh2-settings')) || {}; } catch { /* storage may be unavailable */ }
-const firefox = /firefox/i.test(navigator.userAgent);
-R.init(firefox || !!saved.safe);
-Post.init(view, !saved.safe);
+const firefox = /firefox/i.test(navigator.userAgent), params = new URLSearchParams(location.search);
+// ?safe=1 forces Safe Rendering for this visit, handy when a device can't reach Options
+const safe = !!saved.safe || params.has('safe');
+R.init(firefox || safe);
+Post.init(view, !safe);
 Input.init(view);
 Cards.init();
 Sprites.init(() => skullIcon());
@@ -71,7 +73,7 @@ function frame(now) {
     Post.render(R.scene, R.S, R.t);
     failures = 0;
   } catch (err) {
-    console.error(err);
+    console.error(err); window.__lastErr = err?.message || String(err);
     try { R.ctx.restore(); Input.endFrame(); } catch { /* best effort */ }
     if (++failures === 30) window.__bootFail?.(err?.message || String(err));
   }
@@ -79,6 +81,28 @@ function frame(now) {
 }
 let failures = 0;
 requestAnimationFrame(t => { last = t; document.body.classList.add('ready'); requestAnimationFrame(frame); });
+
+// ?debug=1: a small readout of renderer, audio and errors, to screenshot from a device
+window.addEventListener('error', e => { window.__lastErr = e.message; });
+if (params.has('debug')) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:6px;top:6px;z-index:9;font:11px/1.35 ui-monospace,Menlo,monospace;color:#b8ffb0;background:rgba(0,0,0,.75);padding:6px 8px;pointer-events:none;white-space:pre-wrap;max-width:92vw';
+  document.body.appendChild(d);
+  let frames = 0, t0 = performance.now();
+  const count = () => { frames++; requestAnimationFrame(count); }; count();
+  setInterval(() => {
+    const now = performance.now(), fps = Math.round(frames * 1000 / (now - t0)); frames = 0; t0 = now;
+    const a = Audio.ctx, gl = Post.gl ? (Post.broken ? 'black, switched to plain' : Post.ok ? 'on' : 'lost') : 'off';
+    d.textContent = [
+      `WebGL ${gl}${Post.scene?.parentNode ? ' · plain scene shown' : ''}${safe ? ' · safe mode' : ''}`,
+      `canvas ${R.W}x${R.H} · dpr ${R.dpr.toFixed(2)} · S ${R.S.toFixed(2)} · k ${R.k}${R.soft ? ' · soft' : ''}`,
+      `fps ${fps} · quality ${R.quality}`,
+      `audio ${a ? `${a.state} · ${a.sampleRate}Hz · ${(a.baseLatency * 1000 || 0).toFixed(0)}ms` : 'not started (tap)'}`,
+      `iOS ${IOS} · ${navigator.userAgent}`,
+      `last error: ${window.__lastErr || 'none'}`,
+    ].join('\n');
+  }, 500);
+}
 
 // Handy for debugging from the console.
 window.__bonehead = { Game, R, Post, Audio, Music, FX, firefox };

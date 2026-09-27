@@ -147,6 +147,18 @@ export const Post = {
     s.flash[3] = Math.max(0, s.flash[3] - dt * 3.2);
   },
 
+  watch(gl, scene) {
+    const W = this.view.width, H = this.view.height, sctx = scene.getContext('2d'), px = new Uint8Array(4);
+    let tested = 0, lit = 0;
+    for (const [fx, fy] of [[0.5, 0.5], [0.25, 0.3], [0.75, 0.3], [0.3, 0.75], [0.7, 0.72], [0.5, 0.12]]) {
+      const x = Math.floor(W * fx), y = Math.floor(H * fy);
+      try { if (sctx.getImageData(x, y, 1, 1).data[3] > 200) continue; } catch { /* unreadable: test anyway */ }
+      gl.readPixels(x, H - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      tested++; if (px[0] + px[1] + px[2] > 6) lit++;
+    }
+    if (tested >= 2 && !lit) { this.broken = true; this.ok = false; this.lostAt = 0; console.warn('WebGL output is black; showing the plain scene instead'); }
+  },
+
   flash(rgb, a = 0.5) { this.state.flash = [...rgb, Math.max(this.state.flash[3], a)]; },
   impact(a = 0.6) { this.state.impact = Math.min(1, this.state.impact + a); },
 
@@ -181,5 +193,11 @@ export const Post = {
     gl.uniform3fv(u.uC1, s.c1); gl.uniform3fv(u.uC2, s.c2); gl.uniform3fv(u.uC3, s.c3);
     gl.uniform4fv(u.uFlash, s.flash);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (gl.isContextLost()) { this.ok = false; this.lostAt ??= performance.now(); return; }
+    // Black-screen watchdog (older iPads in Safari can draw nothing without any error):
+    // on a few early frames, sample the output where the scene is see-through. The
+    // background swirl is never pure black there, so all-black means GL isn't drawing.
+    this.frames = (this.frames || 0) + 1;
+    if (this.frames === 8 || this.frames === 45 || this.frames === 180) this.watch(gl, scene);
   },
 };
