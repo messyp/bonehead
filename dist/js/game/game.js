@@ -1346,13 +1346,16 @@ export const Game = {
   // Table cards wait until the deck and hand are gone; say so on the cards.
   drawTableTag() {
     const L = this.L, g = this.g;
+    // Only explain the table cards to a resting pointer: never mid-drag (dragging a
+    // card to the pile on a phone passes right over them) or while a finger is down
+    const calm = !this.drag && !(Input.down && Input.type !== 'mouse');
     if (g.choosing && this.myTurn()) { this.drawChooseSlots(); return; }
     if (this.playerPhase() !== 'hand' || !(g.player.face.length + g.player.blind.length) || this.hidden.size) return;
     if (!L.land) {
       const pt = this.ptable(), half = CW * pt.sc / 2, tx = pt.x + pt.gap * 2 + half + 8, ty = pt.y - 5;
       R.spr(Sprites.lock, tx + 3, ty + 2, { sc: 0.7, alpha: 0.8 });
       R.text('FOR LATER', tx + 9, ty, { font: TINY, color: P.ink6, outline: null });
-      if (Input.over(pt.x - half - 4, pt.y - CH * pt.sc / 2 - 8, pt.gap * 2 + half * 2 + 60, CH * pt.sc + 10) && !UI.blocked && !this.overTray(Input.x, Input.y))
+      if (calm && Input.over(pt.x - half - 4, pt.y - CH * pt.sc / 2 - 8, pt.gap * 2 + half * 2 + 60, CH * pt.sc + 10) && !UI.blocked && !this.overTray(Input.x, Input.y))
         UI.tooltip('Your table cards', 'Saved for later. Once the deck and your hand are gone, these move into your hand: face-up ones first, then the blind ones.', L.cx, pt.y - CH * pt.sc / 2, { color: P.gold1, w: 170 });
       return;
     }
@@ -1363,7 +1366,7 @@ export const Game = {
     R.spr(Sprites.lock, x - w / 2 + 7, y, { sc: 0.8 });
     R.text(label, x + 5, y - 2, { font: TINY, color: P.bone1, align: 'center', outline: null });
     const half = CW * L.tableSc / 2 + 2;
-    if (Input.over(L.playerTable.x - half, L.playerTable.y - CH * L.tableSc / 2 - 6, L.playerTable.gap * 2 + half * 2, CH * L.tableSc + 8) && !UI.blocked)
+    if (calm && Input.over(L.playerTable.x - half, L.playerTable.y - CH * L.tableSc / 2 - 6, L.playerTable.gap * 2 + half * 2, CH * L.tableSc + 8) && !UI.blocked)
       UI.tooltip('Saved for later', 'Your table cards. Play the face-up ones once the deck and your hand are empty, then flip the blind ones.', x, L.playerTable.y - CH * L.tableSc / 2, { color: P.gold1, w: 150 });
   },
 
