@@ -234,6 +234,19 @@ export const Screens = {
         R.spr(Cards.face({ r, s: i % 4 }), x, ay + 8 - k * 26, { sc: 0.5, rot: (i - 2.5) * 0.05 * (1 - k) });
       });
       R.text('LATER', ax, ay - 44, { font: TINY, color: P.gold1, align: 'center', alpha: clamp((t - 1) * 3) });
+    } else if (m.data.rule === 'noweapons') {
+      // The Pit Boss confiscates your 10: the stamp slams down and the flames go out
+      const st = t - 0.75, plain = st > 0.08;
+      R.spr(portrait(game.oppIdx('house'), (R.t % 3) < 0.15 ? 'blink' : 'idle', 0), ax - 40, ay, { sc: 0.9 });
+      R.spr(Cards.face({ r: 10, s: 1, plain }, Math.floor(R.t * 8)), ax + 30, ay + 2, { sc: 0.8, rot: 0.06 });
+      if (st > 0) {
+        if (!m.data.stamped) { m.data.stamped = true; Audio.play('stamp'); R.shake(0.25); }
+        const k = st < 0.16 ? 2.4 - 1.4 * ease.outCubic(st / 0.16) : 1;
+        R.ctx.save(); R.ctx.translate(ax + 30, ay + 4); R.ctx.rotate(-0.32); R.ctx.scale(k, k);
+        R.box(-34, -7, 68, 14, P.red1, 2, 0.95); R.box(-33, -6, 66, 12, P.red4, 2);
+        R.text('CONFISCATED', 0, -3, { font: TINY, color: P.red0, align: 'center', outline: null, shadow: null });
+        R.ctx.restore();
+      }
     } else {
       game.cpuSeats().forEach((seat, i) => R.spr(portrait(game.oppIdx(seat), (R.t + i) % 3 < 0.15 ? 'blink' : 'idle', 0), ax + (i - 0.5) * 50, ay, { sc: 0.9 }));
     }

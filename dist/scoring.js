@@ -1,6 +1,6 @@
 // Bonuses are optional: clearing your cards always advances the run.
 export const MAGIC_POINTS=Object.freeze({2:200,8:240,9:260,10:300});
-export function cardPoints(card){return MAGIC_POINTS[card.r]??(card.r===14?150:card.r*10)}
+export function cardPoints(card){return (card.plain?undefined:MAGIC_POINTS[card.r])??(card.r===14?150:card.r*10)}
 export function comboReward(cards,chain=false){
   if(!cards.length)return {mult:1,reason:'SINGLE CARD'};
   const counts={};for(const c of cards)counts[c.r]=(counts[c.r]||0)+1;
@@ -40,9 +40,9 @@ export const GOALS = {
   speedrun: { name: 'SPEED RUN', points: 700, win: true, desc: 'Win the round in 14 plays or fewer.', detail: g => `${st(g).plays || 0} plays so far`, done: g => won(g) && (st(g).plays || 0) <= 14 },
 };
 // Round 1 keeps the classic pair; later rounds draw three from the pool.
-export function pickGoals(round, rand = Math.random) {
+export function pickGoals(round, rand = Math.random, exclude = []) {
   if (round <= 1) return ['double', 'clean'];
-  const pool = Object.keys(GOALS).filter(id => !['double', 'clean'].includes(id));
+  const pool = Object.keys(GOALS).filter(id => !['double', 'clean', ...exclude].includes(id));
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   return [rand() < 0.5 ? 'double' : 'clean', ...pool.slice(0, 2)];
 }

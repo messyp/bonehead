@@ -39,6 +39,8 @@ export const UPGRADES = {
   embers: { name: 'Ash Collector', kind: 'REST OF RUN', desc: 'Each card in a pile you burn pays +35 chips.', color: P.fire2 },
 };
 
+const magicOf = c => (c.plain ? null : MAGIC[c.r]);
+
 // A card on the table. Springs chase targets set by the layout every frame.
 class View {
   constructor(c, x, y) {
@@ -306,10 +308,12 @@ export const Game = {
     const rd = roundOf(n), g = deal(n, this.config.extraMagic, this.config.minHand, { seats: seatsFor(n), choose: rd.rule === 'choose' });
     const left = ROUNDS.map((_, i) => i + 1).filter(r => !(this.cleared || []).includes(r));
     g.finalRound = left.length === 1 && left[0] === n ? n : -1;
-    g.goals = pickGoals(n);
+    g.goals = pickGoals(n, Math.random, rd.rule === 'noweapons' ? ['conjurer'] : []);
     g.opps = [...rd.opps];
     g.items = items;
     if (this.tricks.includes('wild')) g.player.hand.push({ r: 2, s: 1, id: `gift-${n}-2` }, { r: 10, s: 0, id: `gift-${n}-10` });
+    // The Pit Boss confiscates weapons: every 10 dealt this round is an ordinary card
+    if (rd.rule === 'noweapons') for (const c of [...g.deck, ...seatsOf(g).flatMap(sn => [...g[sn].hand, ...g[sn].face, ...g[sn].blind])]) if (c.r === 10) c.plain = true;
     return g;
   },
 
@@ -565,7 +569,7 @@ export const Game = {
   },
 
   async burnPile(who, cards) {
-    const L = this.L, g = this.g, x = L.pile.x, y = L.pile.y, inferno = cards.at(-1).r === 10, size = g.pile.length;
+    const L = this.L, g = this.g, x = L.pile.x, y = L.pile.y, inferno = cards.at(-1).r === 10 && !cards.at(-1).plain, size = g.pile.length;
     const actor = who === 'player' ? 'YOU' : this.opp(who).name.toUpperCase();
     this.stats.maxBurn = Math.max(this.stats.maxBurn || 0, size);
     const pileViews = g.pile.map(c => this.views.get(c.id)).filter(Boolean);
@@ -915,8 +919,8 @@ export const Game = {
     }
     if (dt) for (const v of this.views.values()) {
       v.update(dt);
-      if (v.fly && v.flip > 0.5 && MAGIC[v.c.r] && Math.hypot(v.vx, v.vy) > 120 && Math.random() < 0.7)
-        FX.burst(v.x, v.y, 1, { colors: [P.white, MAGIC[v.c.r].light, MAGIC[v.c.r].color], speed: [5, 20], grav: 0, drag: 2, life: [0.3, 0.6], w: CW * 0.4, h: CH * 0.4, size: [1, 2] });
+      if (v.fly && v.flip > 0.5 && magicOf(v.c) && Math.hypot(v.vx, v.vy) > 120 && Math.random() < 0.7)
+        FX.burst(v.x, v.y, 1, { colors: [P.white, magicOf(v.c).light, magicOf(v.c).color], speed: [5, 20], grav: 0, drag: 2, life: [0.3, 0.6], w: CW * 0.4, h: CH * 0.4, size: [1, 2] });
     }
   },
 
@@ -1185,8 +1189,8 @@ export const Game = {
     const hv = this.hoverId && this.views.get(this.hoverId);
     if (!L.land) this.drawTray();
     if (hv && this.hoverT > 0.45 && !this.drag?.active && hv.face && !this.selected.includes(hv.id) && !this.overTray(Input.x, Input.y)) {
-      const c = hv.c, m = MAGIC[c.r];
-      UI.tooltip(`${rankLabel(c.r)} of ${SUIT_NAMES[c.s]}`, (m ? `^${c.r === 10 ? 'o' : c.r === 2 ? 't' : 'v'}${m.name}^0 · ${m.desc} ` : '') + `^b${cardPoints(c)} chips`, hv.x, hv.y - CH * 0.55, { color: m ? P.gold1 : P.bone0, w: m ? 140 : 100 });
+      const c = hv.c, m = magicOf(c);
+      UI.tooltip(`${rankLabel(c.r)} of ${SUIT_NAMES[c.s]}`, (m ? `^${c.r === 10 ? 'o' : c.r === 2 ? 't' : 'v'}${m.name}^0 · ${m.desc} ` : '') + (c.plain ? '^rDisarmed^0 by the Pit Boss: just a 10 this round. ' : '') + `^b${cardPoints(c)} chips`, hv.x, hv.y - CH * 0.55, { color: m ? P.gold1 : P.bone0, w: m || c.plain ? 140 : 100 });
     }
   },
 
@@ -1276,7 +1280,7 @@ export const Game = {
     const ghost = showFace && v.c.r === 8 && v.zone === 'pile';
     R.spr(spr, x, y, { rot: r, sx, sy: s, skx, alpha: ghost ? 0.62 + Math.sin(t * 3) * 0.1 : 1 });
     // Foil sweep on magic cards
-    if (showFace && MAGIC[v.c.r] && flipS > 0.5) {
+    if (showFace && magicOf(v.c) && flipS > 0.5) {
       const cyc = (t * 0.55 + v.phase * 0.3) % 2.2, f = Math.floor(cyc / 1.1 * Cards.shine.length);
       if (f < Cards.shine.length) R.spr(Cards.shine[f], x, y, { rot: r, sx, sy: s, skx });
     }

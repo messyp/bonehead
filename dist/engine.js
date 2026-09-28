@@ -2,6 +2,10 @@ export const SUITS = ['♠', '♥', '♣', '♦'];
 export const label = r => ({ 11: 'J', 12: 'Q', 13: 'K', 14: 'A' }[r] || String(r));
 export const magic = { 2: ['RESET', 'A fresh start. Anything goes.'], 8: ['GHOST', 'See-through. The previous rule stays.'], 9: ['UNDERCUT', 'Play on anything. Next non-8 card: 9 or lower.'], 10: ['INFERNO', 'Burn the pile. Take another turn.'] };
 
+// A card is magic by rank, unless a round has disarmed it: in the Pit Boss's
+// "No Weapons" round every 10 carries plain: true and plays as an ordinary 10.
+export const isMagic = c => (c.r === 2 || c.r === 8 || c.r === 9 || c.r === 10) && !(c.r === 10 && c.plain);
+
 export function deck(extra = 0) {
   const d = [];
   for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) d.push({ r, s, id: `${s}-${r}` });
@@ -14,14 +18,14 @@ export function rule(pile) {
   for (let i = pile.length - 1; i >= 0; i--) {
     const r = pile[i].r;
     if (r === 8) continue;
-    if (r === 2 || r === 10) return { r: 0, low: false };
+    if (r === 2 || (r === 10 && !pile[i].plain)) return { r: 0, low: false };
     return { r, low: r === 9 };
   }
   return { r: 0, low: false };
 }
 
 export function legal(c, pile) {
-  if ([2, 8, 9, 10].includes(c.r)) return true;
+  if (isMagic(c)) return true;
   const t = rule(pile);
   return !t.r || (t.low ? c.r <= 9 : c.r >= t.r);
 }
@@ -31,7 +35,7 @@ export const cardsLeft = p => p.hand.length + p.face.length + p.blind.length;
 
 export function burned(pile) {
   if (!pile.length) return false;
-  if (pile.at(-1).r === 10) return true;
+  if (pile.at(-1).r === 10 && !pile.at(-1).plain) return true;
   return pile.length >= 4 && pile.slice(-4).every(c => c.r === pile.at(-1).r);
 }
 
@@ -82,7 +86,7 @@ export function chooseTable(g, who, ids) {
   return true;
 }
 // The house saves its strongest cards for the endgame.
-export const tableValue = c => ({ 10: 100, 2: 95, 14: 80, 13: 75, 12: 70, 11: 65, 9: 60, 8: 40 }[c.r] ?? c.r * 2);
+export const tableValue = c => c.plain ? c.r * 2 : ({ 10: 100, 2: 95, 14: 80, 13: 75, 12: 70, 11: 65, 9: 60, 8: 40 }[c.r] ?? c.r * 2);
 export const aiTable = p => [...p.hand].sort((a, b) => tableValue(b) - tableValue(a)).slice(0, 3).map(c => c.id);
 
 export function replenish(g, p, min = 3) { while (p.hand.length < min && g.deck.length) p.hand.push(g.deck.pop()); }
@@ -149,12 +153,12 @@ export function play(g, who, ids, min = 3, protect = false) {
   const burn = burned(g.pile), size = g.pile.length, burnedCards = burn ? [...g.pile] : [];
   if (who === 'player') {
     const st = pstats(g), counts = {};
-    cards.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; if ([2, 8, 9, 10].includes(c.r)) { st.magicPlays++; if (!st.magic.includes(c.r)) st.magic.push(c.r); } });
+    cards.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; if (isMagic(c)) { st.magicPlays++; if (!st.magic.includes(c.r)) st.magic.push(c.r); } });
     st.plays++;
     st.maxPlay = Math.max(st.maxPlay, cards.length);
     st.maxSame = Math.max(st.maxSame, ...Object.values(counts));
     if (src === 'blind') st.blindHits++;
-    if (burn) { st.maxBurn = Math.max(st.maxBurn, size); if (cards.at(-1).r === 10) st.infernoBurns++; else st.quadBurns++; }
+    if (burn) { st.maxBurn = Math.max(st.maxBurn, size); if (cards.at(-1).r === 10 && !cards.at(-1).plain) st.infernoBurns++; else st.quadBurns++; }
   }
   if (burn) {
     g.pile = []; g.burns++;

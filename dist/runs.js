@@ -1,7 +1,6 @@
-import { valid } from './engine.js';
+import { valid, isMagic } from './engine.js';
 import { cardPoints } from './scoring.js';
 
-const MAGIC = [2, 8, 9, 10];
 
 // Every distinct legal play in a hand (as card sets), each with one playable order.
 // Selection works on these, so players can pick a run's cards in any order.
@@ -31,7 +30,7 @@ export const exactly = (chains, ids) => chains.find(ch => ch.cards.length === id
 
 // Longer runs first, spending as few magic cards as possible.
 export function runScore(cards) {
-  return cards.length * 1000 - cards.filter(c => MAGIC.includes(c.r)).length * 150 + cards.reduce((a, c) => a + cardPoints(c), 0) / 10;
+  return cards.length * 1000 - cards.filter(isMagic).length * 150 + cards.reduce((a, c) => a + cardPoints(c), 0) / 10;
 }
 
 // Best run through one card, for double-tap auto-select.

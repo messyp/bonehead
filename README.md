@@ -22,7 +22,7 @@ No build step, no dependencies, no external requests. The whole game is about 85
 for t in *.test.mjs; do node $t; done
 ```
 
-`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `goals.test.mjs` covers bonus goals, per-round stats and trophies. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
+`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `weapons.test.mjs` covers disarmed 10s. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `goals.test.mjs` covers bonus goals, per-round stats and trophies. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
 
 ## Structure
 
@@ -60,7 +60,7 @@ A run is four tables, defined in `js/game/rounds.js`:
 1. Lucky Bones, classic rules.
 2. The Velvet Reaper, **Pick Your Table**: everyone gets 6 cards and chooses 3 to lay face-up for later.
 3. **The Twins** (Tibia and Fibula), two opponents at once. Go out first to win. If a twin goes out, beat the other. The last one holding cards is the Bonehead.
-4. The Pit Boss, Pick Your Table again.
+4. The Pit Boss, **No Weapons**: 10s are confiscated at the door and play as ordinary 10s. They don't play on anything and don't burn, though four of a kind still burns the pile. The deal marks every 10 with `plain: true`, and the engine's `isMagic` treats such a card as ordinary for playability, burns, scoring, card art and goals (Conjurer is left out of this round).
 
 Between rounds, the **Midnight Circuit** map shows a crypt from above, in the spirit of The Binding of Isaac's rooms. It is painted at full resolution:
 - textured flagstones and a red and gold rug

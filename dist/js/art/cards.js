@@ -332,9 +332,10 @@ export function shineFrames(n = 16) {
 const cache = new Map();
 export const Cards = {
   face(c, frame = 0) {
-    const key = `${c.r}-${c.s}-${c.r === 10 ? frame % 3 : 0}`;
+    // A disarmed 10 (the Pit Boss's No Weapons round) wears an ordinary number face
+    const magic = MAGIC[c.r] && !c.plain, key = `${c.r}-${c.s}-${magic && c.r === 10 ? frame % 3 : 0}${magic ? '' : 'p'}`;
     let s = cache.get(key);
-    if (!s) { s = (MAGIC[c.r] ? magicFace(c.r, c.s, frame % 3) : numberFace(c.r, c.s)).spr(); cache.set(key, s); }
+    if (!s) { s = (magic ? magicFace(c.r, c.s, frame % 3) : numberFace(c.r, c.s)).spr(); cache.set(key, s); }
     return s;
   },
   back: null, backBlue: null, shadow: null, dim: null, flash: null, glow: null, glowRed: null, glowTeal: null, shine: null,

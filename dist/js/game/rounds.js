@@ -8,7 +8,7 @@ export const ROUNDS = [
   { opps: ['lucky'], theme: 0, key: 0, skill: 1 },
   { opps: ['velvet'], theme: 1, key: 3, skill: 2, rule: 'choose' },
   { opps: ['tibia', 'fibula'], theme: 4, key: 5, skill: 2, rule: 'twins', name: 'The Twins', venue: 'THE HALL OF MIRRORS' },
-  { opps: ['boss'], theme: 2, key: -2, skill: 2, rule: 'choose' },
+  { opps: ['boss'], theme: 2, key: -2, skill: 2, rule: 'noweapons' },
 ];
 
 // While testing, every table on the map is playable in any order.
@@ -18,6 +18,10 @@ export const RULES = {
   choose: {
     title: 'PICK YOUR TABLE', color: P.gold1,
     lines: ['You get ^g6 cards^0 this round, not 3.', 'Choose ^g3^0 to lay face-up for later.', 'Save your magic for the endgame,', 'or spend it early. Your call.'],
+  },
+  noweapons: {
+    title: 'NO WEAPONS', color: P.red1,
+    lines: ['The Pit Boss checks you at the door.', '^r10s are just 10s^0 this round:', 'no playing on anything, no burning.', 'Four of a kind still burns the pile.'],
   },
   twins: {
     title: 'TWO OPPONENTS', color: P.teal1,
