@@ -81,6 +81,15 @@ function skullBody(jaw = 0) {
   return b;
 }
 
+// The same skull without the wordmark's heavy ink outline and 3D side: a thin, soft
+// outline, for when lots of them appear at once (the skull pour).
+export function lightSkull(jaw = 0) {
+  const b = skullBody(jaw), p = new Pix(b.w + 2, b.h + 2);
+  p.paste(b, 1, 1);
+  p.outline('#4a3552');
+  return p.spr();
+}
+
 export function buildLogo() {
   const letters = [...'BONEHEAD'].map((ch, i) => ch === 'O' ? null : letter(ch, i < 4 ? BONE : GOLD));
   const skull = dress(skullBody(0)), chomp = dress(skullBody(2));

@@ -90,7 +90,7 @@ Firefox always renders the 2D scene on a CPU-backed canvas (`willReadFrequently`
 
 ## Losing
 
-When you're the Bonehead, logo skulls pour from the top of the screen and pile up from the bottom with simple physics: gravity, bounce, friction, spin and skull-on-skull contacts, with rate-limited bone clacks. About 60 skulls, sized to the screen, fill roughly three quarters of it in just over a second. The result card then lands on the pile, with the logo skull cackling as the BONEHEAD stamp slams down. Reduced Motion gives a smaller pour.
+When you're the Bonehead, logo skulls pour from the top of the screen and pile up from the bottom with simple physics: gravity, bounce, friction, spin and skull-on-skull contacts, with rate-limited bone clacks. About 150 small skulls (a lighter-outlined version of the logo skull), sized to the screen, fill roughly three quarters of it in just over a second. Only real knocks set a skull turning, and anything resting on the pile stops spinning, so the settled pile is still. The result card then lands on the pile, with the logo skull cackling as the BONEHEAD stamp slams down. Reduced Motion gives a smaller pour.
 
 ## Phone layout
 
