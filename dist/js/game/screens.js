@@ -16,6 +16,7 @@ import { UPGRADES, fmtTime, store } from './game.js';
 import { ROUNDS, RULES, ROUND_LOCKS } from './rounds.js';
 import { crownIcon } from '../art/map.js';
 import { mapRoomHD } from '../art/mapHD.js';
+import { buildLogo } from '../art/logo.js';
 import { drawTitle, titleKey } from './title.js';
 import { cardsLeft } from '../../engine.js';
 
@@ -424,9 +425,14 @@ export const Screens = {
     // The loser gets the title. Stamp slams in.
     const px = b.x + w / 2, py = b.y + 62;
     if (win) { R.panel(px - 28, py - 28, 56, 56, { fill: P.ink3, rim: opp.color }); R.spr(portrait(idx, m.t > 0.9 ? 'talk' : 'idle', Math.floor(R.t * 6)), px, py); }
-    else R.spr(game.mascotSpr(), px, py, { sc: 0.9 });
+    else {
+      // The logo skull, cackling (jaw chattering) as the stamp lands
+      const L = resultSkull(), cackle = m.t > 0.55 && m.t < 1.4 && Math.floor(m.t * 14) % 2 === 0;
+      const s = cackle ? L.chomp : L.skull, sc = 1.75, bob = cackle ? -1 : Math.sin(R.t * 2) * 1.5;
+      R.spr(s.spr, px, py + bob + 2, { sc, ax: (s.ox + 12) / s.spr.w, ay: (s.oy + 12) / s.spr.h, rot: cackle ? Math.sin(m.t * 40) * 0.06 : 0 });
+    }
     R.text(win ? opp.name.toUpperCase() : 'YOU', px, py + 32, { color: P.bone0, align: 'center' });
-    R.text('IS OFFICIALLY A', px, py + 42, { color: P.ink6, align: 'center', ...T });
+    R.text(win ? 'IS OFFICIALLY A' : 'ARE OFFICIALLY A', px, py + 42, { color: P.ink6, align: 'center', ...T });
     const st = m.t - 0.55;
     if (st > 0) {
       if (!m.data.stamped) { m.data.stamped = true; Audio.play('stamp'); R.shake(0.45); Post.impact(0.5); FX.burst(px, py + 66, 30, { colors: [P.red1, P.red2, P.bone0], speed: [60, 160], grav: 200, size: [1, 2], top: true }); }
@@ -447,6 +453,9 @@ export const Screens = {
   },
 };
 
+
+let resultArt = null;
+const resultSkull = () => (resultArt ??= buildLogo());
 
 function resultAction(game) {
   const g = game.g, win = g.winner === 'player';

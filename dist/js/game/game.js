@@ -17,6 +17,7 @@ import { Audio } from '../audio/sfx.js';
 import { Music } from '../audio/music.js';
 import { UI } from './ui.js';
 import { wordmark } from '../art/logo.js';
+import { SkullFall } from './skullfall.js';
 import { Screens } from './screens.js';
 
 const DEG = Math.PI / 180;
@@ -744,6 +745,10 @@ export const Game = {
       Audio.play('lose');
       FX.banner('BUSTED', { color: P.red1, sub: this.cpuSeats().length > 1 ? 'Last one holding cards.' : `${this.opp().name} ran out first.`, size: R.land ? 5 : 4, x: this.bannerX() });
       R.shake(0.3);
+      // You're the Bonehead: skulls pour from the sky and fill the screen, then the
+      // result card lands on the pile
+      const tk = this.token;
+      wait(0.3).then(() => { if (tk === this.token) SkullFall.start(tk, this.settings.reduced); });
     }
     Music.set(0);
     const token = this.token;
@@ -1072,6 +1077,7 @@ export const Game = {
   // ---------- update ----------
   update(dt) {
     UI.blocked = !!this.modal || !!this.cine;
+    if (SkullFall.active) { if (SkullFall.token !== this.token || this.scene !== 'table') SkullFall.clear(); else SkullFall.update(dt); }
     if (this.scene === 'table' && this.g) {
       if (!this.modal && !this.g.ended && this.started && !this.cine) this.elapsed += dt;
       if (!this.modal) { this.handleInput(dt); }
@@ -1142,7 +1148,7 @@ export const Game = {
     this.drawnScene = this.scene;
     if (this.scene === 'title') { Screens.title(this); }
     else if (this.scene === 'map') Screens.map(this);
-    else this.drawTable();
+    else { this.drawTable(); SkullFall.draw(); }
     FX.drawTop();
     if (this.cine) this.drawCine();
     this.drawToasts();

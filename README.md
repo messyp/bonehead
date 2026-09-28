@@ -46,6 +46,7 @@ dist/
   js/game/game.js       table layout, card physics, turn flow, scoring, AI
   js/game/screens.js    tutorial, options, trophies, reward and result screens
   js/game/title.js      the title screen
+  js/game/skullfall.js  the skull pour when you're the Bonehead (circle physics)
   js/game/ui.js         pixel buttons, sliders, toggles, tooltips, modals
   js/game/rounds.js     the run: opponents, rule changes, themes and music key per round
 tools/devserver.py      no-cache static server for development
@@ -86,6 +87,10 @@ On iPhone and iPad, Safari caps total canvas memory, so the game renders leaner 
 Two URL switches help on devices: `?safe=1` forces Safe Rendering for that visit, and `?debug=1` shows a small readout: WebGL state, canvas size, scale, fps, audio state and sample rate, user agent and the last error.
 
 Firefox always renders the 2D scene on a CPU-backed canvas (`willReadFrequently`), with a lower pixel budget. Its GPU canvas can drop images drawn from many small source canvases, which is how every glyph and sprite here is drawn. Options → Safe Rendering does the same in any browser and also turns off the WebGL effects.
+
+## Losing
+
+When you're the Bonehead, logo skulls pour from the top of the screen and pile up from the bottom with simple physics: gravity, bounce, friction, spin and skull-on-skull contacts, with rate-limited bone clacks. About 60 skulls, sized to the screen, fill roughly three quarters of it in just over a second. The result card then lands on the pile, with the logo skull cackling as the BONEHEAD stamp slams down. Reduced Motion gives a smaller pour.
 
 ## Phone layout
 

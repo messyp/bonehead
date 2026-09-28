@@ -142,6 +142,12 @@ export const Audio = {
       this.noise(t + 0.005, 0.03, { ff: 5200, q: 1.5, gain: 0.07 * p });
     },
     flip(t) { this.noise(t, 0.05, { ff: 3000, fto: 6000, gain: 0.1 }); this.tone(660, t + 0.02, 0.05, { type: 'triangle', gain: 0.03 }); },
+    // Dry bone-on-bone knock for the skull pour: a tight noise click and a falling blip.
+    clack(t, i, v = 0.6) {
+      const f = 1700 + (i % 7) * 240;
+      this.noise(t, 0.022, { ff: f, q: 5, gain: 0.05 + v * 0.08 });
+      this.tone(f * 0.45, t, 0.035, { type: 'triangle', gain: 0.015 + v * 0.03, to: f * 0.3 });
+    },
     chip(t, i) {
       const f = 660 * Math.pow(2, Math.min(i, 18) / 12);
       this.fm(f, t, 0.22, { ratio: 2.01, index: 1.4, gain: 0.07 });
