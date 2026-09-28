@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { deal, options, play, pickup, legal, rule, isMagic, cardsLeft, seatsOf } from './dist/engine.js';
+import { deal, options, play, pickup, misplay, legal, valid, source, rule, isMagic, cardsLeft, seatsOf } from './dist/engine.js';
 import { ROUNDS, RULES, ROOMS, HOUSE_RULES, roomRounds } from './dist/js/game/rounds.js';
 
 let seed = 11;
@@ -35,6 +35,32 @@ assert.deepEqual(rule([c(11), three]), { r: 11, low: false }, 'and are see-throu
   assert.equal(g.turn, 'player');
 }
 
+// Eye on the Card: a misplay goes down and the whole pile comes back, even when the
+// player was holding a card that would have beaten it (the bug a playtester found:
+// a normal pickup refuses when you have a legal play).
+{
+  const g = deal(7, 0, 3, { seats: ['player', 'house', 'house2'] });
+  g.deck = []; g.turn = 'player'; g.pile = [c(12, 0), c(14, 1)];
+  const wrong = c(4, 2), good = c(10, 3), total = () => g.deck.length + g.pile.length + seatsOf(g).reduce((a, s) => a + cardsLeft(g[s]), 0);
+  g.player = { hand: [wrong, good, c(6, 1)], face: [], blind: [] };
+  const before = total();
+  assert.equal(pickup(g, 'player'), false, 'a normal pickup is refused while you hold a 10');
+  assert.equal(misplay(g, 'player', [wrong.id]), true);
+  assert.equal(g.pile.length, 0, 'the pile is picked up');
+  assert.equal(g.player.hand.length, 5, 'two left in hand + the two pile cards + the misplayed 4');
+  assert.ok(g.player.hand.some(x => x.id === wrong.id), 'the misplayed card comes back too');
+  assert.equal(g.turn, 'house', 'and the turn passes on');
+  assert.equal(total(), before, 'no cards lost');
+  assert.equal(g.playerPickups, 1);
+  // Face-up table cards misplayed come back into the hand as well
+  g.turn = 'player'; g.pile = [c(13, 2)]; g.player = { hand: [], face: [c(5, 0), c(11, 1)], blind: [c(3, 3)] };
+  assert.equal(misplay(g, 'player', ['5-0-']), true);
+  assert.deepEqual(g.player.hand.map(x => x.r).sort((a, b) => a - b), [5, 13]);
+  assert.equal(g.player.face.length, 1);
+  // Not your turn, or unknown cards: nothing happens
+  assert.equal(misplay(g, 'player', ['nope']), false);
+}
+
 // Simulated games under every pair of house rules and with disarmed 10s: cards are
 // conserved and every game finishes.
 const ids = Object.keys(HOUSE_RULES), combos = [[], ...ids.flatMap((a, i) => ids.slice(i + 1).map(b => [a, b])), ['plain']];
@@ -55,4 +81,26 @@ for (const combo of combos) for (let k = 0; k < 60; k++) {
   assert.ok(g.ended, `game finishes (${combo.join('+') || 'classic'})`);
   games++;
 }
+// Eye on the Card simulations: the player sometimes plays a random card blind, legal or
+// not; misplays must never lose cards or stall the game.
+for (let k = 0; k < 120; k++) {
+  const g = deal(7, 0, 3, { seats: ['player', 'house', 'house2'] });
+  const total = g.deck.length + seatsOf(g).reduce((a, s) => a + cardsLeft(g[s]), 0);
+  let moves = 0;
+  while (!g.ended && moves++ < 4000) {
+    const who = g.turn, src = source(g[who]);
+    if (who === 'player' && src !== 'blind' && Math.random() < 0.4) {
+      const pick = g.player[src][Math.floor(Math.random() * g.player[src].length)];
+      if (valid([pick], g.pile)) play(g, who, [pick.id]); else assert.equal(misplay(g, who, [pick.id]), true);
+    } else {
+      const opts = options(g, who);
+      if (opts.length) play(g, who, opts[0].map(x => x.id)); else pickup(g, who);
+    }
+    const count = g.deck.length + g.pile.length + (g.cardsBurned || 0) + seatsOf(g).reduce((a, s) => a + cardsLeft(g[s]), 0);
+    assert.equal(count, total, 'cards conserved with misplays');
+  }
+  assert.ok(g.ended, 'eye games finish');
+  games++;
+}
+
 console.log(`rooms: ok (${games} simulated games across ${combos.length} rule sets)`);

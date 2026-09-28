@@ -174,6 +174,24 @@ export function play(g, who, ids, min = 3, protect = false) {
   return { cards, burn, size, src, burnedCards };
 }
 
+// Eye on the Card: a play that doesn't beat the hidden pile still goes down, then that
+// player picks up the whole pile, misplayed cards included. Unlike a normal pickup this
+// happens even if they were holding something playable.
+export function misplay(g, who, ids) {
+  const p = g[who], src = source(p), cards = ids.map(id => p[src].find(c => c.id === id));
+  if (g.ended || g.turn !== who || !cards.length || cards.some(c => !c)) return false;
+  p[src] = p[src].filter(c => !ids.includes(c.id));
+  g.pile.push(...cards);
+  if (who === 'player') g.playerPickups = (g.playerPickups || 0) + 1;
+  const n = g.pile.length;
+  p.hand.push(...g.pile);
+  trackPickup(g, who, n);
+  g.pile = [];
+  g.turn = nextSeat(g, who);
+  g.moves++;
+  return true;
+}
+
 export function pickup(g, who) {
   if (g.ended || g.turn !== who || !g.pile.length || options(g, who).length) return false;
   if (who === 'player') g.playerPickups = (g.playerPickups || 0) + 1;

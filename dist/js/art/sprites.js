@@ -285,7 +285,7 @@ export const OPPONENTS = [
     },
   },
   {
-    id: 'velvet', name: 'The Velvet Reaper', venue: 'THE VELVET FLOOR', stake: 'The house is learning your tricks.', voice: 150, color: P.vio1,
+    id: 'velvet', name: 'The Velvet Reaper', short: 'VELVET', venue: 'THE VELVET FLOOR', stake: 'The house is learning your tricks.', voice: 150, color: P.vio1,
     paint: velvetReaper,
     lines: {
       intro: ['Your time is borrowed, darling.', 'Shall we dance? I always lead.'],
@@ -350,7 +350,7 @@ export const OPPONENTS = [
   },
   // ---------- Room II ----------
   {
-    id: 'marrow', name: 'Madame Marrow', venue: 'THE CRYSTAL PARLOUR', stake: 'The cards never lie, dear. You do.', voice: 170, color: P.vio1,
+    id: 'marrow', name: 'Madame Marrow', short: 'MARROW', venue: 'THE CRYSTAL PARLOUR', stake: 'The cards never lie, dear. You do.', voice: 170, color: P.vio1,
     paint: madameMarrow, room: 2,
     lines: {
       intro: ['I foresee... a pickup in your future.', 'Sit, sit. I already know how this ends.'],
@@ -366,7 +366,7 @@ export const OPPONENTS = [
     },
   },
   {
-    id: 'nana', name: 'Nana Knuckles', venue: 'NANA\'S FRONT ROOM', stake: 'Nana\'s house, Nana\'s rules, sweetie.', voice: 230, color: '#ff9fc4',
+    id: 'nana', name: 'Nana Knuckles', short: 'NANA', venue: 'NANA\'S FRONT ROOM', stake: 'Nana\'s house, Nana\'s rules, sweetie.', voice: 230, color: '#ff9fc4',
     paint: nanaKnuckles, room: 2,
     lines: {
       intro: ['Sit down, poppet. Nana\'s rules tonight.', 'Have a biscuit. Then lose gracefully.'],
@@ -382,7 +382,7 @@ export const OPPONENTS = [
     },
   },
   {
-    id: 'cadaverini', name: 'The Great Cadaverini', venue: 'THE GRAND THEATRE', stake: 'Keep your eye on the card!', voice: 140, color: P.gold1,
+    id: 'cadaverini', name: 'The Great Cadaverini', short: 'CADAVERINI', venue: 'THE GRAND THEATRE', stake: 'Keep your eye on the card!', voice: 140, color: P.gold1,
     paint: cadaverini, room: 2,
     lines: {
       intro: ['Pick a card, any card! No, not that one.', 'Ladies, gentlemen and Boneheads!'],
@@ -398,7 +398,7 @@ export const OPPONENTS = [
     },
   },
   {
-    id: 'lucinda', name: 'Lovely Lucinda', venue: 'THE GRAND THEATRE', stake: 'Keep your eye on the card!', voice: 250, color: '#ff7ab8',
+    id: 'lucinda', name: 'Lovely Lucinda', short: 'LUCINDA', venue: 'THE GRAND THEATRE', stake: 'Keep your eye on the card!', voice: 250, color: '#ff7ab8',
     paint: lucinda, room: 2,
     lines: {
       intro: ['Top: Hello, darling! Bottom: Hi down here.', 'Don\'t mind me. I\'m in two minds.'],

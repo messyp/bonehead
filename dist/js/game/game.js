@@ -1,4 +1,4 @@
-import { deal, rule, legal, valid, source, options, play, pickup, SUITS, seatsOf, cardsLeft, chooseTable, aiTable } from '../../engine.js';
+import { deal, rule, legal, valid, source, options, play, pickup, misplay, SUITS, seatsOf, cardsLeft, chooseTable, aiTable } from '../../engine.js';
 import { scorePlay, comboReward, cardPoints, roundGoals, pickGoals } from '../../scoring.js';
 import { claimGoals, trophies, earnedTrophies, exchangeHand } from '../../progression.js';
 import { guidance } from '../../guidance.js';
@@ -40,6 +40,9 @@ export const UPGRADES = {
 };
 
 const magicOf = c => (c.plain ? null : MAGIC[c.r]);
+// What an opponent is called where space is tight (under portraits, "X PLAYS..."):
+// the full name when it's short, otherwise their stage name.
+const callName = opp => { const full = opp.name.replace('The ', '').toUpperCase(); return full.length <= 11 ? full : opp.short || full; };
 
 // A card on the table. Springs chase targets set by the layout every frame.
 class View {
@@ -122,7 +125,7 @@ export const Game = {
   // Phone seat: portrait on the left, hand centred, table cards on a small centred
   // rail just under the hand (the player's rail mirrors it just above their hand).
   seatLayoutTall(x, y, w, h, twins) {
-    const pw = twins ? 32 : 40, ph = twins ? 46 : 56, sc = twins ? 0.42 : 0.5, tsc = twins ? 0.36 : 0.42;
+    const pw = twins ? 38 : 40, ph = twins ? 50 : 56, sc = twins ? 0.42 : 0.5, tsc = twins ? 0.36 : 0.42;
     const portrait = { x: x + 2, y: y + 2, w: pw, h: ph };
     const hx = twins ? x + pw + 4 + (w - pw - 8) / 2 : R.vw / 2, hw = twins ? w - pw - 12 : R.vw - 2 * (pw + 16);
     const gap = Math.round(CW * tsc + 3);
@@ -494,6 +497,9 @@ export const Game = {
   async wrongPlay(ids) {
     if (this.moving || this.g.ended) return;
     const token = this.token, g = this.g, src = source(g.player), need = rule(g.pile);
+    // Settle the outcome first (in the engine), then animate it
+    const next = structuredClone(g);
+    if (!misplay(next, 'player', ids)) return;
     this.lock();
     try {
       for (const id of ids) {
@@ -512,8 +518,6 @@ export const Game = {
       this.say('playerPickup', 1);
       await wait(1.6);
       if (token !== this.token) return;
-      const next = structuredClone(this.g);
-      pickup(next, 'player');
       await this.collectPile('player', 'WRONG CARD');
       if (token === this.token) { this.g = next; this.afterMove('player', { pickup: true, cards: [] }); }
     } finally { if (token === this.token) this.endMove(); }
@@ -1400,7 +1404,7 @@ export const Game = {
     R.panel(pr.x, pr.y, pr.w, pr.h, { fill: active ? P.ink3 : P.ink2, rim: active ? opp.color : P.ink0, hi: P.ink4, alpha: out ? 0.6 : 1 });
     const spr = portrait(idx, this.portraitStateFor(seat), Math.floor(R.t * 6));
     R.spr(spr, pr.x + pr.w / 2 + shake, pr.y + 3 + pw / 2 + bob, { sc: sc * (1 + f.pulse * 0.1), rot: shake * 0.02, alpha: out ? 0.5 : 1 });
-    const name = opp.name.replace('The ', '').toUpperCase();
+    const name = callName(opp);
     const nameSize = R.measure(name) > pr.w - 4 ? TINY_OPTS : {};
     R.text(name, pr.x + pr.w / 2, pr.y + pw + 6, { ...nameSize, color: opp.color, align: 'center' });
     if (out) {
@@ -1730,7 +1734,7 @@ export const Game = {
     // Turn lamp
     const yourTurn = g.turn === 'player' && !g.ended;
     const lampX = L.land ? L.btn.x + bw / 2 : L.cx, lampY = L.land ? L.btn.y - 12 : L.btn.y - 12;
-    const who = g.turn !== 'player' ? this.opp(g.turn).name.replace('The ', '').toUpperCase() : '';
+    const who = g.turn !== 'player' ? callName(this.opp(g.turn)) : '';
     const tp = this.turnPulse, txt = g.ended ? 'ROUND OVER' : g.choosing ? 'PICK YOUR TABLE' : this.moving ? (g.turn === 'player' ? 'RESOLVING…' : `${who} PLAYS…`) : yourTurn ? 'YOUR MOVE' : `${who}'S TURN`;
     if (L.land || true) {
       R.ctx.save(); R.ctx.translate(lampX, lampY + 3); R.ctx.scale(1 + tp * 0.4, 1 + tp * 0.4);
