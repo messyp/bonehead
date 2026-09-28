@@ -140,7 +140,8 @@ export function play(g, who, ids, min = 3, protect = false) {
   p[src] = p[src].filter(c => !ids.includes(c.id));
   g.moves++;
   if (src === 'blind' && !legal(cards[0], g.pile)) {
-    if (protect) return { protected: true, cards, src };
+    // Second Chance: the bad flip is discarded. If that was your last card, you're out.
+    if (protect) { if (!cardsLeft(p)) finish(g, who); return { protected: true, cards, src }; }
     const n = g.pile.length + cards.length;
     p.hand.push(...g.pile, ...cards);
     if (who === 'player') g.playerPickups = (g.playerPickups || 0) + 1;

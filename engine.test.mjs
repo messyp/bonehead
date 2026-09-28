@@ -9,3 +9,14 @@ let g=deal();g.pile=[c(7,0),c(7,1),c(7,2)];g.player.hand=[c(7,3)];let res=play(g
 g=deal();g.deck=[];g.player={hand:[],face:[],blind:[c(4)]};g.pile=[c(12)];res=play(g,'player',['4-0']);assert.equal(res.pickup,true);assert.equal(g.player.hand.length,2);assert.equal(source(g.player),'hand');assert.equal(g.turn,'house');assert.equal(g.ended,false);
 g=deal();g.deck=[];g.player={hand:[],face:[],blind:[c(14)]};res=play(g,'player',['14-0']);assert.equal(g.winner,'player');
 let finished=0,maxMoves=0;for(let i=0;i<500;i++){g=deal();let burned=0;for(let move=0;move<20000&&!g.ended;move++){let who=g.turn;let opts=options(g,who);if(opts.length){let choice=opts[Math.floor(Math.random()*opts.length)];let r=play(g,who,choice.map(c=>c.id));assert.ok(!r.error);if(r.burn)burned+=r.size}else assert.ok(pickup(g,who));const all=[...g.deck,...g.pile,...g.player.hand,...g.player.face,...g.player.blind,...g.house.hand,...g.house.face,...g.house.blind];assert.equal(all.length+burned,52);assert.equal(new Set(all.map(x=>x.id)).size,all.length);maxMoves=Math.max(maxMoves,move)}if(g.ended)finished++}assert.equal(finished,500);console.log(`All rule tests passed. ${finished}/500 simulated games completed; max ${maxMoves} moves. Card conservation verified each move.`);
+
+// Second Chance on your very last blind card: the flip is discarded and you're out.
+{
+  const g2 = deal(1, 0, 3);
+  g2.deck = []; g2.turn = 'player'; g2.pile = [{ r: 13, s: 0, id: 'k' }];
+  g2.player = { hand: [], face: [], blind: [{ r: 4, s: 1, id: 'last' }] };
+  const r2 = play(g2, 'player', ['last'], 3, true);
+  assert.equal(r2.protected, true);
+  assert.equal(g2.ended, true, 'discarding your last card ends the round');
+  assert.equal(g2.winner, 'player');
+}

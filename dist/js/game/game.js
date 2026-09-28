@@ -503,7 +503,7 @@ export const Game = {
         await this.collectPile(who, 'BAD FLIP');
       } else if (result.protected) {
         const c = cards[0], v = this.views.get(c.id);
-        FX.banner('SECOND CHANCE', { color: P.red1, sub: 'Bad flip discarded. Go again.', size: 3, x: this.bannerX() });
+        FX.banner('SECOND CHANCE', { color: P.red1, sub: next.ended ? 'Bad flip discarded. That was your last card!' : 'Bad flip discarded. Go again.', size: 3, x: this.bannerX() });
         Audio.play('ghost');
         if (v) { FX.add(new Dissolve(this.faceSpr(c), v.x, v.y, v.r, v.s, { life: 0.8, edge: [P.white, P.vio0, P.vio1, P.vio2], dir: 'radial' })); this.views.delete(c.id); }
         g.pile.pop(); this.shields--;
