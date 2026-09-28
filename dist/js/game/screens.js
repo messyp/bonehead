@@ -13,7 +13,7 @@ import { roundGoals } from '../../scoring.js';
 import { trophies } from '../../progression.js';
 import { UI } from './ui.js';
 import { UPGRADES, fmtTime, store } from './game.js';
-import { ROUNDS, RULES, ROUND_LOCKS } from './rounds.js';
+import { ROUNDS, RULES, ROUND_LOCKS, HOUSE_RULES, ROOMS, roomRounds } from './rounds.js';
 import { crownIcon } from '../art/map.js';
 import { mapRoomHD } from '../art/mapHD.js';
 import { buildLogo } from '../art/logo.js';
@@ -25,14 +25,14 @@ const card = (r, s) => Cards.face({ r, s }, Math.floor(R.t * 8));
 
 
 // Progression map state that only matters for drawing.
-const mapCache = { key: '', room: null, spr: null, crown: null };
+const mapCache = { key: '', rooms: null, crown: null };
 const motes = Array.from({ length: 22 }, () => ({ x: Math.random(), y: Math.random(), ph: Math.random() * 6, sp: 0.15 + Math.random() * 0.3 }));
 
 // The four opponent cards sit on the table in a gentle zig-zag.
-function mapCards(t, land) {
-  const n = ROUNDS.length;
-  if (land) return ROUNDS.map((_, i) => ({ x: t.cx + (i - (n - 1) / 2) * 62, y: t.cy + (i % 2 ? -1 : 1) * 15 }));
-  return ROUNDS.map((_, i) => ({ x: t.cx + (i % 2 ? 1 : -1) * 24, y: t.cy + ((n - 1) / 2 - i) * 60 }));
+function mapCards(t, land, n = 4) {
+  const idx = Array.from({ length: n }, (_, i) => i);
+  if (land) return idx.map(i => ({ x: t.cx + (i - (n - 1) / 2) * 62, y: t.cy + (i % 2 ? -1 : 1) * 15 }));
+  return idx.map(i => ({ x: t.cx + (i % 2 ? 1 : -1) * 24, y: t.cy + ((n - 1) / 2 - i) * 60 }));
 }
 // A snaking chalk line through the cards (Catmull-Rom through their centres).
 function snake(pts) {
@@ -56,82 +56,145 @@ export const Screens = {
   map(game) {
     const vw = R.vw, vh = R.vh, land = R.land, mp = game.map, t = mp.t, cleared = game.cleared || [];
     const key = `${Math.ceil(vw)}x${Math.ceil(vh)}`;
-    if (mapCache.key !== key) { mapCache.key = key; mapCache.room = mapRoomHD(Math.ceil(vw), Math.ceil(vh), land); mapCache.crown ??= crownIcon().spr(); }
-    const room = mapCache.room, tb = room.table, rug = room.rug;
-    R.spr(room.spr, 0, 0, { ax: 0, ay: 0 });
-    // Candle flames and a flickering glow
-    room.candles.forEach((c, i) => {
-      const fl = Sprites.flame[Math.floor(R.t * 8 + i) % 3], x = c.x + 0.5, y = c.y;
-      R.box(x - 5, y - 4, 10, 10, P.fire2, 3, 0.05 + Math.sin(R.t * 9 + i * 2) * 0.03);
-      R.spr(fl, x, y, { sc: 0.32 + Math.sin(R.t * 11 + i) * 0.03 });
-    });
-    // Wall torches
-    room.torches.forEach((tc, i) => {
-      const fl = Sprites.flame[Math.floor(R.t * 9 + i * 2) % 3];
-      R.box(tc.x - 10, tc.y - 12, 20, 20, P.fire2, 6, 0.06 + Math.sin(R.t * 7 + i * 3) * 0.04);
-      R.spr(fl, tc.x, tc.y - 4, { sc: 0.75 + Math.sin(R.t * 10 + i) * 0.06 });
-    });
-    // Dust motes drifting in the lamp light over the table
-    for (const m of motes) {
-      const x = tb.cx + (m.x - 0.5) * tb.rx * 2, y = tb.cy + (m.y - 0.5) * tb.ry * 2 + Math.sin(R.t * m.sp + m.ph) * 5;
-      R.rect(Math.round(x), Math.round(y), 1, 1, P.bone1, 0.15 + 0.35 * Math.max(0, Math.sin(R.t * 1.5 + m.ph)));
+    if (mapCache.key !== key) {
+      mapCache.key = key;
+      mapCache.rooms = [mapRoomHD(Math.ceil(vw), Math.ceil(vh), land, 1), mapRoomHD(Math.ceil(vw), Math.ceil(vh), land, 2)];
+      mapCache.crown ??= crownIcon().spr();
     }
-    const cards = mapCards(tb, land), sel = mp.sel;
-    // Chalk path: dotted, solid gold through cleared tables
-    const path = snake(cards);
-    path.forEach((pt, i) => {
-      if (i % 2) return;
-      const done = cleared.includes(pt.seg + 1) && cleared.includes(pt.seg + 2);
-      R.rect(Math.round(pt.x) - 1, Math.round(pt.y) - 1, 3, 3, P.ink0, 0.35); R.rect(Math.round(pt.x) - 1, Math.round(pt.y) - 1, 2, 2, done ? P.gold1 : '#eef6e6', done ? 1 : 0.8);
-    });
-    // Opponent cards
+    const roomOfSel = (ROUNDS[mp.sel - 1].room || 1), open2 = game.roomOpen(2);
+    mp.view ??= roomOfSel;
+    // First time Room I is beaten: glide across, then the chains break
+    if (mp.unlocking !== undefined) {
+      mp.unlocking += UI.dt;
+      if (mp.unlocking > 0.9) mp.view = 2;
+      if (mp.unlocking > 1.6 && !mp.broke) {
+        mp.broke = true; game.room2Shown = true; game.save?.();
+        Audio.play('stamp'); R.shake(0.4); Post.impact?.(0.5);
+        FX.burst(vw / 2, vh / 2, 60, { colors: [P.ink5, P.ink6, P.bone2, P.teal1], speed: [60, 220], grav: 260, size: [1, 3], top: true });
+        FX.banner('ROOM II UNLOCKED', { color: P.teal1, sub: 'The Deep Crypt awaits.', size: land ? 4 : 3 });
+      }
+    }
+    mp.cam = mp.cam === undefined ? mp.view - 1 : mp.cam + ((mp.view - 1) - mp.cam) * (1 - Math.exp(-UI.dt * 7));
+    const settled = Math.abs(mp.cam - (mp.view - 1)) < 0.02, chained = !open2 || (mp.unlocking !== undefined && !mp.broke);
+    const setView = v => {
+      if (v === mp.view || mp.unlocking !== undefined && !mp.broke) return;
+      mp.view = v; Audio.play('swoosh');
+      if (game.roomOpen(v)) { const first = roomRounds(v).find(x => !cleared.includes(x.n)) || roomRounds(v)[0]; mp.sel = first.n; }
+    };
     const cw = 41, ch = 57;
     let hover = null;
-    const order = ROUNDS.map((_, i) => i).sort((a, b) => (a === sel - 1) - (b === sel - 1));
-    for (const i of order) {
-      const rd = ROUNDS[i], round = i + 1, n = cards[i], done = cleared.includes(round), picked = round === sel;
-      const locked = ROUND_LOCKS && !done && round !== mp.next;
-      const hot = Input.over(n.x - cw / 2, n.y - ch / 2, cw, ch) && !UI.blocked && !locked;
-      const lift = picked ? 7 + Math.sin(R.t * 3) * 1.5 : hot ? 3 : 0, sc = picked ? 1.12 : 1;
-      const x = n.x, y = n.y - lift;
-      R.ctx.save(); R.ctx.translate(x, y); R.ctx.scale(sc, sc); R.ctx.rotate(picked ? 0 : (i % 2 ? 0.04 : -0.04));
-      R.box(-cw / 2 + 2, -ch / 2 + 3 + lift * 0.6, cw, ch, P.ink0, 3, 0.45);
-      if (picked) R.box(-cw / 2 - 3, -ch / 2 - 3, cw + 6, ch + 6, P.gold1, 3, 0.55 + Math.sin(R.t * 6) * 0.35);
-      R.box(-cw / 2, -ch / 2, cw, ch, P.ink1, 3);
-      R.box(-cw / 2 + 1, -ch / 2 + 1, cw - 2, ch - 2, done ? '#d8cfb4' : P.bone0, 3);
-      const lead = OPPONENTS[oppIndex(rd.opps[0])], col = rd.name ? P.teal2 : lead.color;
-      R.box(-cw / 2 + 4, -ch / 2 + 9, cw - 8, 30, col, 1);
-      R.box(-cw / 2 + 5, -ch / 2 + 10, cw - 10, 28, P.ink1, 1);
-      const pscale = rd.opps.length > 1 ? 0.34 : 0.6;
-      rd.opps.forEach((id, k) => R.spr(portrait(oppIndex(id), picked && (R.t + k) % 3.5 < 0.12 ? 'blink' : 'idle', Math.floor(R.t * 6)), (rd.opps.length > 1 ? (k - 0.5) * 15 : 0), -ch / 2 + 24, { sc: pscale }));
-      R.text(String(round), -cw / 2 + 3, -ch / 2 + 2, { font: TINY, color: P.ink1, outline: null, shadow: null });
-      if (rd.rule) R.text('!', cw / 2 - 5, -ch / 2 + 2, { font: TINY, color: P.red2, outline: null, shadow: null });
-      const full = (rd.name || lead.name).replace('The ', '').toUpperCase(), name = R.measure(full, { font: TINY }) > cw - 5 ? full.split(' ')[0] : full;
-      R.text(name, 0, ch / 2 - 12, { font: TINY, color: P.ink2, align: 'center', outline: null, shadow: null });
-      if (done) {
-        R.ctx.rotate(-0.3);
-        R.box(-21, -4, 42, 9, P.red2, 1, 0.92); R.text('BONEHEAD', 0, -2, { font: TINY, color: P.white, align: 'center', outline: null, shadow: null });
-        R.ctx.rotate(0.3);
-        R.spr(Sprites.check, cw / 2 - 3, -ch / 2 + 3);
+    for (const room of [1, 2]) {
+      const ox = Math.round(((room - 1) - mp.cam) * vw);
+      if (ox <= -vw || ox >= vw) continue;
+      const art = mapCache.rooms[room - 1], tb = { ...art.table, cx: art.table.cx + ox }, live = room === mp.view && settled && !(room === 2 && chained);
+      R.spr(art.spr, ox, 0, { ax: 0, ay: 0 });
+      art.candles.forEach((c, i) => {
+        const fl = Sprites.flame[Math.floor(R.t * 8 + i) % 3], x = c.x + ox + 0.5, y = c.y;
+        R.box(x - 5, y - 4, 10, 10, room === 2 ? P.teal2 : P.fire2, 3, 0.05 + Math.sin(R.t * 9 + i * 2) * 0.03);
+        R.spr(fl, x, y, { sc: 0.32 + Math.sin(R.t * 11 + i) * 0.03 });
+      });
+      art.torches.forEach((tc, i) => {
+        const fl = Sprites.flame[Math.floor(R.t * 9 + i * 2) % 3];
+        R.box(tc.x + ox - 10, tc.y - 12, 20, 20, room === 2 ? P.teal2 : P.fire2, 6, 0.06 + Math.sin(R.t * 7 + i * 3) * 0.04);
+        R.spr(fl, tc.x + ox, tc.y - 4, { sc: 0.75 + Math.sin(R.t * 10 + i) * 0.06 });
+      });
+      for (const m of motes) {
+        const x = tb.cx + (m.x - 0.5) * tb.rx * 2, y = tb.cy + (m.y - 0.5) * tb.ry * 2 + Math.sin(R.t * m.sp + m.ph) * 5;
+        R.rect(Math.round(x), Math.round(y), 1, 1, P.bone1, 0.15 + 0.35 * Math.max(0, Math.sin(R.t * 1.5 + m.ph)));
       }
-      if (locked) { R.box(-cw / 2 + 1, -ch / 2 + 1, cw - 2, ch - 2, P.ink0, 3, 0.55); R.spr(Sprites.lock, 0, 0); }
-      R.ctx.restore();
-      // Bouncing arrow over the selected table
-      if (picked) R.text('↓', x, y - ch * sc / 2 - 13 - Math.abs(Math.sin(R.t * 4)) * 4, { size: 2, color: P.gold1, align: 'center' });
-      if (hot) hover = { rd, round, x, y: y - ch / 2, done, lead };
-      if (!locked && Input.button('map-card-' + round, n.x - cw / 2, n.y - ch / 2, cw, ch, !UI.blocked)) {
-        if (sel === round) game.startMapRound(); else { mp.sel = round; Audio.play('select', round * 2); }
+      const tables = roomRounds(room), cards = mapCards(tb, land, tables.length);
+      snake(cards).forEach((pt, i) => {
+        if (i % 2) return;
+        const done = cleared.includes(tables[pt.seg].n) && cleared.includes(tables[pt.seg + 1].n);
+        R.rect(Math.round(pt.x) - 1, Math.round(pt.y) - 1, 3, 3, P.ink0, 0.35); R.rect(Math.round(pt.x) - 1, Math.round(pt.y) - 1, 2, 2, done ? P.gold1 : '#eef6e6', done ? 1 : 0.8);
+      });
+      const order = tables.map((_, i) => i).sort((a, b) => (tables[a].n === mp.sel) - (tables[b].n === mp.sel));
+      for (const i of order) {
+        const { rd, n: round } = tables[i], n = cards[i], done = cleared.includes(round), picked = round === mp.sel && room === mp.view;
+        const locked = (room === 2 && chained) || (ROUND_LOCKS && !done && round !== mp.next);
+        const hot = live && Input.over(n.x - cw / 2, n.y - ch / 2, cw, ch) && !UI.blocked;
+        const lift = picked && !locked ? 7 + Math.sin(R.t * 3) * 1.5 : hot ? 3 : 0, sc = picked && !locked ? 1.12 : 1;
+        const x = n.x, y = n.y - lift;
+        R.ctx.save(); R.ctx.translate(x, y); R.ctx.scale(sc, sc); R.ctx.rotate(picked ? 0 : (i % 2 ? 0.04 : -0.04));
+        R.box(-cw / 2 + 2, -ch / 2 + 3 + lift * 0.6, cw, ch, P.ink0, 3, 0.45);
+        if (picked && !locked) R.box(-cw / 2 - 3, -ch / 2 - 3, cw + 6, ch + 6, P.gold1, 3, 0.55 + Math.sin(R.t * 6) * 0.35);
+        R.box(-cw / 2, -ch / 2, cw, ch, P.ink1, 3);
+        R.box(-cw / 2 + 1, -ch / 2 + 1, cw - 2, ch - 2, done ? '#d8cfb4' : P.bone0, 3);
+        const lead = OPPONENTS[oppIndex(rd.opps[0])], col = rd.name ? P.teal2 : lead.color;
+        R.box(-cw / 2 + 4, -ch / 2 + 9, cw - 8, 30, col, 1);
+        R.box(-cw / 2 + 5, -ch / 2 + 10, cw - 10, 28, P.ink1, 1);
+        const pscale = rd.opps.length > 1 ? 0.34 : 0.6;
+        rd.opps.forEach((id, k) => R.spr(portrait(oppIndex(id), picked && (R.t + k) % 3.5 < 0.12 ? 'blink' : 'idle', Math.floor(R.t * 6)), (rd.opps.length > 1 ? (k - 0.5) * 15 : 0), -ch / 2 + 24, { sc: pscale }));
+        R.text(String(round), -cw / 2 + 3, -ch / 2 + 2, { font: TINY, color: P.ink1, outline: null, shadow: null });
+        if (rd.rule) R.text('!', cw / 2 - 5, -ch / 2 + 2, { font: TINY, color: P.red2, outline: null, shadow: null });
+        const full = (rd.name || lead.name).replace('The ', '').toUpperCase(), name = R.measure(full, { font: TINY }) > cw - 5 ? full.split(/[ &]+/)[0] : full;
+        R.text(name, 0, ch / 2 - 12, { font: TINY, color: P.ink2, align: 'center', outline: null, shadow: null });
+        if (done) {
+          R.ctx.rotate(-0.3);
+          R.box(-21, -4, 42, 9, P.red2, 1, 0.92); R.text('BONEHEAD', 0, -2, { font: TINY, color: P.white, align: 'center', outline: null, shadow: null });
+          R.ctx.rotate(0.3);
+          R.spr(Sprites.check, cw / 2 - 3, -ch / 2 + 3);
+        }
+        if (locked) { R.box(-cw / 2 + 1, -ch / 2 + 1, cw - 2, ch - 2, P.ink0, 3, 0.5); R.spr(Sprites.lock, 0, 0); }
+        R.ctx.restore();
+        if (picked && !locked) R.text('↓', x, y - ch * sc / 2 - 13 - Math.abs(Math.sin(R.t * 4)) * 4, { size: 2, color: P.gold1, align: 'center' });
+        if (hot) hover = { rd, round, x, y: y - ch / 2, done, lead, locked };
+        if (live && !locked && Input.button('map-card-' + round, n.x - cw / 2, n.y - ch / 2, cw, ch, !UI.blocked)) {
+          if (mp.sel === round) game.startMapRound(); else { mp.sel = round; Audio.play('select', round * 2); }
+        }
+      }
+      // Room II until it opens: chains across the room and a padlock
+      if (room === 2 && chained) {
+        const k = mp.broke ? 0 : 1, cx = ox + vw / 2, cy = tb.cy;
+        R.rect(ox, 0, vw, vh, P.ink0, 0.45 * k);
+        // Two heavy chains corner to corner: alternating ring and side-on links
+        for (const dir of [-1, 1]) {
+          const ang = Math.atan2(dir * vh * 0.9, vw * 0.9), len = Math.hypot(vw * 0.9, vh * 0.9);
+          R.ctx.save(); R.ctx.translate(cx, cy); R.ctx.rotate(ang); R.ctx.globalAlpha *= k;
+          for (let lx = -len / 2, i = 0; lx < len / 2; lx += 7, i++) {
+            const sag = Math.sin((lx / len + 0.5) * Math.PI) * 4 + Math.sin(R.t * 1.5 + dir) * 0.8;
+            if (i % 2) { R.rect(lx - 1, sag - 2, 10, 4, P.ink0); R.rect(lx, sag - 1, 8, 2, P.ink6); R.rect(lx, sag - 1, 8, 1, P.bone2); }
+            else { R.box(lx - 1, sag - 4, 10, 8, P.ink0, 2); R.box(lx, sag - 3, 8, 6, P.ink6, 2); R.rect(lx + 2, sag - 1, 4, 2, P.ink0); R.rect(lx + 1, sag - 3, 6, 1, P.bone2); }
+          }
+          R.ctx.restore();
+        }
+        R.box(cx - 16, cy - 10, 32, 26, P.ink0, 3, k); R.box(cx - 14, cy - 8, 28, 22, P.gold2, 3, k);
+        R.box(cx - 10, cy - 22, 20, 16, P.ink0, 5, k); R.box(cx - 7, cy - 19, 14, 12, P.ink1, 4, k);
+        R.rect(cx - 2, cy, 4, 6, P.ink0, k);
+        const msg = 'BEAT ALL FOUR TABLES IN ROOM I', mw = R.measure(msg, { font: TINY }) + 14;
+        R.box(cx - mw / 2, cy + 22, mw, 13, P.ink0, 2, 0.85 * k);
+        R.text(msg, cx, cy + 25, { font: TINY, color: P.bone1, align: 'center', alpha: k });
       }
     }
-    // Selected table: who, where, what changes
-    const nr = ROUNDS[sel - 1], nlead = OPPONENTS[oppIndex(nr.opps[0])];
-    const label = `ROUND ${sel} · ${(nr.name || nlead.name).toUpperCase()} · ${nr.venue || nlead.venue}`;
-    // Across the top edge of the rug, above the four tables
-    const sw = Math.min(vw - 8, R.measure(label) + 30), sy = rug.y - 2;
-    R.rect(vw / 2 - sw / 2, sy, sw, 13, P.ink0, 0.9);
-    R.text(label, vw / 2, sy + 3, { color: P.gold2, align: 'center', outline: null, ...(R.measure(label) > vw - 20 ? { font: TINY } : {}) });
-    const note = nr.rule ? `RULE CHANGE: ${RULES[nr.rule].title}` : cleared.includes(sel) ? 'ALREADY BEATEN · PLAY IT AGAIN' : 'CLASSIC RULES';
-    R.text(note, vw / 2, sy + 16, { font: TINY, color: nr.rule ? RULES[nr.rule].color : P.bone2, align: 'center', alpha: 0.75 + Math.sin(R.t * 5) * 0.25 });
+    // Swipe sideways (or the arrow keys) to look into the other room
+    if (Input.released && !UI.blocked && Math.abs(Input.x - Input.downX) > 50 && Math.abs(Input.y - Input.downY) < 60) setView(Input.x < Input.downX ? 2 : 1);
+    // Edge arrows to slide between the rooms
+    const arrow = (dir, label, lockedTo) => {
+      const aw = 22, ah = 44, ax = dir > 0 ? vw - aw - 4 : 4, ay = vh / 2 - ah / 2, hot = Input.over(ax, ay, aw, ah) && !UI.blocked;
+      const nudge = Math.sin(R.t * 4) * 2 * dir;
+      R.box(ax, ay, aw, ah, P.ink0, 3, 0.75); R.box(ax + 1, ay + 1, aw - 2, ah - 2, hot ? P.ink4 : P.ink2, 3, 0.9);
+      R.text(dir > 0 ? '→' : '←', ax + aw / 2 + nudge, ay + 8, { color: hot ? P.gold1 : P.bone0, align: 'center' });
+      if (lockedTo) R.spr(Sprites.lock, ax + aw / 2, ay + 27, { sc: 0.8 });
+      else R.text(label, ax + aw / 2, ay + 24, { font: TINY, color: P.bone2, align: 'center' });
+      if (Input.button('map-room-' + dir, ax, ay, aw, ah, !UI.blocked)) setView(dir > 0 ? 2 : 1);
+    };
+    if (mp.view === 1) arrow(1, 'II', !open2); else arrow(-1, 'I', false);
+    // Room name across the top
+    const rn = `ROOM ${mp.view === 1 ? 'I' : 'II'} · ${ROOMS[mp.view - 1].name}`, rnw = R.measure(rn) + 16;
+    R.box(vw / 2 - rnw / 2, 22, rnw, 14, P.ink0, 2, 0.75);
+    R.text(rn, vw / 2, 25, { color: mp.view === 2 ? P.teal1 : P.gold1, align: 'center' });
+    // Selected table: who, where, what changes (across the top of the rug, above the tables)
+    const art = mapCache.rooms[mp.view - 1], rug = art.rug, viewOpen = !(mp.view === 2 && chained);
+    const inView = (ROUNDS[mp.sel - 1].room || 1) === mp.view;
+    if (viewOpen && inView && settled) {
+      const nr = ROUNDS[mp.sel - 1], nlead = OPPONENTS[oppIndex(nr.opps[0])];
+      const label = `ROUND ${mp.sel} · ${(nr.name || nlead.name).toUpperCase()} · ${nr.venue || nlead.venue}`;
+      const sw = Math.min(vw - 8, R.measure(label) + 30), sy = rug.y - 2;
+      R.rect(vw / 2 - sw / 2, sy, sw, 13, P.ink0, 0.9);
+      R.text(label, vw / 2, sy + 3, { color: P.gold2, align: 'center', outline: null, ...(R.measure(label) > vw - 20 ? { font: TINY } : {}) });
+      const note = nr.rule ? `RULE CHANGE: ${RULES[nr.rule].title}` : cleared.includes(mp.sel) ? 'ALREADY BEATEN · PLAY IT AGAIN' : 'CLASSIC RULES';
+      R.text(note, vw / 2, sy + 16, { font: TINY, color: nr.rule ? RULES[nr.rule].color : P.bone2, align: 'center', alpha: 0.75 + Math.sin(R.t * 5) * 0.25 });
+    }
     // Progress and run stats, top right
     const pct = `${Math.round(cleared.length / ROUNDS.length * 100)}%`, stats = `${pct} · SCORE ${game.score.toLocaleString()} · ${fmtTime(game.elapsed)} · BEST ${game.best.toLocaleString()}`;
     const stw = R.measure(stats, { font: TINY }) + 22;
@@ -148,10 +211,10 @@ export const Screens = {
     if (blHot) R.rect(11, 16, blw, 1, P.gold1);
     if (Input.button('map-title', 4, 3, blw + 12, 17, !UI.blocked)) { Audio.play('back'); game.transition(() => { game.scene = 'title'; }); }
     // GO sits on the rug's bottom edge
-    const go = { x: vw / 2 - 48, y: rug.y + rug.h - 14, w: 96, h: 28 };
-    if (UI.button('map-go', go.x, go.y, go.w, go.h, 'GO!', { size: 2, pulse: t > 0.8, color: 'gold' })) game.startMapRound();
+    const go = { x: vw / 2 - 48, y: rug.y + rug.h - 14, w: 96, h: 28 }, canGo = viewOpen && inView && settled;
+    if (UI.button('map-go', go.x, go.y, go.w, go.h, 'GO!', { size: 2, pulse: t > 0.8 && canGo, color: 'gold', enabled: canGo })) game.startMapRound();
     // First run: point at GO so a new player knows how to take their seat
-    if (game.onboardMap && t > 0.6) {
+    if (game.onboardMap && t > 0.6 && canGo) {
       const tip = land ? 'Beat all four tables. Start here!' : 'Start here!', tw = R.measure(tip) + 12, bob = Math.round(Math.sin(R.t * 5) * 2);
       const tx = go.x - 8 - tw + bob, ty = go.y + go.h / 2 - 7;
       R.box(tx - 1, ty - 1, tw + 2, 15, P.ink0, 3);
@@ -160,9 +223,9 @@ export const Screens = {
       for (let i = 0; i < 4; i++) R.rect(tx + tw + i, ty + 3 + i, 1, 7 - i * 2, P.gold1);
     }
     if (hover) {
-      const st = hover.done ? '^lBeaten. Officially a Bonehead.' : hover.round === sel ? '^gSelected. Tap again or GO to play.' : '^dTap to select.';
+      const st = hover.locked ? '^rLocked.^0 Beat all of Room I first.' : hover.done ? '^lBeaten. Officially a Bonehead.' : hover.round === mp.sel ? '^gSelected. Tap again or GO to play.' : '^dTap to select.';
       const who = hover.rd.opps.map(id => OPPONENTS[oppIndex(id)].name).join(' & ');
-      UI.tooltip(who, `${hover.rd.venue || hover.lead.venue}${hover.rd.rule ? `\n^o${RULES[hover.rd.rule].title}` : ''}\n${st}`, hover.x, hover.y - 10, { color: hover.rd.name ? P.teal1 : hover.lead.color, w: 150 });
+      UI.tooltip(who, `${hover.rd.venue || hover.lead.venue}${hover.rd.rule ? `\n^o${RULES[hover.rd.rule].title}` : ''}\n${st}`, hover.x, hover.y - 10, { color: hover.rd.name ? P.teal1 : hover.lead.color, w: 160 });
     }
   },
 
@@ -247,10 +310,22 @@ export const Screens = {
         R.text('CONFISCATED', 0, -3, { font: TINY, color: P.red0, align: 'center', outline: null, shadow: null });
         R.ctx.restore();
       }
+    } else if (['open', 'nana', 'toll'].includes(m.data.rule)) {
+      // One opponent on the left; on the right, what they bring to the table
+      R.spr(portrait(game.oppIdx('house'), (R.t % 3) < 0.15 ? 'blink' : 'talk', Math.floor(R.t * 6)), ax - 40, ay, { sc: 0.9 });
+      if (m.data.rule === 'open') [[12, 0], [7, 2], [4, 3]].forEach(([r, su], i) => R.spr(Cards.face({ r, s: su }), ax + 18 + i * 16, ay + 2 - Math.abs(i - 1) * -3, { sc: 0.5, rot: (i - 1) * 0.15 }));
+      if (m.data.rule === 'toll') for (let i = 0; i < 7; i++) { const k = clamp((t - 0.5 - i * 0.08) * 4); R.box(ax + 22 + (i % 3) * 9, ay + 16 - Math.floor(i / 3) * 5 - (1 - k) * 30, 9, 5, P.gold2, 2, k); R.rect(ax + 23 + (i % 3) * 9, ay + 16 - Math.floor(i / 3) * 5 - (1 - k) * 30, 7, 1, P.gold0, k); }
+      if (m.data.rule === 'nana') (game.g?.houseRules || []).forEach((id, i) => {
+        const nm = HOUSE_RULES[id].name, tw = R.measure(nm, { font: TINY }) + 10, k = clamp((t - 0.5 - i * 0.2) * 4);
+        R.ctx.save(); R.ctx.globalAlpha *= k; R.ctx.translate(ax + 36, ay - 8 + i * 17); R.ctx.rotate((i ? 0.05 : -0.06));
+        R.box(-tw / 2, -6, tw, 13, P.ink0, 2); R.box(-tw / 2 + 1, -5, tw - 2, 11, '#ff9fc4', 2);
+        R.text(nm, 0, -3, { font: TINY, color: P.ink0, align: 'center', outline: null, shadow: null });
+        R.ctx.restore();
+      });
     } else {
       game.cpuSeats().forEach((seat, i) => R.spr(portrait(game.oppIdx(seat), (R.t + i) % 3 < 0.15 ? 'blink' : 'idle', 0), ax + (i - 0.5) * 50, ay, { sc: 0.9 }));
     }
-    rl.lines.forEach((l, i) => R.text(l, b.x + w / 2, b.y + 118 + i * 11, { color: P.bone1, align: 'center', reveal: Math.floor((t - 0.4 - i * 0.2) * 60) }));
+    (typeof rl.lines === 'function' ? rl.lines(game.g) : rl.lines).forEach((l, i) => R.text(l, b.x + w / 2, b.y + 118 + i * 11, { color: P.bone1, align: 'center', reveal: Math.floor((t - 0.4 - i * 0.2) * 60) }));
     if (m.t > 0.6 && UI.button('rule-go', b.x + w / 2 - 50, b.y + h - 30, 100, 22, "LET'S GO", { ignoreBlock: true, pulse: true })) { const r = m.data.resolve; game.modal = null; Audio.muffle(false); r?.(); }
     b.restore();
   },
@@ -278,6 +353,7 @@ export const Screens = {
     y += th + 10;
     R.text('MAP', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const mw = Math.floor((w - 24 - 8) / 3);
+    if (UI.button('dm-room2', b.x + 12 + mw + 4, y, mw * 2 + 4, 18, game.dev.room2 ? 'ROOM II: OPEN' : 'ROOM II: LOCKED', { color: game.dev.room2 ? 'green' : 'ink', ignoreBlock: true })) game.setDev('room2', !game.dev.room2);
     if (UI.button('dm-open', b.x + 12, y, mw, 18, 'OPEN MAP', { color: 'teal', ignoreBlock: true })) {
       game.modal = null; Audio.muffle(false);
       game.transition(() => { if (game.started && game.g) game.showMap(game.nextUncleared(), 0, {}); else game.newRun(); });

@@ -4,7 +4,9 @@ export const magic = { 2: ['RESET', 'A fresh start. Anything goes.'], 8: ['GHOST
 
 // A card is magic by rank, unless a round has disarmed it: in the Pit Boss's
 // "No Weapons" round every 10 carries plain: true and plays as an ordinary 10.
-export const isMagic = c => (c.r === 2 || c.r === 8 || c.r === 9 || c.r === 10) && !(c.r === 10 && c.plain);
+// Nana's house rules mark cards too: seeThrough 3s play on anything like an 8, a
+// lowRule 7 makes the next card 7 or lower, and a skip 8 gives its player another go.
+export const isMagic = c => ((c.r === 2 || c.r === 8 || c.r === 9 || c.r === 10) && !(c.r === 10 && c.plain)) || !!c.seeThrough;
 
 export function deck(extra = 0) {
   const d = [];
@@ -16,10 +18,10 @@ export function deck(extra = 0) {
 
 export function rule(pile) {
   for (let i = pile.length - 1; i >= 0; i--) {
-    const r = pile[i].r;
-    if (r === 8) continue;
-    if (r === 2 || (r === 10 && !pile[i].plain)) return { r: 0, low: false };
-    return { r, low: r === 9 };
+    const c = pile[i], r = c.r;
+    if (r === 8 || c.seeThrough) continue;
+    if (r === 2 || (r === 10 && !c.plain)) return { r: 0, low: false };
+    return { r, low: r === 9 || !!c.lowRule };
   }
   return { r: 0, low: false };
 }
@@ -27,7 +29,7 @@ export function rule(pile) {
 export function legal(c, pile) {
   if (isMagic(c)) return true;
   const t = rule(pile);
-  return !t.r || (t.low ? c.r <= 9 : c.r >= t.r);
+  return !t.r || (t.low ? c.r <= t.r : c.r >= t.r);
 }
 
 export function source(p) { return p.hand.length ? 'hand' : p.face.length ? 'face' : 'blind'; }
@@ -168,7 +170,7 @@ export function play(g, who, ids, min = 3, protect = false) {
   }
   replenish(g, p, min);
   if (!cardsLeft(p)) finish(g, who);
-  g.turn = burn && !(g.out || []).includes(who) ? who : nextSeat(g, who);
+  g.turn = (burn || cards.at(-1).skip) && !(g.out || []).includes(who) ? who : nextSeat(g, who);
   return { cards, burn, size, src, burnedCards };
 }
 

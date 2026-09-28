@@ -1,4 +1,4 @@
-import { deal, rule, legal, source, options, play, pickup, SUITS, seatsOf, cardsLeft, chooseTable, aiTable } from '../../engine.js';
+import { deal, rule, legal, valid, source, options, play, pickup, SUITS, seatsOf, cardsLeft, chooseTable, aiTable } from '../../engine.js';
 import { scorePlay, comboReward, cardPoints, roundGoals, pickGoals } from '../../scoring.js';
 import { claimGoals, trophies, earnedTrophies, exchangeHand } from '../../progression.js';
 import { guidance } from '../../guidance.js';
@@ -12,7 +12,7 @@ import { hash } from '../core/pixel.js';
 import { P, THEMES } from '../art/palette.js';
 import { Cards, CW, CH, MAGIC, rankLabel } from '../art/cards.js';
 import { Sprites, OPPONENTS, portrait, oppIndex } from '../art/sprites.js';
-import { ROUNDS, RULES, roundOf, seatsFor } from './rounds.js';
+import { ROUNDS, RULES, HOUSE_RULES, ROOMS, roomRounds, roundOf, seatsFor } from './rounds.js';
 import { Audio } from '../audio/sfx.js';
 import { Music } from '../audio/music.js';
 import { UI } from './ui.js';
@@ -197,7 +197,7 @@ export const Game = {
   phaseOf(seat) { const g = this.g; return g.deck.length ? 'hand' : source(g[seat]); },
   myTurn() { return this.started && this.g && this.g.turn === 'player' && !this.busy && !this.moving && !this.g.ended && !this.modal && !this.cine; },
   selCards() { const g = this.g, src = source(g.player); return this.selected.map(id => g.player[src].find(c => c.id === id)).filter(Boolean); },
-  mustPickUp() { const g = this.g; return this.myTurn() && g.pile.length > 0 && source(g.player) !== 'blind' && !options(g, 'player').length; },
+  mustPickUp() { const g = this.g; return this.myTurn() && !g.eye && g.pile.length > 0 && source(g.player) !== 'blind' && !options(g, 'player').length; },
   canPlay(c) {
     const g = this.g, src = source(g.player);
     if (src === 'blind') return true;
@@ -207,7 +207,7 @@ export const Game = {
   runIndex() {
     const g = this.g, src = source(g.player), cards = g.player[src];
     const key = src + '|' + cards.map(c => c.id).join(',') + '|' + g.pile.map(c => c.id).join(',');
-    if (this.runKeyIdx !== key) { this.runKeyIdx = key; this.chains = src === 'blind' ? [] : allChains(cards, g.pile); }
+    if (this.runKeyIdx !== key) { this.runKeyIdx = key; this.chains = src === 'blind' ? [] : allChains(cards, g.eye ? [] : g.pile); }
     return this.chains;
   },
   // A selection is ready when it is exactly one legal play (blind flips: one card).
@@ -246,7 +246,7 @@ export const Game = {
   },
   save() {
     if (!this.started || this.moving || !this.g) return;
-    store.set('bh2-save', { g: this.g, score: this.score, tricks: this.tricks, shields: this.shields, rewardChoices: this.rewardChoices, pending: this.pending, elapsed: this.elapsed, slot: [...this.slot], map: this.pending === 'map' ? { next: this.map.sel, items: this.map.items } : null, cleared: this.cleared || [] });
+    store.set('bh2-save', { g: this.g, score: this.score, tricks: this.tricks, shields: this.shields, rewardChoices: this.rewardChoices, pending: this.pending, elapsed: this.elapsed, slot: [...this.slot], map: this.pending === 'map' ? { next: this.map.sel, items: this.map.items } : null, cleared: this.cleared || [], room2Shown: !!this.room2Shown });
   },
   hasSave() { const s = store.get('bh2-save', null); return !!(s?.g && (!s.g.ended || ['upgrade', 'result', 'map'].includes(s.pending))); },
 
@@ -267,7 +267,7 @@ export const Game = {
     this.score = 0; this.shownScore = 0; this.elapsed = 0; this.tricks = []; this.rewardChoices = []; this.shields = 0; this.pending = null;
     this.selected = []; this.swapMode = false; this.drag = null;
     this.stats = { maxBurn: 0 };
-    this.cleared = [];
+    this.cleared = []; this.room2Shown = false;
     this.g = null; this.started = true;
     if (viaMap) this.showMap(round, 0, {});
     else this.beginRound(round, {});
@@ -285,17 +285,22 @@ export const Game = {
     Clock.clear(); FX.clear(); this.views.clear();
     this.modal = null; Audio.muffle(false);
     this.map = { t: 0, next, from, sel: next, items: items || {} };
+    // Room I just fell: open on it, then glide across to Room II as the chains break
+    if (this.roomCleared(1) && !this.room2Shown && !this.dev.room2 && (ROUNDS[next - 1].room || 1) === 2) { this.map.view = 1; this.map.unlocking = 0; }
     this.scene = 'map';
     if (this.g) { this.pending = 'map'; this.save(); }
     Post.theme(THEMES[roundOf(next).theme]);
     Music.set(0, roundOf(next).key);
   },
-  nextUncleared() { const c = this.cleared || []; return ROUNDS.findIndex((_, i) => !c.includes(i + 1)) + 1 || ROUNDS.length; },
+  nextUncleared() { const c = this.cleared || []; return ROUNDS.findIndex((_, i) => !c.includes(i + 1) && this.roomOpen(ROUNDS[i].room || 1)) + 1 || ROUNDS.length; },
   allCleared() { return (this.cleared || []).length >= ROUNDS.length; },
+  // Room II stays chained until this run has beaten every table in Room I (dev mode can open it)
+  roomCleared(room) { const c = this.cleared || []; return roomRounds(room).every(x => c.includes(x.n)); },
+  roomOpen(room) { return room <= 1 || this.roomCleared(room - 1) || !!this.dev.room2; },
 
   startMapRound() {
     const mp = this.map;
-    if (!mp || this.trans) return;
+    if (!mp || this.trans || !this.roomOpen(ROUNDS[mp.sel - 1].room || 1)) return;
     Audio.play('coin');
     this.onboardMap = false;
     this.transition(() => { this.pending = null; this.beginRound(mp.sel, mp.items); });
@@ -312,8 +317,18 @@ export const Game = {
     g.opps = [...rd.opps];
     g.items = items;
     if (this.tricks.includes('wild')) g.player.hand.push({ r: 2, s: 1, id: `gift-${n}-2` }, { r: 10, s: 0, id: `gift-${n}-10` });
+    const every = [...g.deck, ...seatsOf(g).flatMap(sn => [...g[sn].hand, ...g[sn].face, ...g[sn].blind])];
     // The Pit Boss confiscates weapons: every 10 dealt this round is an ordinary card
-    if (rd.rule === 'noweapons') for (const c of [...g.deck, ...seatsOf(g).flatMap(sn => [...g[sn].hand, ...g[sn].face, ...g[sn].blind])]) if (c.r === 10) c.plain = true;
+    if (rd.rule === 'noweapons') for (const c of every) if (c.r === 10) c.plain = true;
+    // Nana brings two of her house rules; each marks the cards it changes
+    if (rd.rule === 'nana') {
+      const ids = Object.keys(HOUSE_RULES).sort(() => Math.random() - 0.5).slice(0, 2);
+      g.houseRules = ids;
+      for (const c of every) ids.forEach(id => HOUSE_RULES[id].mark(c));
+    }
+    if (rd.rule === 'open') g.open = true;
+    if (rd.rule === 'eye') g.eye = true;
+    if (rd.rule === 'toll') { g.toll = true; g.tollPaid = 0; }
     return g;
   },
 
@@ -455,7 +470,53 @@ export const Game = {
     if (!this.selectionReady()) { this.tell(this.runHint(), true); Audio.play('bad'); return; }
     this.submittedAt = Clock.t;
     this.noteRun(this.selected.length);
-    this.animatePlay('player', [...this.selected]);
+    this.submitPlay([...this.selected]);
+  },
+
+  // Eye on the Card: a well-formed play that doesn't beat the hidden pile is still
+  // played, then shown up, and you pick up the lot.
+  submitPlay(ids) {
+    const g = this.g, src = source(g.player), cards = ids.map(id => g.player[src].find(c => c.id === id));
+    if (g.eye && src !== 'blind' && cards.every(Boolean) && !valid(cards, g.pile)) this.wrongPlay(ids);
+    else this.animatePlay('player', ids);
+  },
+
+  // The Ferryman's toll: 25 points a card picked up, paid in coins that fly to him.
+  payToll(count) {
+    const g = this.g, cost = Math.min(this.score, count * 25), pr = this.L.seats.house?.portrait || this.L.portrait;
+    g.tollPaid = (g.tollPaid || 0) + cost;
+    this.score -= cost; this.shownScore = Math.min(this.shownScore, this.score);
+    FX.pop(cost ? `-${cost.toLocaleString()} TOLL` : 'TOLL: NOTHING TO TAKE', this.L.hand.cx, this.L.handY - CH * 1.25, { color: P.white, box: P.teal3, size: 2 });
+    for (let i = 0; i < Math.min(12, count); i++) setTimeout(() => Audio.play('coin'), i * 60);
+    FX.burst(pr.x + pr.w / 2, pr.y + pr.h / 2, 18, { colors: [P.gold0, P.gold1, P.gold2], speed: [40, 120], grav: 160, size: [1, 2], top: true });
+  },
+
+  async wrongPlay(ids) {
+    if (this.moving || this.g.ended) return;
+    const token = this.token, g = this.g, src = source(g.player), need = rule(g.pile);
+    this.lock();
+    try {
+      for (const id of ids) {
+        const c = g.player[src].find(x => x.id === id);
+        if (!c) continue;
+        g.player[src] = g.player[src].filter(x => x.id !== id); g.pile.push(c);
+        const v = this.views.get(id); if (v) v.fly = true;
+        await this.arrive(id, 0.7);
+        if (token !== this.token) return;
+      }
+      this.selected = [];
+      this.eyeReveal = R.t + 1.8;
+      Audio.play('bad'); R.shake(0.3);
+      const it = need.r ? `It needed ${rankLabel(need.r)} or ${need.low ? 'lower' : 'higher'}.` : 'Anything would have done!';
+      FX.banner('WRONG CARD!', { color: P.red1, sub: `${it} Pick it all up.`, size: 3, x: this.bannerX() });
+      this.say('playerPickup', 1);
+      await wait(1.6);
+      if (token !== this.token) return;
+      const next = structuredClone(this.g);
+      pickup(next, 'player');
+      await this.collectPile('player', 'WRONG CARD');
+      if (token === this.token) { this.g = next; this.afterMove('player', { pickup: true, cards: [] }); }
+    } finally { if (token === this.token) this.endMove(); }
   },
 
   async animatePlay(who, ids) {
@@ -608,6 +669,7 @@ export const Game = {
     const g = this.g, count = g.pile.length;
     if (!count) return;
     const you = who === 'player';
+    if (you && g.toll) this.payToll(count);
     if (you) {
       Audio.play('pickup'); R.shake(0.2);
       // A forced pickup was already explained by the prompt; only surprises get a banner.
@@ -784,6 +846,7 @@ export const Game = {
     Object.assign(this, { g: s.g, score: s.score, shownScore: s.score, tricks: s.tricks || [], shields: s.shields || 0, rewardChoices: s.rewardChoices || [], pending: s.pending, elapsed: s.elapsed || 0 });
     this.slot = new Map(s.slot || []);
     this.cleared = s.cleared || ROUNDS.map((_, i) => i + 1).filter(r => r < (s.g.round || 1) || (r === s.g.round && s.g.ended && s.g.winner === 'player'));
+    this.room2Shown = !!s.room2Shown;
     this.started = true; this.selected = []; this.busy = false; this.moving = false; this.scene = 'table'; this.modal = null;
     if (this.pending === 'map' && s.map) { this.showMap(s.map.next, s.map.next - 1, s.map.items); this.map.t = 2; return; }
     this.resetPanel();
@@ -834,12 +897,15 @@ export const Game = {
     };
     const vis = arr => arr.filter(c => !this.hidden.has(c.id));
 
-    // Pile
-    const n = g.pile.length;
+    // Pile. With Eye on the Card, only the newest card shows, and only for a moment
+    // (or all of it while a wrong play is being shown up).
+    const n = g.pile.length, topId = g.pile.at(-1)?.id;
+    if (topId !== this.eyeTopId) { this.eyeTopId = topId; this.eyeTopAt = R.t; }
+    const eyeShow = i => !g.eye || (this.eyeReveal || 0) > R.t || (i === n - 1 && R.t - this.eyeTopAt < 1.3);
     g.pile.forEach((c, i) => {
       const h = hash(c.id), top = i === n - 1, jit = top ? 0.35 : 1;
       const lift = -Math.min(i, 14) * 0.35;
-      put(c, L.pile.x + ((h % 9) - 4) * jit, L.pile.y + (((h >> 4) % 7) - 3) * jit + lift, (((h >> 8) % 25) - 12) * DEG * jit, 1, !this.revealing.has(c.id), 100 + i, 'pile');
+      put(c, L.pile.x + ((h % 9) - 4) * jit, L.pile.y + (((h >> 4) % 7) - 3) * jit + lift, (((h >> 8) % 25) - 12) * DEG * jit, 1, !this.revealing.has(c.id) && eyeShow(i), 100 + i, 'pile');
     });
 
     // Player
@@ -855,7 +921,7 @@ export const Game = {
         let r = t * k * 2.2 * DEG;
         if (this.focus === i && myTurn) y -= 3;
         const v = put(c, x, y, sel || hov ? r * 0.4 : r, (hov ? 1.1 : 1) * hs, true, 300 + i + (hov ? 60 : 0), 'hand', true);
-        const ok = g.choosing || this.canPlay(c), hints = this.settings.hints;
+        const ok = g.choosing || this.canPlay(c), hints = this.settings.hints && !g.eye;
         v.dim = hints && myTurn && !sel && !this.swapMode && !ok ? 1 : 0;
         v.link = hints && myTurn && !sel && !this.swapMode && !g.choosing && ok && this.selected.length > 0;
       });
@@ -874,7 +940,7 @@ export const Game = {
       for (const c of g.player.face) {
         const i = this.slot.get(c.id) ?? 0, sel = this.selected.includes(c.id), hov = this.hoverId === c.id && !sel;
         const v = put(c, slotX(i), hy - 6 - (sel ? 14 : 0) - (hov ? 6 : 0), (i - 1) * 2 * DEG, (hov ? 1.08 : 1) * L.handSc, true, 301 + i * 2 + (hov ? 60 : 0), 'pslot', true);
-        const ok = this.canPlay(c), hints = this.settings.hints;
+        const ok = this.canPlay(c), hints = this.settings.hints && !g.eye;
         v.dim = hints && myTurn && !sel && !ok ? 1 : 0;
         v.link = hints && myTurn && !sel && ok && this.selected.length > 0;
         this.handOrder.push(c.id);
@@ -899,7 +965,7 @@ export const Game = {
         const cards = vis(p.hand), m = cards.length, sp = m > 1 ? Math.min(CW * hsc * 0.72, (S.hand.w - CW * hsc) / (m - 1)) : 0, k = sp / 30;
         cards.forEach((c, i) => {
           const t = i - (m - 1) / 2, jig = this.thinking === seat && i % 2 ? Math.sin(R.t * 8 + i) : 0;
-          put(c, S.hand.x + t * sp, S.hand.y - (t * k) * (t * k) * 0.6 + jig, -t * k * 1.8 * DEG, hsc, false, 20 + zb + i, 'hhand');
+          put(c, S.hand.x + t * sp, S.hand.y - (t * k) * (t * k) * 0.6 + jig, -t * k * 1.8 * DEG, hsc, !!g.open, 20 + zb + i, 'hhand');
         });
         const tsc = S.tsc ?? hsc, tdim = L.land ? 0.6 : 0.45;
         for (const c of vis(p.blind)) { const i = this.slot.get(c.id) ?? 0; put(c, S.table.x + i * S.table.gap, S.table.y, 0, tsc, false, 10 + zb + i * 2, 'htable').dim = tdim; }
@@ -1021,7 +1087,7 @@ export const Game = {
           const ord = src === 'blind' ? null : exactly(this.runIndex(), d.ids);
           if (ord) d.ids = ord.cards.map(c => c.id);
           const ok = cards.every(Boolean) && (src === 'blind' ? cards.length === 1 : !!ord);
-          if (ok) { this.selected = d.ids; if (flick) Audio.play('swoosh'); this.submittedAt = Clock.t; this.noteRun(d.ids.length); this.animatePlay('player', d.ids); }
+          if (ok) { this.selected = d.ids; if (flick) Audio.play('swoosh'); this.submittedAt = Clock.t; this.noteRun(d.ids.length); this.submitPlay(d.ids); }
           else { this.tell('That card can\'t beat the pile.', true); Audio.play('bad'); d.ids.forEach(id => { const v = this.views.get(id); if (v) v.wig = 1; }); }
         } else Audio.play('deselect');
       }
@@ -1036,7 +1102,13 @@ export const Game = {
       if (this.modal) { Screens.key?.(this, k); continue; }
       if (this.scene === 'title') { Screens.titleKey(this, k); continue; }
       if (this.scene === 'map') {
-        if ((k.key === 'ArrowRight' || k.key === 'ArrowLeft') && this.map) { this.map.sel = clamp(this.map.sel + (k.key === 'ArrowRight' ? 1 : -1), 1, ROUNDS.length); Audio.play('select', this.map.sel * 2); }
+        if ((k.key === 'ArrowRight' || k.key === 'ArrowLeft') && this.map) {
+          // Step through the tables; walking off Room I's end slides into Room II (or peeks at its chains)
+          const mp = this.map, nxt = clamp(mp.sel + (k.key === 'ArrowRight' ? 1 : -1), 1, ROUNDS.length), room = ROUNDS[nxt - 1].room || 1;
+          if (this.roomOpen(room)) { if (nxt !== mp.sel) { mp.sel = nxt; mp.view = room; Audio.play('select', nxt * 2); } }
+          else if (mp.view !== room) { mp.view = room; Audio.play('swoosh'); }
+          if (k.key === 'ArrowLeft' && mp.view !== (ROUNDS[mp.sel - 1].room || 1)) mp.view = ROUNDS[mp.sel - 1].room || 1;
+        }
         if (k.key === 'Enter' || k.key === ' ') this.startMapRound(); if (k.key === 'Escape') this.transition(() => { this.scene = 'title'; }); continue; }
       if (this.scene !== 'table') continue;
       if (k.key === 'Escape') { if (this.selected.length) { this.selected = []; Audio.play('deselect'); } else this.openModal('pause'); continue; }
@@ -1190,7 +1262,7 @@ export const Game = {
     if (!L.land) this.drawTray();
     if (hv && this.hoverT > 0.45 && !this.drag?.active && hv.face && !this.selected.includes(hv.id) && !this.overTray(Input.x, Input.y)) {
       const c = hv.c, m = magicOf(c);
-      UI.tooltip(`${rankLabel(c.r)} of ${SUIT_NAMES[c.s]}`, (m ? `^${c.r === 10 ? 'o' : c.r === 2 ? 't' : 'v'}${m.name}^0 · ${m.desc} ` : '') + (c.plain ? '^rDisarmed^0 by the Pit Boss: just a 10 this round. ' : '') + `^b${cardPoints(c)} chips`, hv.x, hv.y - CH * 0.55, { color: m ? P.gold1 : P.bone0, w: m || c.plain ? 140 : 100 });
+      UI.tooltip(`${rankLabel(c.r)} of ${SUIT_NAMES[c.s]}`, (m ? `^${c.r === 10 ? 'o' : c.r === 2 ? 't' : 'v'}${m.name}^0 · ${m.desc} ` : '') + (c.plain ? '^rDisarmed^0 by the Pit Boss: just a 10 this round. ' : '') + (c.seeThrough ? '^tNana\'s rules:^0 plays on anything, see-through. ' : c.lowRule ? '^tNana\'s rules:^0 next card must be 7 or lower. ' : c.skip ? '^tNana\'s rules:^0 play it and go again. ' : '') + `^b${cardPoints(c)} chips`, hv.x, hv.y - CH * 0.55, { color: m ? P.gold1 : P.bone0, w: m || c.plain || c.lowRule || c.skip ? 140 : 100 });
     }
   },
 
@@ -1225,6 +1297,13 @@ export const Game = {
 
   // Rule badge (face-down blind flips don't count until revealed)
   drawRuleBadge(px, py, ph, g) {
+    if (g.eye) {
+      const by = py + ph / 2 + 5, txt = 'WHAT WAS IT?', bw = R.measure(txt) + 14;
+      R.panel(px - bw / 2, by, bw, 13, { fill: P.gold3, rim: P.ink0, hi: P.gold2 });
+      R.text(txt, px, by + 3, { color: P.white, align: 'center' });
+      if (g.pile.length) R.text(`${g.pile.length} IN PILE`, px, by + 16, { color: P.ink6, align: 'center', outline: null });
+      return;
+    }
     const r = rule(this.visiblePile()), low = r.low, any = !r.r;
     const txt = any ? 'ANY CARD' : low ? `${rankLabel(r.r)} OR LOWER ↓` : `${rankLabel(r.r)} OR HIGHER ↑`;
     const col = any ? P.teal2 : low ? P.vio2 : P.gold3, sc = 1 + this.rulePop * 0.25;
@@ -1234,7 +1313,7 @@ export const Game = {
     R.text(txt, 0, -3, { color: P.white, align: 'center' });
     R.ctx.restore();
     const vis = this.visiblePile(), top = vis.at(-1);
-    if (top?.r === 8 && vis.length > 1) R.text('8 IS SEE-THROUGH: RULE FROM BELOW', px, by + 16, { color: P.vio0, align: 'center', font: TINY, alpha: 0.75 + Math.sin(R.t * 4) * 0.25 });
+    if ((top?.r === 8 || top?.seeThrough) && vis.length > 1) R.text(`${top.r} IS SEE-THROUGH: RULE FROM BELOW`, px, by + 16, { color: P.vio0, align: 'center', font: TINY, alpha: 0.75 + Math.sin(R.t * 4) * 0.25 });
     else if (top?.r === 9) R.text('UNDERCUT: GO LOWER', px, by + 16, { color: P.vio0, align: 'center', font: TINY });
     else if (g.pile.length) R.text(`${g.pile.length} IN PILE`, px, by + 16, { color: P.ink6, align: 'center', outline: null });
   },
@@ -1279,6 +1358,11 @@ export const Game = {
     const spr = showFace ? this.faceSpr(v.c) : Cards.back;
     const ghost = showFace && v.c.r === 8 && v.zone === 'pile';
     R.spr(spr, x, y, { rot: r, sx, sy: s, skx, alpha: ghost ? 0.62 + Math.sin(t * 3) * 0.1 : 1 });
+    if (showFace && (v.c.seeThrough || v.c.lowRule || v.c.skip)) {
+      R.ctx.save(); R.ctx.translate(x, y); R.ctx.rotate(r); R.ctx.scale(sx, s);
+      R.box(CW / 2 - 11, -CH / 2 + 3, 8, 8, P.ink0, 2); R.box(CW / 2 - 10, -CH / 2 + 4, 6, 6, '#ff9fc4', 2); R.rect(CW / 2 - 8, -CH / 2 + 6, 2, 2, P.white);
+      R.ctx.restore();
+    }
     // Foil sweep on magic cards
     if (showFace && magicOf(v.c) && flipS > 0.5) {
       const cyc = (t * 0.55 + v.phase * 0.3) % 2.2, f = Math.floor(cyc / 1.1 * Cards.shine.length);
@@ -1330,6 +1414,7 @@ export const Game = {
     const n = total(g[seat]);
     R.box(pr.x + pr.w - 12, pr.y - 4, 16, 11, P.ink0, 2); R.box(pr.x + pr.w - 11, pr.y - 3, 14, 9, n <= 3 ? P.red2 : P.ink4, 2);
     R.text(String(n), pr.x + pr.w - 4, pr.y - 2, { color: P.white, align: 'center', outline: null });
+    if (g.toll && g.tollPaid) R.text(`TOLL ${g.tollPaid.toLocaleString()}`, pr.x + pr.w / 2, pr.y + pr.h + (L.land ? 3 : 11), { font: TINY, color: P.gold1, align: 'center' });
     if (active && this.thinking === seat) { const dots = '.'.repeat(1 + Math.floor(R.t * 3) % 3); R.text(dots, pr.x + pr.w / 2, pr.y + pr.h + 2, { color: P.bone1, align: 'center' }); }
   },
 
@@ -1421,12 +1506,12 @@ export const Game = {
     if (UI.iconButton('menu', x + w - 20, y + 3, 17, 15, (bx, by) => { for (let i = 0; i < 3; i++) R.rect(bx + 4, by + 4 + i * 3, 9, 2, P.bone0); })) this.openModal('pause');
     y += 26;
     // Round block
-    const opp = this.opp(), venue = this.venue(), nR = ROUNDS.length;
+    const opp = this.opp(), venue = this.venue(), nR = ROUNDS.length, here = roomRounds(this.round().room || 1);
     R.panel(x, y, w, 40, { fill: P.ink2, hi: P.ink4 });
     R.text('ROUND', x + 6, y + 5, { color: P.ink6 });
     R.text(`${g.round}`, x + 6, y + 15, { size: 2, color: opp.color });
     R.text(`/${nR}`, x + 6 + R.measure(`${g.round}`, { size: 2 }) + 2, y + 22, { color: P.ink6 });
-    for (let i = 0; i < nR; i++) { const cx = x + w - 6 - nR * 11 + i * 11; R.box(cx, y + 6, 9, 9, P.ink0, 2); R.box(cx + 1, y + 7, 7, 7, i === g.round - 1 ? opp.color : (this.cleared || []).includes(i + 1) ? P.grn2 : P.ink3, 1); }
+    here.forEach(({ n }, i) => { const cx = x + w - 6 - here.length * 11 + i * 11; R.box(cx, y + 6, 9, 9, P.ink0, 2); R.box(cx + 1, y + 7, 7, 7, n === g.round ? opp.color : (this.cleared || []).includes(n) ? P.grn2 : P.ink3, 1); });
     R.text(venue, x + w - 6, y + 20, { font: undefined, color: P.bone1, align: 'right', ...(R.measure(venue) > w - 40 ? TINY_OPTS : {}) });
     R.text(fmtTime(this.elapsed), x + w - 6, y + 29, { color: P.ink6, align: 'right', outline: null });
     y += 44;
@@ -1664,6 +1749,7 @@ export const Game = {
       else if (this.swapMode) msg = 'SWITCHEROO: pick a hand card to trade.';
       else if (this.mustPickUp()) { msg = this.pickPrompt?.t > 0.95 ? 'Tap the pile to pick it up.' : 'Nothing in your hand beats the pile...'; bad = true; }
       else if (this.myTurn() && this.selected.length && !this.selectionReady()) msg = this.runHint();
+      else if (this.myTurn() && g.eye) msg = 'What\'s on top? Play something that beats it.';
       else if (this.myTurn()) msg = guidance(g, this.selected);
     }
     this.drawRunTip(!!msg && this.tellT > 0);

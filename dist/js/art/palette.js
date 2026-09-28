@@ -19,6 +19,8 @@ export const THEMES = [
   { name: 'last chance', a: '#6a1628', b: '#1a0c1e', c: '#b8452a', accent: P.red1 },
   { name: 'title', a: '#86175a', b: '#4a0c42', c: '#b82762', accent: P.gold1 },
   { name: 'mirrors', a: '#1d5a4c', b: '#131a30', c: '#c0652c', accent: P.gold1 },
+  { name: 'front room', a: '#6a2a4a', b: '#24122a', c: '#b0506e', accent: '#ff9fc4' },
+  { name: 'river', a: '#0e3a3c', b: '#081418', c: '#2a6a5e', accent: P.teal1 },
 ];
 
 const cache = new Map();

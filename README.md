@@ -1,6 +1,6 @@
 # Bonehead
 
-A pixel-art shedding roguelite inspired by Shithead. Beat four tables of house opponents, claim tricks between rounds, and don't be the Bonehead.
+A pixel-art shedding roguelite inspired by Shithead. Beat two rooms of house opponents, eight tables in all, claim tricks between rounds, and don't be the Bonehead.
 
 Version 2 is a ground-up presentation rework: everything is drawn to a canvas, with modern pixel art, spring-driven card motion, shader post-processing and a synthesized soundtrack. The tested rules engine, scoring and progression from v1 are unchanged.
 
@@ -22,7 +22,7 @@ No build step, no dependencies, no external requests. The whole game is about 85
 for t in *.test.mjs; do node $t; done
 ```
 
-`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `weapons.test.mjs` covers disarmed 10s. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `goals.test.mjs` covers bonus goals, per-round stats and trophies. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
+`engine`, `scoring`, `polish`, `burn` and `progression` cover the rules (including 500 simulated full games with card conservation checks). `runs.test.mjs` covers run selection. `weapons.test.mjs` covers disarmed 10s. `rooms.test.mjs` covers the two rooms and Nana's house rules, including 300 simulated games under every pair of rules. `rounds.test.mjs` covers three-seat tables and pick-your-table deals (400 simulated three-seat games). `goals.test.mjs` covers bonus goals, per-round stats and trophies. `art.test.mjs` checks the bitmap fonts, the card silhouette and opponent dialogue coverage.
 
 ## Structure
 
@@ -55,20 +55,27 @@ tools/stamp.mjs         deploy step: content-hash every module via an import map
 
 ## Rounds
 
-A run is four tables, defined in `js/game/rounds.js`:
+A run is eight tables in two rooms, defined in `js/game/rounds.js` (`ROUNDS`, `ROOMS`).
 
+**Room I · The Back Rooms**
 1. Lucky Bones, classic rules.
 2. The Velvet Reaper, **Pick Your Table**: everyone gets 6 cards and chooses 3 to lay face-up for later.
 3. **The Twins** (Tibia and Fibula), two opponents at once. Go out first to win. If a twin goes out, beat the other. The last one holding cards is the Bonehead.
 4. The Pit Boss, **No Weapons**: 10s are confiscated at the door and play as ordinary 10s. They don't play on anything and don't burn, though four of a kind still burns the pile. The deal marks every 10 with `plain: true`, and the engine's `isMagic` treats such a card as ordinary for playability, burns, scoring, card art and goals (Conjurer is left out of this round).
 
-Between rounds, the **Midnight Circuit** map shows a crypt from above, in the spirit of The Binding of Isaac's rooms. It is painted at full resolution:
+**Room II · The Deep Crypt** (opens once this run has beaten all of Room I)
+5. Madame Marrow, **Open Hands**: her hand is dealt face up.
+6. Nana Knuckles, **Nana's Rules**: she brings two random house rules (`HOUSE_RULES`): sevens go low, invisible threes (play on anything, see-through), or eights skip (play one and go again). Each marks the cards it changes, the engine reads the marks, and marked cards wear a pink rosette.
+7. **The Great Cadaverini & Lovely Lucinda** (sawn in half, and her halves bicker), two opponents, **Eye on the Card**: played cards turn face down after a moment, and the rule badge and hints hide. A well-formed play that doesn't beat the hidden pile is still played, then shown up, and you pick up the lot.
+8. The Ferryman, **Pay the Toll**: every card you pick up costs 25 points of run score, paid in coins.
+
+Between rounds, the **Midnight Circuit** map shows the crypt from above. Room II sits just off to the right: slide across with the edge arrow, a swipe or the arrow keys. It is crossed with chains and a padlock until Room I is cleared, then the camera glides over as the chains break (`roomOpen` in `game.js`). Room II is the same room painter recoloured as a cold ossuary. The dev panel's ROOM II switch opens it for testing. Each room is in the spirit of The Binding of Isaac's rooms, painted at full resolution:
 - textured flagstones and a red and gold rug
 - a card table with a grained, brass-studded rim
 - perspective walls with torches, banners and a barred door
 - props, and banded 16-bit style lighting
 
-The four opponents are cards on the table, joined by a chalk path, and beaten tables are stamped BONEHEAD. The round's name and rules sit on the rug's top edge, and GO sits on its bottom edge. A "← TITLE" link is at top left, with progress and score at top right. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal. In the dev panel, OPEN MAP jumps straight here.
+Each room's opponents are cards on its table, joined by a chalk path, and beaten tables are stamped BONEHEAD. The round's name and rules sit on the rug's top edge, and GO sits on its bottom edge. A "← TITLE" link is at top left, with progress and score at top right. Tap a card to select it (it lifts, glows and gets an arrow), then tap it again or press GO. While testing, every open table is playable in any order (`ROUND_LOCKS` in `rounds.js`). A rule-change card then explains the twist before the deal. In the dev panel, OPEN MAP jumps straight here.
 
 ## Bonus goals and trophies
 

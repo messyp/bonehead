@@ -18,7 +18,18 @@ function vnoise(x, y, sc, s = 0) {
   const a = h2(x0, y0, s), b = h2(x0 + 1, y0, s), c = h2(x0, y0 + 1, s), d = h2(x0 + 1, y0 + 1, s);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
-const C = hex => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+// Room II, the Deep Crypt, is the same room recoloured: a cold ossuary with a teal and
+// bone rug, violet felt and an eerie green glow through the door.
+const ROOM2 = {
+  '#3d3338': '#2e3a3a', '#372e33': '#293333', '#43383d': '#344240', '#342b30': '#263030', '#3f3539': '#303c3c', '#120e17': '#0b1414',
+  '#4e1a24': '#1d3b3a', '#5a2029': '#23464a',
+  '#2a0a16': '#0a1f24', '#c98f36': '#cfc4a0', '#3e0f1e': '#0f3038', '#f0c060': '#f4ecd8', '#d9a444': '#d6c59f', '#8e2438': '#1f6a6a', '#b8862f': '#bfb18c', '#5e1628': '#113c44', '#6c1a2f': '#16505a',
+  '#23694a': '#4a2f6a', '#185038': '#321d4e', '#1d5c40': '#3d275c', '#206345': '#452c66', '#b8923e': '#cfc4a0',
+  '#4d4459': '#44524f', '#463e52': '#3d4a48', '#52485f': '#4a5956', '#433b4e': '#3a4644', '#1b1622': '#101a19',
+  '#5e1426': '#123e46', '#7a1c32': '#1a5660', '#c9973e': '#cfc4a0',
+};
+let remap = null;
+const C = hex => { hex = remap?.[hex] ?? hex; return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]; };
 const mul = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 
 // A tiny RGB raster: base colour, a pre-light shade multiplier and whether the
@@ -121,8 +132,9 @@ function floorCard(img, x, y, red) {
   img.set(x + 1, y + 1, red ? C('#b3263f') : C('#2a2436'));
 }
 
-export function mapRoomHD(w, h, land) {
-  const img = raster(w, h), r = rng(7171);
+export function mapRoomHD(w, h, land, room = 1) {
+  remap = room === 2 ? ROOM2 : null;
+  const img = raster(w, h), r = rng(room === 2 ? 9191 : 7171);
   const T = Math.round(h * (land ? 0.16 : 0.1)), B = Math.round(h * 0.06), S = Math.round(w * (land ? 0.06 : 0.08));
   const inner = h - T - B;
   // The rug runs from just below the back wall to where GO sits (on its bottom edge).
@@ -288,7 +300,7 @@ export function mapRoomHD(w, h, land) {
     const inner2 = px > dx - dw && px < dx + dw && py >= dtop + dw * 0.7 - Math.sqrt(Math.max(0, 1 - ((px - dx) / dw) ** 2)) * dw * 0.7;
     if (!inner2) { img.set(px, py, (px + py) % 4 ? C('#5d5070') : C('#4a3f5a')); continue; }
     const glow = 1 - (T - py) / (T - dtop);
-    img.set(px, py, [40 + glow * 90, 8 + glow * 12, 16 + glow * 20], 0);
+    img.set(px, py, room === 2 ? [8 + glow * 20, 30 + glow * 100, 30 + glow * 76] : [40 + glow * 90, 8 + glow * 12, 16 + glow * 20], 0);
     if ((px - dx + 100) % 4 === 0) img.set(px, py, (py % 7 === 0) ? C('#7a7088') : C('#2e2836'));
   }
   // Torches (flames drawn live by the screen) and hanging banners
@@ -313,6 +325,14 @@ export function mapRoomHD(w, h, land) {
     const sx = x0 + 6, sy = y0 + Math.round(bh * 0.45);
     img.ell(sx + 0.5, sy, 3, 2.6, (px, py) => img.set(px, py, C('#e0b050')));
     img.set(sx - 1, sy, C('#5e1426')); img.set(sx + 1, sy, C('#5e1426')); img.rect(sx - 1, sy + 2, 3, 2, C('#e0b050'));
+  }
+  // The Deep Crypt's back wall is an ossuary: rows of small skulls in the brickwork
+  if (room === 2) for (let row = 0; row < 2; row++) for (let x = S + 10; x < w - S - 10; x += 9) {
+    const y = Math.round(T * (0.3 + row * 0.32));
+    if (Math.abs(x - dx) < dw + 8 || torches.some(t => Math.abs(x - t.x) < 10)) continue;
+    img.rect(x - 1, y - 1, 5, 5, C('#0b1414'));
+    img.rect(x, y, 3, 2, C('#cfc4a0')); img.set(x + 1, y + 2, C('#cfc4a0'));
+    img.set(x, y + 1, C('#0b1414')); img.set(x + 2, y + 1, C('#0b1414'));
   }
   // Hanging chains on the side walls
   for (const cxw of [Math.round(S * 0.5), Math.round(w - S * 0.5)]) for (let k = 0; k < 9; k++) {
@@ -352,9 +372,9 @@ export function mapRoomHD(w, h, land) {
     { x: cx, y: cy - ry * 0.15, rx: rx * 1.9, ry: ry * 2.4, c: [1.0, 0.86, 0.66] },
     ...torches.map(t => ({ x: t.x, y: t.y + 14, rx: 90, ry: 70, c: [0.95, 0.58, 0.3] })),
     ...[[fx0 + 4, fy0 + 6], [fx1 - 6, fy0 + 60], [fx0 + 44, fy1 - 4], [fx1 - 8, fy1 - 6]].map(([x, y]) => ({ x, y, rx: 56, ry: 48, c: [0.9, 0.58, 0.32] })),
-    { x: dx, y: T, rx: 42, ry: 30, c: [0.8, 0.12, 0.2] },
+    { x: dx, y: T, rx: 42, ry: 30, c: room === 2 ? [0.15, 0.7, 0.6] : [0.8, 0.12, 0.2] },
   ];
-  const amb = [0.42, 0.39, 0.54];
+  const amb = room === 2 ? [0.36, 0.44, 0.5] : [0.42, 0.39, 0.54];
   const px2 = new Uint8ClampedArray(w * h * 4);
   for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
     const i = py * w + px, base = [img.rgb[i * 3], img.rgb[i * 3 + 1], img.rgb[i * 3 + 2]];
@@ -378,5 +398,6 @@ export function mapRoomHD(w, h, land) {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   cv.getContext('2d').putImageData(new ImageData(px2, w, h), 0, 0);
+  remap = null;
   return { spr: new Spr(cv), candles, torches, table: { cx, cy, rx, ry }, rug: { x: rx0, y: ry0, w: RW, h: RH } };
 }

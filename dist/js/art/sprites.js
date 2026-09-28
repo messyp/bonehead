@@ -138,6 +138,135 @@ function twin(variant, state = 'idle') {
   return variant ? p.flipX() : p;
 }
 
+// ---------- Room II ----------
+// Madame Marrow: fortune teller in a paisley headscarf and hoops, over her crystal ball.
+function madameMarrow(state = 'idle', frame = 0) {
+  const p = new Pix(44, 44);
+  p.rect(0, 0, 44, 44, '#1d1233');
+  for (let i = 0; i < 26; i++) { const x = (i * 17 + 5) % 44, y = (i * 29 + 3) % 30; p.set(x, y, (i + frame) % 5 ? P.vio3 : P.gold2); }
+  // Fringed shawl
+  p.poly([[1, 44], [5, 33], [15, 30], [29, 30], [39, 33], [43, 44]], P.red3);
+  for (let x = 4; x < 41; x += 2) p.set(x, 36 + (x % 4 ? 0 : 1), P.gold2);
+  skull(p, 22, 20, 10, 10, { jaw: state === 'talk' ? 2 : 0 });
+  eyes(p, 22, 20, 4.5, { w: 4, h: 4, glow: P.vio0, glow2: P.vio1, blink: state === 'blink' });
+  // Headscarf knotted on top, with coins along the band
+  p.ell(22, 13, 12.5, 7.5, P.red2, (x, y) => y <= 14);
+  p.rect(9, 12, 26, 3, P.red3);
+  for (let x = 11; x < 34; x += 4) p.set(x, 15, P.gold1);
+  for (let x = 12; x < 33; x += 5) { p.set(x, 8, P.gold2); p.set(x + 2, 10, P.vio1); }
+  p.circ(33, 7, 2.6, P.red2); p.set(33, 7, P.gold1);
+  // Hoop earrings
+  for (const ex of [10, 34]) for (let a = 0; a < 16; a++) { const t = a / 16 * Math.PI * 2; p.set(Math.round(ex + Math.cos(t) * 2.2), Math.round(27 + Math.sin(t) * 2.6), P.gold1); }
+  // Crystal ball with a floating eye
+  p.circ(22, 41, 7, P.teal2); p.circ(22, 41, 5.5, P.teal1);
+  p.circ(22, 41, 2.6, P.white); p.circ(22 + Math.round(Math.sin(frame * 0.7)), 41, 1.3, P.vio2); p.set(22 + Math.round(Math.sin(frame * 0.7)), 41, P.ink0);
+  p.set(19, 37, P.white); p.set(18, 38, P.teal0);
+  p.outline(P.ink0);
+  return p;
+}
+
+// Nana Knuckles: tiny granny with a grey bun, round specs, pearls and her knitting.
+function nanaKnuckles(state = 'idle') {
+  const p = new Pix(44, 44);
+  p.rect(0, 0, 44, 44, '#4a2436');
+  for (let y = 3; y < 44; y += 8) for (let x = (y % 16 ? 4 : 0); x < 44; x += 8) { p.set(x, y, '#7a3a52'); p.set(x + 1, y, '#8e4a62'); p.set(x, y + 1, '#8e4a62'); p.set(x + 1, y + 1, '#7a3a52'); }
+  // Cardigan with buttons over a lace collar
+  p.poly([[2, 44], [6, 34], [15, 31], [29, 31], [38, 34], [42, 44]], '#5a6a8a');
+  p.poly([[16, 31], [28, 31], [25, 44], [19, 44]], P.bone1);
+  for (let y = 36; y < 44; y += 3) p.set(22, y, P.gold2);
+  // Pearls
+  for (let i = 0; i < 9; i++) { const a = 0.35 + i / 8 * 2.45; p.set(Math.round(22 + Math.cos(a) * 7.5), Math.round(30 + Math.sin(a) * 3.2), P.white); }
+  skull(p, 22, 21, 9.5, 9.5, { jaw: state === 'talk' ? 2 : 0 });
+  eyes(p, 22, 21, 4.2, { w: 4, h: 4, glow: '#ff9fc4', glow2: P.white, blink: state === 'blink' });
+  // Round reading glasses
+  for (const ex of [18, 26]) for (let a = 0; a < 20; a++) { const t = a / 20 * Math.PI * 2; p.set(Math.round(ex + Math.cos(t) * 3.4), Math.round(21 + Math.sin(t) * 3.2), P.gold1); }
+  p.hline(21, 23, 20, P.gold1);
+  // Grey bun and curls
+  p.ell(22, 12, 11, 5.5, P.ink6, (x, y) => y <= 14);
+  p.circ(22, 6, 4, P.ink6); p.set(21, 4, P.bone1); p.set(20, 6, P.ink5);
+  for (let x = 12; x < 33; x += 3) p.set(x, 13, P.bone2);
+  // Knitting: two needles and a ball of wool
+  p.line(31, 44, 41, 31, P.bone3); p.line(34, 44, 43, 34, P.bone3);
+  p.circ(37, 40, 3.4, P.red2); p.line(35, 39, 39, 41, P.red1); p.set(36, 38, P.red0);
+  p.outline(P.ink0);
+  return p;
+}
+
+// The Great Cadaverini: top hat, waxed moustache, high collar, wand at the ready.
+function cadaverini(state = 'idle', frame = 0) {
+  const p = new Pix(44, 44);
+  p.rect(0, 0, 44, 44, P.red4);
+  for (let x = 0; x < 44; x += 5) { p.rect(x, 0, 2, 44, P.red3); p.set(x + 2, (x * 3) % 44, '#6b1830'); }
+  p.circ(22, 14, 15, '#6b1830');
+  // Cape with a high collar and red lining, white shirt and bow tie
+  p.poly([[0, 44], [4, 32], [14, 29], [30, 29], [40, 32], [44, 44]], P.ink1);
+  p.poly([[8, 33], [12, 24], [16, 31]], P.red2); p.poly([[36, 33], [32, 24], [28, 31]], P.red2);
+  p.poly([[17, 31], [27, 31], [24, 44], [20, 44]], P.bone0);
+  p.poly([[18, 32], [22, 34], [18, 36]], P.ink2); p.poly([[26, 32], [22, 34], [26, 36]], P.ink2); p.set(22, 34, P.gold1);
+  skull(p, 22, 20, 10, 10, { jaw: state === 'talk' ? 2 : 0 });
+  eyes(p, 22, 19, 4.5, { w: 4, h: 4, glow: P.gold1, glow2: P.gold0, blink: state === 'blink' });
+  // Waxed moustache curling up
+  p.hline(17, 27, 25, P.ink0); p.hline(18, 26, 26, P.ink1);
+  p.set(16, 24, P.ink0); p.set(15, 23, P.ink0); p.set(28, 24, P.ink0); p.set(29, 23, P.ink0);
+  // Top hat with a purple band
+  p.rect(13, 0, 18, 10, P.ink1); p.rect(13, 7, 18, 2, P.vio2); p.rect(9, 10, 26, 2, P.ink1); p.hline(14, 29, 1, P.ink3);
+  // Wand with a sparkle
+  p.line(36, 41, 42, 29, P.ink0); p.line(41, 31, 42, 29, P.white);
+  const tw = frame % 3; p.set(42, 27 - tw, P.gold0); p.set(41 - tw, 28, P.gold1); p.set(43, 28 + tw, P.gold1);
+  p.outline(P.ink0);
+  return p;
+}
+
+// Lovely Lucinda: sequins and a feather plume, sawn clean in half. The two halves
+// sit a little apart, and argue.
+function lucinda(state = 'idle', frame = 0) {
+  const p = new Pix(44, 44);
+  p.rect(0, 0, 44, 44, '#122a3a');
+  for (let i = 0; i < 30; i++) p.set((i * 13 + 7) % 44, (i * 23 + frame) % 44, i % 3 ? '#1e4a5e' : P.teal3);
+  // Sequinned costume
+  p.poly([[3, 44], [7, 34], [15, 31], [29, 31], [37, 34], [41, 44]], P.teal2);
+  for (let y = 34; y < 44; y++) for (let x = 4; x < 41; x++) if (p.get(x, y) && (x + y * 3) % 5 === 0) p.set(x, y, (x + frame) % 3 ? P.teal0 : P.white);
+  skull(p, 22, 21, 9.5, 9.5, { jaw: state === 'talk' ? 2 : 0 });
+  eyes(p, 22, 21, 4.2, { w: 4, h: 4, glow: '#ff7ab8', glow2: P.white, blink: state === 'blink' });
+  // Lashes and lipstick
+  for (const ex of [18, 26]) { p.set(ex - 2, 18, P.ink0); p.set(ex, 17, P.ink0); p.set(ex + 2, 18, P.ink0); }
+  p.hline(19, 25, 27, P.red1);
+  // Feather plume and a jewelled band
+  p.poly([[26, 12], [30, 1], [34, 3], [29, 13]], '#ff7ab8'); p.line(28, 12, 32, 2, '#ffc0dc');
+  p.hline(13, 31, 12, P.gold1); p.set(22, 12, P.teal0);
+  p.outline(P.ink0);
+  // The saw box cut: shift everything below the line right, leave a gap and the blade
+  const cut = 30, out = new Pix(44, 44);
+  for (let y = 0; y < 44; y++) for (let x = 0; x < 44; x++) { const c = p.get(x, y); if (!c) continue; if (y < cut) out.set(x, y, c); else if (y > cut) out.set(x + 3, y, c); }
+  for (let x = 0; x < 44; x++) { out.set(x, cut, P.ink0); out.set(x, cut + 1, P.ink0); }
+  for (let x = 30; x < 44; x++) { out.set(x, cut, x % 2 ? P.bone2 : P.ink6); out.set(x, cut - 1, P.ink6); }
+  for (let y = cut + 1; y < 44; y++) { out.set(0, y, '#122a3a'); out.set(1, y, '#122a3a'); out.set(2, y, '#122a3a'); }
+  return out;
+}
+
+// The Ferryman: a deep hood, a long gaunt skull, coins on his eyes, lantern and pole.
+function ferryman(state = 'idle', frame = 0) {
+  const p = new Pix(44, 44);
+  p.rect(0, 0, 44, 44, '#0c2226');
+  for (let y = 26; y < 44; y += 3) for (let x = 0; x < 44; x++) if ((x + y * 5 + frame * 2) % 9 < 4) p.set(x, y, '#12343a');
+  for (let x = 0; x < 44; x++) if ((x + frame) % 7 < 3) p.set(x, 30, '#1e4a52');
+  // Pole
+  p.line(38, 0, 36, 44, '#4a3422'); p.line(39, 0, 37, 44, '#6a4a30');
+  // Robe and hood
+  p.poly([[3, 44], [6, 24], [11, 8], [22, 2], [33, 8], [37, 24], [39, 44]], '#26302e');
+  p.poly([[6, 44], [8, 24], [12, 11], [17, 6], [13, 22], [12, 44]], '#344240');
+  p.ell(22, 22, 9.5, 13, P.ink0);
+  skull(p, 22, 22, 7.5, 10, { bone: P.bone1, lo: P.bone3, jaw: state === 'talk' ? 2 : 0 });
+  // Coins on the eyes (a glint instead of a blink)
+  for (const ex of [19, 25]) { p.circ(ex, 20, 2.4, P.gold2); p.set(ex, 20, state === 'blink' ? P.gold3 : P.gold0); p.set(ex - 1, 19, P.gold1); }
+  p.each((x, y, c) => (y < 15 && (c === P.bone1 || c === P.bone3) ? '#1a2220' : undefined));
+  // Lantern
+  p.rect(5, 33, 7, 8, P.ink2); p.rect(6, 34, 5, 6, frame % 2 ? P.fire1 : P.fire2); p.set(8, 36, P.fire0);
+  p.hline(5, 11, 32, P.gold3); p.set(8, 31, P.gold3);
+  p.outline(P.ink0);
+  return p;
+}
+
 export const OPPONENTS = [
   {
     id: 'lucky', name: 'Lucky Bones', venue: 'THE BACK ROOM', stake: 'A friendly game. Allegedly.', voice: 190, color: P.teal1,
@@ -219,12 +348,95 @@ export const OPPONENTS = [
       low: ['Me too! Me too!'],
     },
   },
+  // ---------- Room II ----------
+  {
+    id: 'marrow', name: 'Madame Marrow', venue: 'THE CRYSTAL PARLOUR', stake: 'The cards never lie, dear. You do.', voice: 170, color: P.vio1,
+    paint: madameMarrow, room: 2,
+    lines: {
+      intro: ['I foresee... a pickup in your future.', 'Sit, sit. I already know how this ends.'],
+      think: ['The spirits say...', 'Mmm, cloudy.', 'Hush. I\'m reading.'],
+      houseBurn: ['I saw that coming.', 'The ashes speak.'],
+      playerBurn: ['I saw that coming. I just didn\'t like it.', 'The spirits are... displeased.'],
+      playerPickup: ['As foretold!', 'The Tower card. Also, a lot of cards.'],
+      housePickup: ['A minor detour of fate.', 'That was... unforeseen.'],
+      magic: ['A trick of the light.', 'The cards favour you. Briefly.'],
+      houseWin: ['It was written. In pencil, but written.'],
+      playerWin: ['Hm. My crystal ball needs a polish.'],
+      low: ['The end is near. I can feel it.'],
+    },
+  },
+  {
+    id: 'nana', name: 'Nana Knuckles', venue: 'NANA\'S FRONT ROOM', stake: 'Nana\'s house, Nana\'s rules, sweetie.', voice: 230, color: '#ff9fc4',
+    paint: nanaKnuckles, room: 2,
+    lines: {
+      intro: ['Sit down, poppet. Nana\'s rules tonight.', 'Have a biscuit. Then lose gracefully.'],
+      think: ['Now where are my glasses...', 'Ooh, let Nana think.', 'Tsk tsk tsk.'],
+      houseBurn: ['Mind the doilies!', 'Toasty, like my crumpets.'],
+      playerBurn: ['Watch the carpet, dear!', 'Cheeky monkey.'],
+      playerPickup: ['Have a biscuit. Now pick that up.', 'Oh dear, oh dear. All of it, sweetie.'],
+      housePickup: ['Oh, fiddlesticks.', 'Nana meant to do that.'],
+      magic: ['Didn\'t your mother teach you manners?', 'Ooh, fancy.'],
+      houseWin: ['Same time next week, poppet?'],
+      playerWin: ['Well! Somebody\'s been practising.'],
+      low: ['Nearly done, and it\'s only half past eight!'],
+    },
+  },
+  {
+    id: 'cadaverini', name: 'The Great Cadaverini', venue: 'THE GRAND THEATRE', stake: 'Keep your eye on the card!', voice: 140, color: P.gold1,
+    paint: cadaverini, room: 2,
+    lines: {
+      intro: ['Pick a card, any card! No, not that one.', 'Ladies, gentlemen and Boneheads!'],
+      think: ['Abracadabra...', 'Nothing up my sleeve...', 'And now...'],
+      houseBurn: ['Ta-da!', 'Vanished!'],
+      playerBurn: ['Lucinda! The fire extinguisher!', 'That was MY finale!'],
+      playerPickup: ['Ta-da! It\'s all yours!', 'Where did the pile go? Oh, you have it.'],
+      housePickup: ['All part of the act.', 'A minor mishap.'],
+      magic: ['An amateur illusion.', 'I invented that one.'],
+      houseWin: ['And for my final trick... you\'re the Bonehead!'],
+      playerWin: ['Impossible! Check my sleeves!'],
+      low: ['And now, the grand finale!'],
+    },
+  },
+  {
+    id: 'lucinda', name: 'Lovely Lucinda', venue: 'THE GRAND THEATRE', stake: 'Keep your eye on the card!', voice: 250, color: '#ff7ab8',
+    paint: lucinda, room: 2,
+    lines: {
+      intro: ['Top: Hello, darling! Bottom: Hi down here.', 'Don\'t mind me. I\'m in two minds.'],
+      think: ['Top: The queen. Bottom: You ALWAYS play the queen.', 'Top: Left? Bottom: Right!'],
+      houseBurn: ['Top: Sparkle! Bottom: Ow, my feet.', 'Ta-daaa!'],
+      playerBurn: ['Top: Rude! Bottom: I didn\'t see.', 'We\'re beside ourselves!'],
+      playerPickup: ['Top: Oh dear. Bottom: Oh dear.', 'Twice the sympathy, darling.'],
+      housePickup: ['Bottom: That was your fault.', 'Top: We\'ll split it.'],
+      magic: ['Top: Ooh! Bottom: What? What happened?', 'Showstopper!'],
+      houseWin: ['Top: Bravo! Bottom: Bravo!'],
+      playerWin: ['I\'m torn about this.'],
+      low: ['Top: Nearly there! Bottom: Speak for yourself.'],
+    },
+  },
+  {
+    id: 'ferryman', name: 'The Ferryman', venue: 'THE RIVER CROSSING', stake: 'Every crossing has a price.', voice: 95, color: P.teal1,
+    paint: ferryman, room: 2,
+    lines: {
+      intro: ['Coin for the crossing?', 'Everyone pays. Eventually.'],
+      think: ['...', 'Mm.', 'The river is patient.'],
+      houseBurn: ['Ashes, to the water.', 'Drifting.'],
+      playerBurn: ['Hm. Warm.', 'The river takes all.'],
+      playerPickup: ['Thank you for your custom.', 'That will be extra.'],
+      housePickup: ['...Noted.', 'A small fare.'],
+      magic: ['Old tricks. Older than you.', 'Mm.'],
+      houseWin: ['This way, please. Mind the step.'],
+      playerWin: ['...I\'ll allow it. This once.'],
+      low: ['The far bank is close now.'],
+    },
+  },
 ];
 
 const portraitCache = new Map();
 export const oppIndex = id => OPPONENTS.findIndex(o => o.id === id);
 export function portrait(i, state = 'idle', frame = 0) {
-  const key = `${i}-${state}-${i === 2 ? frame % 6 : 0}`;
+  // Portraits with ambient motion (smoke, sequins, water) cache six frames; the rest one
+  const anim = ['boss', 'marrow', 'cadaverini', 'lucinda', 'ferryman'].includes(OPPONENTS[i].id);
+  const key = `${i}-${state}-${anim ? frame % 6 : 0}`;
   let s = portraitCache.get(key);
   if (!s) { s = OPPONENTS[i].paint(state, frame % 6).spr(); portraitCache.set(key, s); }
   return s;
