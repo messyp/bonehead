@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Bonehead Stylesheet</title>
+<link rel="icon" href="../assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="dev.css">
+</head>
+<body>
+<style>
+  .stage { background: var(--ink0); border-radius: 6px; padding: 18px; overflow-x: auto; }
+  .stage.felt { background: radial-gradient(circle at 50% 40%, #1d5c40, #0f2e22 80%); }
+  .stage.magenta { background: radial-gradient(circle at 50% 45%, #86175a, #4a0c42 75%); }
+  .row, .figs { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; }
+  figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
+  figcaption { font-size: 0.8rem; color: var(--ink6); text-align: center; max-width: 120px; }
+  .sw { all: unset; cursor: pointer; display: grid; gap: 3px; width: 92px; font-size: 0.78rem; }
+  .sw i { height: 44px; border-radius: 4px; background: var(--c); border: 2px solid var(--ink0); box-shadow: 0 3px 0 var(--ink0); }
+  .sw b { color: var(--bone1); font-weight: 700; }
+  .sw code { color: var(--ink6); font-size: 0.75rem; }
+  .sw.copied code::after { content: ' · copied'; color: var(--gold); }
+  .sw:focus-visible i { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .fam { display: grid; gap: 10px; }
+  .fam h3 { font-size: 1rem; }
+  .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .theme { border-radius: 6px; border: 2px solid var(--ink0); padding: 12px; min-height: 96px; display: grid; align-content: end; gap: 2px; position: relative; }
+  .theme span { position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; border-radius: 3px; border: 2px solid var(--ink0); }
+  .theme b { color: var(--bone0); font-family: var(--display); font-weight: 500; text-transform: capitalize; }
+  .theme code { font-size: 0.7rem; color: var(--bone2); }
+  .rules2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .rules2 div { border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; font-size: 0.93rem; }
+  .rules2 b { display: block; color: var(--bone0); font-family: var(--display); font-weight: 500; }
+</style>
+<div class="wrap">
+<nav class="top"><a class="home" href="index.html">BONE<span style="color:var(--gold)">HEAD</span> · dev</a><a href="plan.html">Plan</a><a href="progression.html">Progression</a><a href="cast.html">Cast</a><a href="stylesheet.html" aria-current="page">Stylesheet</a><a href="../">← Game</a></nav>
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Design</div>
+  <h1>Stylesheet</h1>
+  <p class="lede">The look of Bonehead in one place: the logo, colours, pixel type, buttons, cards, characters and icons. Everything below is drawn live by the game's own art code.</p>
+</header>
+
+<section>
+  <div class="eyebrow">Logo</div>
+  <h2>The wordmark</h2>
+  <div class="stage magenta" id="logo-big"></div>
+  <div class="rules2">
+    <div><b>BONE in cream, HEAD in gold</b>Vertical gradients, top-lit bevel, chunky 2-cell strokes on a 6×8 grid.</div>
+    <div><b>The O is the skull</b>Square sockets, red pupils looking inward, gapped teeth. Never swap it for another skull.</div>
+    <div><b>Plum 3D side, ink outline</b>Always on a dark or magenta ground. The HUD uses the same art, scaled down.</div>
+  </div>
+  <div class="row" id="logo-parts"></div>
+  <h3>In the HUD</h3>
+  <div class="stage" id="logo-hud"></div>
+  <h3>Logo colours</h3>
+  <div class="row" id="logo-colours"></div>
+</section>
+
+<section>
+  <div class="eyebrow">Colour</div>
+  <h2>Palette</h2>
+  <p class="muted">One palette for the whole game (<code>js/art/palette.js</code>). Every sprite, panel and particle pulls from it. Tap a swatch to copy its hex.</p>
+  <div id="palette" style="display:grid;gap:22px"></div>
+  <h3>Backgrounds</h3>
+  <p class="muted">Each table sets the swirling background from a theme: two base colours and an accent.</p>
+  <div class="themes" id="themes"></div>
+</section>
+
+<section>
+  <div class="eyebrow">Type</div>
+  <h2>Pixel fonts</h2>
+  <p class="muted">Two hand-drawn bitmap fonts (<code>js/core/font.js</code>). FONT for everything readable, at size 2 for titles; TINY for labels. Colour codes like <code>^g</code> recolour text inline. These dev pages use Pixelify Sans and Atkinson Hyperlegible; the game itself never does.</p>
+  <div class="stage"><canvas id="type" class="px"></canvas></div>
+</section>
+
+<section>
+  <div class="eyebrow">Components</div>
+  <h2>Buttons and badges</h2>
+  <p class="muted">Chunky 3D pixel buttons with a lip (<code>js/game/ui.js</code>). Gold is the main action, red is danger, ink is secondary. The yellow CTA is for the one big action on a screen.</p>
+  <div class="stage"><canvas id="ui" class="px"></canvas></div>
+</section>
+
+<section>
+  <div class="eyebrow">Cards</div>
+  <h2>The deck</h2>
+  <div class="stage felt"><canvas id="cards" class="px"></canvas></div>
+  <div class="stage felt"><canvas id="cards2" class="px"></canvas></div>
+</section>
+
+<section>
+  <div class="eyebrow">Characters</div>
+  <h2>Portraits</h2>
+  <p class="muted">44×44 pixel portraits with idle, blink and talk frames. More on the <a href="cast.html">cast page</a>.</p>
+  <div class="stage"><div class="figs" id="chars"></div></div>
+</section>
+
+<section>
+  <div class="eyebrow">Icons</div>
+  <h2>Icons</h2>
+  <div class="stage"><div class="figs" id="icons"></div></div>
+</section>
+
+<footer>Drawn from the game's art code each time this page loads, so it always matches the build.</footer>
+</div>
+<script type="module" src="stylesheet.js"></script>
+</body>
+</html>

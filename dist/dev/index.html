@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Bonehead Dev</title>
+<link rel="icon" href="../assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="dev.css">
+</head>
+<body>
+<div class="wrap narrow">
+<nav class="top"><a class="home" href="index.html">BONE<span style="color:var(--gold)">HEAD</span> · dev</a><a href="plan.html">Plan</a><a href="progression.html">Progression</a><a href="cast.html">Cast</a><a href="stylesheet.html">Stylesheet</a><a href="../">← Game</a></nav>
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Dev mode</div>
+  <h1>BONE<span class="head">HEAD</span> dev pages</h1>
+  <p class="lede">Plans, the cast and the stylesheet, kept beside the game so they stay in step with it.</p>
+</header>
+<style>
+  .hub { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .hub a { text-decoration: none; color: inherit; }
+  .hub .panel { height: 100%; transition: transform .12s ease; }
+  .hub a:hover .panel { transform: translateY(-3px); border-color: var(--gold); }
+  .hub h2 { font-size: 1.25rem; }
+  @media (prefers-reduced-motion: reduce) { .hub .panel { transition: none; } }
+</style>
+<section class="hub">
+  <a href="plan.html"><div class="panel"><span class="eyebrow">Plan</span><h2>Launch plan</h2><p class="muted">What to build next, trick card ideas, and how to launch it.</p></div></a>
+  <a href="progression.html"><div class="panel"><span class="eyebrow">Plan</span><h2>Progression &amp; stakes</h2><p class="muted">The descent: a run with rising pressure, gold teeth, a shop and lives.</p></div></a>
+  <a href="cast.html"><div class="panel"><span class="eyebrow">Bible</span><h2>The cast</h2><p class="muted">All ten opponents across both rooms: portraits, rules, venues and lines.</p></div></a>
+  <a href="stylesheet.html"><div class="panel"><span class="eyebrow">Design</span><h2>Stylesheet</h2><p class="muted">Logo, colours, pixel fonts, buttons, cards and icons, drawn live from the game.</p></div></a>
+</section>
+<footer>Not linked for players. The cast and stylesheet draw straight from the game's art code.</footer>
+</div>
+</body>
+</html>

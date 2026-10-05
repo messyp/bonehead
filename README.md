@@ -47,6 +47,7 @@ dist/
   js/game/screens.js    tutorial, options, trophies, reward and result screens
   js/game/title.js      the title screen
   js/game/skullfall.js  the skull pour when you're the Bonehead (circle physics)
+dist/dev/               dev pages: plans, the cast and the live stylesheet
   js/game/ui.js         pixel buttons, sliders, toggles, tooltips, modals
   js/game/rounds.js     the run: opponents, rule changes, themes and music key per round
 tools/devserver.py      no-cache static server for development
@@ -129,7 +130,15 @@ Scoring is Chips × Mult: card chips times a run multiplier, plus burn and quick
 
 ## Debug
 
-Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has a mascot trial for the loss screen (classic, or brand: a pixel take on the original rubber-hose Bonehead), test-table shortcuts, a round skipper, and renderer info. Art choices are stored per browser in `bh2-dev`. Players see the classic art unless they change it there.
+Ctrl+Shift+D, or five quick taps on the title logo, opens the dev panel. It has links to the dev pages, OPEN MAP, a ROOM II open/locked switch, test-table shortcuts, a round skipper, and renderer info. Dev settings are stored per browser in `bh2-dev`.
+
+The dev pages live in `dist/dev/` (not linked for players, and marked noindex):
+- `plan.html`: the launch plan, with trick card ideas
+- `progression.html`: the progression and stakes concept
+- `cast.html`: every opponent's portrait, rule, venue and lines
+- `stylesheet.html`: the logo, palette, pixel fonts, buttons, cards, portraits and icons
+
+The cast and stylesheet import the game's own modules and draw with its renderer, so they always match the build.
 
 `window.__bonehead` exposes the game objects. `window.__timeScale = 0.2` slows everything down. With a run in progress, Ctrl+Shift+B sets up a 10 burn, Ctrl+Shift+Q a four-of-a-kind, Ctrl+Shift+L the blind-card stage, Ctrl+Shift+R a suited run, and Ctrl+Shift+W wins the round.
 

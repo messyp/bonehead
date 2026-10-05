@@ -16,6 +16,8 @@ export const LOGO_Q = 3;
 const BONE = { grad: ['#ffffff', '#fff8ea', '#fff8ea', '#fbf1dc', '#f4e8cd', '#ecdcb9', '#e2cea6'], hi: '#ffffff', lo: '#cdb88f' };
 const GOLD = { grad: ['#fff3a6', '#ffe275', '#ffd45e', '#ffc446', '#ffb238', '#fb9f2c', '#f38a24'], hi: '#fff8cf', lo: '#c8601e' };
 const SIDE = '#3d0f33', SIDE_LO = '#26091f', EXTRUDE = 5, M = 3;
+// For the stylesheet page
+export const LOGO_COLORS = { bone: BONE, gold: GOLD, side: SIDE, sideLo: SIDE_LO };
 
 // Bevel + vertical gradient over a filled body.
 function shade(body, pal) {

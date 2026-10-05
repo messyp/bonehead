@@ -83,7 +83,7 @@ export const Game = {
   started: false, busy: false, moving: false, token: 0, hidden: new Set(), revealing: new Set(), slot: new Map(),
   config: { minHand: 3, aiDelay: 1.05, timeBonus: 8, extraMagic: 0, aiSkill: 0 },
   settings: { music: 0.55, sfx: 0.8, crt: true, shake: true, fast: false, reduced: false, hints: true },
-  unlocked: {}, dev: { mascot: 'classic' }, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
+  unlocked: {}, dev: {}, sortSuit: false, hoverId: null, hoverT: 0, drag: null, focus: -1, swapMode: false,
   panel: { chips: 0, mult: 1, label: '', total: 0, showTotal: false, flame: 0, pop: 0, mpop: 0, bonus: [] },
   speech: null, cine: null, portraitState: 'idle', blinkT: 2, tellMsg: '', tellT: 0, tellBad: false,
   turnStart: 0, submittedAt: 0, ruleKey: '', rulePop: 0, turnPulse: 0, lastTurn: '', stats: {},
@@ -1127,7 +1127,6 @@ export const Game = {
 
   // Dev-mode art trials. Players only ever see 'classic' unless they open the dev panel.
   setDev(key, value) { this.dev[key] = value; store.set('bh2-dev', this.dev); Audio.play('ui'); },
-  mascotSpr(state = 'idle') { const m = Sprites.mascots[this.dev.mascot] || Sprites.mascots.classic; return m[state]; },
 
   devKey(code) {
     if (code === 'KeyD') { if (this.modal?.kind === 'dev') this.closeModal(); else this.openModal('dev'); return; }

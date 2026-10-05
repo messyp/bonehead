@@ -332,25 +332,18 @@ export const Screens = {
 
   // Hidden dev panel: compare art trials live and jump to test tables.
   dev(game, m) {
-    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 320), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
+    const w = Math.min(R.vw - 12, 300), h = Math.min(R.vh - 10, 214), b = UI.modal('dev', w, h, m.t, { fill: P.ink1 });
     UI.title('DEV MODE', b.x + w / 2, b.y + 8, { size: 2, color: P.teal1, wave: 0.5 });
-    const tile = (id, x, y, tw, th, selected, draw, label) => {
-      const hot = Input.over(x, y, tw, th);
-      if (selected || hot) R.box(x - 2, y - 2, tw + 4, th + 4, selected ? P.gold1 : P.ink5, 3);
-      R.panel(x, y, tw, th, { fill: selected ? P.ink3 : P.ink2, hi: P.ink4 });
-      draw(x + tw / 2, y + (th - 10) / 2);
-      R.text(label, x + tw / 2, y + th - 9, { font: TINY, color: selected ? P.gold1 : P.bone1, align: 'center' });
-      return Input.button('dv-' + id, x, y, tw, th, true);
-    };
     let y = b.y + 30;
-    R.text('MASCOT (LOSS SCREEN)', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
-    const styles = ['classic', 'brand'], tw = Math.floor((w - 24 - 8) / 2), th = 64;
-    styles.forEach((st, i) => {
-      const x = b.x + 12 + i * (tw + 8), wink = (R.t + i) % 4 > 3.7;
-      const spr = Sprites.mascots[st][wink ? 'wink' : 'idle'];
-      if (tile('m-' + st, x, y, tw, th, game.dev.mascot === st, (cx, cy) => R.spr(spr, cx, cy + Math.sin(R.t * 2 + i) * 1.5, { sc: Math.min((tw - 8) / 64, (th - 14) / 60) }), st.toUpperCase())) game.setDev('mascot', st);
+    // The dev pages (plans, cast, stylesheet) live beside the game in dev/; save the run and go
+    R.text('PAGES', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
+    const pages = [['plan', 'PLAN'], ['progression', 'PROGRESS'], ['cast', 'CAST'], ['stylesheet', 'STYLESHEET']], pw = Math.floor((w - 24 - 3 * 4) / 4);
+    pages.forEach(([pg, label], i) => {
+      if (UI.button('dp-' + pg, b.x + 12 + i * (pw + 4), y, pw, 18, label, { color: pg === 'stylesheet' ? 'violet' : 'ink', ignoreBlock: true })) {
+        if (game.started && game.g) game.save(); location.assign(`dev/${pg}.html`);
+      }
     });
-    y += th + 10;
+    y += 26;
     R.text('MAP', b.x + 12, y, { color: P.ink6, font: TINY }); y += 8;
     const mw = Math.floor((w - 24 - 8) / 3);
     if (UI.button('dm-room2', b.x + 12 + mw + 4, y, mw * 2 + 4, 18, game.dev.room2 ? 'ROOM II: OPEN' : 'ROOM II: LOCKED', { color: game.dev.room2 ? 'green' : 'ink', ignoreBlock: true })) game.setDev('room2', !game.dev.room2);

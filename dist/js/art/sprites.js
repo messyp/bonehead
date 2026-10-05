@@ -442,91 +442,6 @@ export function portrait(i, state = 'idle', frame = 0) {
   return s;
 }
 
-// ---------- Title mascots (64x60). 'classic' ships; the others are dev-mode trials. ----------
-export function mascot(wink = false, chomp = 0) {
-  const p = new Pix(64, 60);
-  // Cranium
-  const bone = P.bone0, lo = P.bone2, dark = P.ink0;
-  p.ell(30, 24, 22, 20, bone);
-  p.rect(14, 30, 32, 14, bone);
-  p.ell(15, 38, 5, 5, bone); p.ell(45, 38, 5, 5, bone);
-  p.each((x, y, c) => (c === bone && (x > 42 || (y > 36 && x > 34)) ? P.bone1 : undefined));
-  p.each((x, y, c) => (c === P.bone1 && x > 47 ? lo : undefined));
-  // Crack
-  p.line(24, 5, 27, 10, lo); p.line(27, 10, 25, 14, lo); p.line(27, 10, 31, 12, lo);
-  // Eyes
-  p.ell(20, 26, 6.5, 6, dark); p.ell(40, 26, 6.5, 6, dark);
-  p.rect(17, 23, 3, 3, P.white); p.set(22, 28, P.teal1); p.set(21, 28, P.teal2);
-  if (wink) { p.ell(40, 26, 6.5, 6, bone); p.line(34, 27, 40, 24, dark); p.line(40, 24, 46, 27, dark); p.line(34, 28, 40, 25, dark); p.line(40, 25, 46, 28, dark); }
-  else { p.rect(37, 23, 3, 3, P.white); p.set(42, 28, P.teal1); p.set(41, 28, P.teal2); }
-  // Nose
-  p.poly([[28, 33], [33, 33], [30.5, 38]], dark);
-  // Grin with teeth; jaw drops when chomping
-  const jy = 42 + chomp;
-  p.rect(16, jy, 28, 8, bone);
-  p.each((x, y, c) => (c === bone && y >= jy && x > 38 ? P.bone1 : undefined));
-  for (let x = 17; x <= 42; x++) { p.set(x, jy - 1, dark); p.set(x, jy + 3, x % 3 === 0 ? dark : undefined); }
-  for (let x = 17; x <= 42; x += 3) { p.vline(x, jy, jy + 2, dark); p.vline(x, jy - 4, jy - 2, dark); }
-  p.hline(17, 42, jy - 4, dark);
-  p.set(26, jy - 3, P.gold1); p.set(27, jy - 3, P.gold1); p.set(26, jy - 2, P.gold2); p.set(27, jy - 2, P.gold2);
-  p.outline(dark);
-  p.outline(P.ink2);
-  return p;
-}
-
-// Soft two-tone shading on a round skull: a lower-right crescent in two steps.
-function shadeSkull(p, cx, cy, rx, ry) {
-  p.each((x, y, c) => (c === P.bone0 && Math.hypot((x - cx + rx * 0.25) / rx, (y - cy + ry * 0.2) / ry) > 0.92 ? P.bone1 : undefined));
-  p.each((x, y, c) => (c === P.bone1 && Math.hypot((x - cx + rx * 0.33) / rx, (y - cy + ry * 0.3) / ry) > 1.08 ? P.bone2 : undefined));
-}
-
-// The original Bonehead: a rubber-hose cartoon skull with one pie-cut eye, a wink,
-// tongue out and a white-gloved finger gun. 'wink' is its double-take (both eyes open).
-export function mascotBrand(wink = false, chomp = 0) {
-  const p = new Pix(64, 60), cx = 37, bone = P.bone0, dark = P.ink0;
-  p.ell(cx, 23, 20, 19, bone);
-  p.ell(cx + 1, 39, 14, 9, bone);
-  shadeSkull(p, cx, 23, 20, 19);
-  p.ell(28, 10, 5, 2.4, P.white);
-  const pie = ex => {
-    p.ell(ex, 24, 5.5, 7.5, dark);
-    p.ell(ex + 0.5, 26, 3, 4.5, P.white);
-    p.ell(ex + 1.3, 26.5, 1.8, 3, dark);
-    p.set(ex + 2, 24, dark);
-  };
-  pie(30);
-  p.line(25, 14, 29, 12, dark); p.line(29, 12, 34, 13, dark);
-  if (wink) { pie(45); p.line(41, 13, 45, 12, dark); p.line(45, 12, 50, 14, dark); }
-  else {
-    for (let i = -5; i <= 5; i++) { const y = 25 - Math.round(Math.sqrt(25 - i * i) * 0.7); p.set(45 + i, y, dark); p.set(45 + i, y + 1, dark); }
-    p.line(39, 26, 37, 28, dark); p.line(51, 26, 53, 28, dark);
-    p.line(41, 17, 45, 16, dark); p.line(45, 16, 50, 18, dark);
-    p.hline(42, 47, 30, P.bone2);
-  }
-  p.map(['##.##', '#####', '.###.', '..#..'], cx - 2, 31, { '#': dark });
-  // Open grin; closes to a smile on the chomp frame.
-  if (chomp) { for (let x = 28; x <= 48; x++) p.set(x, 40 + Math.round(Math.abs(x - 38) * -0.15 + 1.5), dark); }
-  else {
-    p.poly([[27, 37.5], [49, 36.5], [46, 44.5], [31, 45.5]], dark);
-    for (let x = 30; x <= 46; x += 3) p.rect(x, 38, 2, 2, bone);
-    p.ell(43, 46, 4, 5, P.red1); p.vline(43, 43, 50, P.red2); p.set(42, 45, P.red0); p.set(41, 46, P.red0);
-  }
-  // White-gloved finger gun, on a rubber-hose arm.
-  p.line(19, 49, 27, 46, dark); p.line(19, 50, 27, 47, dark);
-  p.ell(12, 42, 6, 5.5, bone);
-  p.rect(1, 38, 10, 4, bone);
-  p.rect(9, 33, 4, 6, bone);
-  p.rect(15, 44, 5, 7, P.bone1); p.hline(15, 19, 46, P.bone3);
-  p.hline(8, 16, 44, P.bone2); p.hline(8, 15, 46, P.bone2);
-  p.outline(dark); p.outline(P.ink2);
-  // Cartoon action marks.
-  for (const [x, y, c] of [[9, 8, P.fire2], [6, 14, P.red1], [58, 9, P.red1], [60, 15, P.fire2]]) { p.line(x, y, x + 2, y + 2, c); p.set(x + 1, y, c); }
-  return p;
-}
-
-// The skull-faced O from the original wordmark.
-const MASCOTS = { classic: mascot, brand: mascotBrand };
-
 // ---------- Icons ----------
 export function flameIcon(f = 0) {
   const p = new Pix(11, 13), layers = [[P.fire3, 5, 1], [P.fire2, 3.8, 4], [P.fire1, 2.4, 7], [P.fire0, 1.2, 9]];
@@ -595,9 +510,8 @@ export function trickIcon(id) {
 }
 
 export const Sprites = {
-  mascots: {}, flame: [], trophy: null, trophyDim: null, lock: null, check: null, uncheck: null, tricks: {}, skull: null,
+  flame: [], trophy: null, trophyDim: null, lock: null, check: null, uncheck: null, tricks: {}, skull: null,
   init(skullIconFn) {
-    for (const [k, f] of Object.entries(MASCOTS)) this.mascots[k] = { idle: f(false, 0).spr(), wink: f(true, 0).spr(), chomp: f(false, 2).spr() };
     this.flame = [0, 1, 2].map(f => flameIcon(f).spr());
     this.trophy = trophyIcon().spr(); this.trophyDim = trophyIcon(P.ink4).spr();
     this.lock = lockIcon().spr(); this.check = checkIcon(true).spr(); this.uncheck = checkIcon(false).spr();

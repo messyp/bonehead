@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Bonehead Progression</title>
+<link rel="icon" href="../assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="dev.css">
+</head>
+<body>
+<style>
+  .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .compare .panel h3 { font-size: 1.05rem; }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; counter-reset: s; }
+  ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 14px; }
+  ol.steps > li::before { content: counter(s); font: 700 1.5rem/44px var(--display); text-align: center; color: var(--ink0); background: var(--bone1); border-radius: 4px; box-shadow: 0 3px 0 var(--bone2); height: 44px; }
+  ol.steps li > div { display: grid; gap: 6px; padding-top: 6px; }
+  .bosses { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .boss { border-left: 3px solid var(--red); padding: 2px 0 2px 12px; }
+  .boss b { font-family: var(--display); font-weight: 500; color: var(--bone0); display: block; }
+  .boss span { font-size: 0.92rem; color: var(--ink6); }
+  .scene { background: var(--ink2); border-radius: 6px; padding: 18px 20px; border-left: 4px solid var(--gold); font-size: 1.02rem; }
+</style>
+<div class="wrap narrow">
+<nav class="top"><a class="home" href="index.html">BONE<span style="color:var(--gold)">HEAD</span> · dev</a><a href="plan.html">Plan</a><a href="progression.html" aria-current="page">Progression</a><a href="cast.html">Cast</a><a href="stylesheet.html">Stylesheet</a><a href="../">← Game</a></nav>
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Plan · Concept</div>
+  <h1>Progression &amp; stakes</h1>
+  <p class="lede">Shithead is luck-heavy, and a run has no rising pressure or real risk yet. This is a structure where luck decides single hands but your decisions decide the run, the way poker tournaments work.</p>
+</header>
+
+<section>
+  <div class="eyebrow">The gap</div>
+  <h2>Why Balatro pulls you forward</h2>
+  <div class="compare">
+    <div class="panel"><h3>Balatro</h3><ul class="tight">
+      <li><strong>A target that rises:</strong> each round demands a bigger score, and you can see it.</li>
+      <li><strong>Your build is the answer:</strong> you only meet the number by improving your deck and jokers.</li>
+      <li><strong>Real stakes:</strong> fail once and the run is over.</li>
+      <li><strong>Choices soften the luck:</strong> shops, rerolls and deck thinning.</li>
+    </ul></div>
+    <div class="panel"><h3>Bonehead today</h3><ul class="tight">
+      <li><strong>Difficulty is a menu, not a climb:</strong> tables can be played in any order.</li>
+      <li><strong>The score doesn't matter:</strong> it's a number on screen. (The Ferryman's toll is a first taste of stakes.)</li>
+      <li><strong>Tricks are nice to have</strong>, not needed to win.</li>
+      <li><strong>One hand is mostly the deal.</strong></li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">The structure</div>
+  <h2>The descent</h2>
+  <ol class="steps">
+    <li><div><h3>Climb down through the crypt</h3><p>Six floors (the two rooms are a start). Each floor offers <strong>two tables to choose from</strong>, one safer and one harder that pays more, and ends with a <strong>boss</strong>. About 12 tables, 30–40 minutes.</p></div></li>
+    <li><div><h3>Two separate goals</h3><ul class="tight">
+      <li><strong>Survive:</strong> win the hand to move on. Lose and you lose a bone. You start with three; lose them all and the run ends. Lives suit a luck-heavy game better than one strike.</li>
+      <li><strong>Score to buy power:</strong> your score converts to <strong>gold teeth</strong>. Runs, burns, speed and bonus goals pay more, and a lost hand still pays a little.</li>
+    </ul></div></li>
+    <li><div><h3>A shop between floors</h3><ul class="tight">
+      <li>Buy trick cards from the pool of about 20.</li>
+      <li>Build your deck: remove low cards, or add enchanted cards that only work for you (a gilded 7 adds mult, a glass 10 burns then shatters).</li>
+      <li>Buy ways to manage bad luck: redeal your starting hand, peek at a blind card.</li>
+      <li>Buy a bone back, at a steep price.</li>
+    </ul></div></li>
+    <li><div><h3>Difficulty that actually rises</h3><p>Opponents get sharper floor by floor, and later ones <strong>cheat with their own tricks</strong>. "The house always cheats." Bosses break a rule, reusing the rule-change rounds:</p>
+      <div class="bosses">
+        <div class="boss"><b>The Mortician</b><span>The pile can't be burned.</span></div>
+        <div class="boss"><b>Baron Bones</b><span>2s don't reset.</span></div>
+        <div class="boss"><b>The Lich</b><span>Plays with an open hand but holds five cards.</span></div>
+        <div class="boss"><b>The Collector</b><span>Takes one of your tricks if you lose.</span></div>
+      </div></div></li>
+    <li><div><h3>Reasons to go back after winning</h3><p><strong>Grave Depths</strong> difficulty levels, each adding a modifier; new starting decks and characters; and the <strong>Daily Deal</strong>, the same seeded descent for everyone.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <div class="eyebrow">How it feels</div>
+  <h2>A moment from a run</h2>
+  <p class="scene">Floor 3. Two bones left, 34 gold teeth, a Pyromaniac and Ash Collector build. The harder route pays double, but its boss is the Mortician, who stops burns, and burning is your whole plan. Spend 20 teeth on a Rigged Deck to protect yourself, or save for a glass 10?</p>
+</section>
+
+<section>
+  <div class="eyebrow">Before building it</div>
+  <h2>Prove it's fun, cheaply</h2>
+  <ol class="tight">
+    <li><strong>Prototype behind a dev switch:</strong> three floors, lives, teeth, a basic shop of six items, one boss. No art polish.</li>
+    <li><strong>Watch five to ten testers:</strong> do they hesitate in the shop, talk about their build, start another run straight after dying? Does losing a bone feel tense or unfair?</li>
+    <li><strong>Tune two dials:</strong> how much luck decides a hand (hand size, deck makeup), and how fast opponents get harder.</li>
+  </ol>
+  <p class="muted">If testers want another run, build it fully. If a bad deal still feels unfair, add more ways to manage luck before adding content.</p>
+</section>
+
+<footer>Bonehead · progression concept, September 2026.</footer>
+</div>
+</body>
+</html>

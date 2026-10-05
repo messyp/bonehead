@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Bonehead Launch Plan</title>
+<link rel="icon" href="../assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="dev.css">
+</head>
+<body>
+<style>
+  .verdict { background: var(--ink2); border: 2px solid var(--ink0); box-shadow: 0 4px 0 var(--ink0); border-radius: 6px; padding: 20px 22px; display: grid; gap: 10px; }
+  .verdict .stamp { justify-self: start; font: 700 0.8rem/1 var(--display); letter-spacing: 0.08em; color: var(--ink0); background: var(--gold); padding: 6px 10px 5px; border-radius: 3px; transform: rotate(-2deg); }
+  ol.prio { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: p; }
+  ol.prio > li { counter-increment: p; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; }
+  ol.prio > li::before { content: counter(p); font: 700 1.5rem/44px var(--display); text-align: center; color: var(--ink0); background: var(--bone1); border-radius: 4px; box-shadow: 0 3px 0 var(--bone2); }
+  ol.prio li div { display: grid; gap: 4px; padding-top: 4px; }
+  ul.tight { margin: 4px 0 0; padding-left: 1.1em; display: grid; gap: 4px; }
+  ul.tight li::marker { color: var(--gold); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.85rem; }
+  .one { background: var(--teal-deep); color: var(--teal); }
+  .run { background: #6d2c15; color: var(--gold); }
+  .cursed { background: var(--red-deep); color: #ffc0c8; }
+  .have { background: var(--ink3); color: var(--bone2); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 14px; }
+  .card { background: var(--bone0); color: #2a2436; border: 2px solid var(--ink0); border-radius: 7px; box-shadow: 0 4px 0 var(--ink0); padding: 14px 14px 13px; display: grid; gap: 7px; align-content: start; }
+  .card h3 { color: #1b1830; font-size: 1.08rem; font-weight: 700; }
+  .card p { font-size: 0.92rem; line-height: 1.45; }
+  .card .why { font-size: 0.84rem; color: #5b5470; font-style: italic; }
+  .card.old { background: var(--ink2); color: var(--bone1); border-color: var(--ink3); box-shadow: none; }
+  .card.old h3 { color: var(--bone0); }
+  .card.old .why { color: var(--ink6); }
+  .builds { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .build { border-left: 3px solid var(--gold); padding: 4px 0 4px 12px; display: grid; gap: 2px; }
+  .build b { font-family: var(--display); font-weight: 500; color: var(--bone0); }
+  .build span { font-size: 0.92rem; color: var(--ink6); }
+  .phases { display: grid; gap: 16px; }
+  .phase { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding-top: 16px; border-top: 1px solid var(--ink3); }
+  .phase .when { display: grid; gap: 4px; align-content: start; }
+  .phase .when b { font: 700 1.05rem/1.1 var(--display); color: var(--gold); }
+  .phase .when span { font-size: 0.82rem; color: var(--ink6); }
+  .phase .what { display: grid; gap: 8px; }
+  td.num { color: var(--gold); white-space: nowrap; }
+  .next { background: var(--ink2); border-radius: 6px; padding: 20px 22px; display: grid; gap: 10px; }
+  .next ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+  .next li::marker { font-family: var(--display); color: var(--gold); }
+  @media (max-width: 560px) {
+    .phase { grid-template-columns: 1fr; gap: 6px; }
+  }
+</style>
+<div class="wrap narrow">
+<nav class="top"><a class="home" href="index.html">BONE<span style="color:var(--gold)">HEAD</span> · dev</a><a href="plan.html" aria-current="page">Plan</a><a href="progression.html">Progression</a><a href="cast.html">Cast</a><a href="stylesheet.html">Stylesheet</a><a href="../">← Game</a></nav>
+<header style="display:grid;gap:14px">
+    <div class="eyebrow">Plan · updated October 2026</div>
+    <h1>BONE<span class="head">HEAD</span> launch plan</h1>
+    <p class="lede">What to add next, whether to launch, and how to get the backpacker card game in front of the world.</p>
+  </header>
+
+  <div class="verdict">
+    <span class="stamp">VERDICT</span>
+    <p><strong>Launch, as a soft launch on the web first.</strong> The game is testing well and costs almost nothing to host. What stands between it and a wider audience is depth and shareability, not polish. Build a daily reason to return and a way to share results, release quietly on the web, measure, then take it to Steam and the app stores if the numbers hold.</p>
+  </div>
+
+  <section>
+    <div class="eyebrow">Where it stands</div>
+    <h2>Ready for strangers</h2>
+    <p>Eight tables in two rooms. <strong>Room I</strong>: classic rules, Pick Your Table, the Twins and the Pit Boss's No Weapons. <strong>Room II</strong> (opens after Room I): Madame Marrow's Open Hands, Nana's Rules, Cadaverini &amp; Lucinda's Eye on the Card and the Ferryman's toll. Also the crypt map, bonus goals, 16 trophies, onboarding, the phone layout, iOS fixes and the skull pour.</p>
+    <p><span class="pill done">Shipped since this plan</span> Room II and its four rules, No Weapons, and three house rules (through Nana).</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Product</div>
+    <h2>What to build, in order</h2>
+    <ol class="prio">
+      <li><div><h3>A reason to come back every day</h3>
+        <p>A <strong>Daily Deal</strong>: everyone plays the same shuffled run that day. Finishing gives a spoiler-free result card to paste anywhere, like Wordle's grid. Add a daily leaderboard. This is the cheapest growth engine a web game has.</p>
+        <p class="muted">Bonehead #112 · 8/8 tables · 9,202 · 🔥🔥💀</p></div></li>
+      <li><div><h3>House rules <span class="pill have">Started</span></h3>
+        <p>Every group plays Shithead differently: 7s force lower, 3s are invisible, jokers, multiples on a 10. A "Your House Rules" screen makes the game theirs, and "which rules are right?" arguments drive sharing. The engine already supports rule-change rounds, so this builds on what exists.</p></div></li>
+      <li><div><h3>Roguelite depth</h3>
+        <ul class="tight">
+          <li>About 20 trick cards instead of 6, so no two runs play alike (ideas below)</li>
+          <li>More opponents, each with a personality and their own twist on the rules <span class="pill done">Room II</span></li>
+          <li>Harder difficulty levels after you win, like Balatro's stakes</li>
+          <li>Unlockable card backs, decks and starting tricks</li>
+        </ul></div></li>
+      <li><div><h3>Play with friends</h3>
+        <p><strong>Pass-and-play on one phone</strong> is cheap and should come first. <strong>Online rooms joined by a link</strong> are the biggest feature but need a server, moderation and handling for dropouts, so build them only if the numbers justify it.</p></div></li>
+      <li><div><h3>Launch groundwork</h3>
+        <ul class="tight">
+          <li>Installable app: home-screen icon, works offline</li>
+          <li>Privacy-friendly analytics to see where players drop off</li>
+          <li>An in-game feedback link</li>
+          <li>A social preview image and description for shared links</li>
+          <li>Your own domain</li>
+          <li>Testing on low-end Android phones, and colour-blind-safe suits</li>
+        </ul></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="eyebrow">Trick cards</div>
+    <h2>Twenty tricks, three flavours</h2>
+    <p>Every trick should change a decision you make, not just add points. Mix one-use tactics, build-defining passives, and a few cursed deals that pay big but bite back. Once there's a big enough pool, offer three at random after each win and let players build a strategy around them.</p>
+    <div class="legend">
+      <span><span class="pill one">One use</span> tactical, spent when played</span>
+      <span><span class="pill run">Rest of run</span> passive, shapes a build</span>
+      <span><span class="pill cursed">Cursed</span> big upside, real downside</span>
+      <span><span class="pill have">In game</span> already exists</span>
+    </div>
+
+    <div class="cards">
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Peek-a-Boo</h3><p>Look at one of your blind table cards before you have to flip it.</p><p class="why">Turns the endgame coin toss into a plan.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Play Dead</h3><p>Skip your turn instead of picking up the pile.</p><p class="why">The panic button everyone wishes they had.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Snitch</h3><p>See the opponent's hand until your next turn.</p><p class="why">Know exactly what to hold back.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Rigged Deck</h3><p>Look at the top three cards of the deck and put them back in any order.</p><p class="why">Sets up your own draws, or starves theirs.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Grave Robber</h3><p>Take any one card from the burned heap into your hand.</p><p class="why">Rescue that 10 you burned too early.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Table Manners</h3><p>Swap a hand card with one of your face-up table cards.</p><p class="why">The classic pre-game swap from the real rules, as a mid-game trick.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Double Down</h3><p>Your next play scores ×2 mult.</p><p class="why">Save it for the four-card run.</p></article>
+      <article class="card"><span class="pill one" style="justify-self:start">One use</span><h3>Hot Potato</h3><p>Give two random cards from your hand to the opponent.</p><p class="why">Lighter hand, heavier grudge.</p></article>
+
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Pyromaniac</h3><p>Three of a kind in a row burns the pile, not just four.</p><p class="why">Anchors a burn build.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Deep Pockets</h3><p>Draw back up to 4 cards instead of 3.</p><p class="why">More options every turn, more runs.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Loose Stairs</h3><p>Runs of three climbing ranks count in any suit.</p><p class="why">Bends the core rule; huge with Chain Reaction.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Scavenger</h3><p>Picking up the pile pays 15 chips per card.</p><p class="why">Turns your worst moment into points.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Tax Collector</h3><p>When the opponent picks up, gain 20 chips per card in the pile.</p><p class="why">Rewards forcing pickups over racing out.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Ghost Writer</h3><p>Every 8 you play adds +1 mult to that play.</p><p class="why">Makes the ghost a weapon, not just a skip.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Magpie</h3><p>Jacks, queens and kings pay double chips.</p><p class="why">Face cards stop being dead weight.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Rabbit's Foot</h3><p>Once per round, a failed blind flip lets you flip another blind card instead.</p><p class="why">A gentler cousin of Second Chance.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Early Bird</h3><p>Your first play of each round scores ×3 mult.</p><p class="why">Makes the opening move matter.</p></article>
+      <article class="card"><span class="pill run" style="justify-self:start">Rest of run</span><h3>Undertaker</h3><p>At the start of each round, see which of the opponent's blind cards are magic.</p><p class="why">Information you can play around all round.</p></article>
+
+      <article class="card"><span class="pill cursed" style="justify-self:start">Cursed</span><h3>Glass Jaw</h3><p>+2 mult on every play, but a failed blind flip loses the round outright.</p><p class="why">High score chasers only.</p></article>
+      <article class="card"><span class="pill cursed" style="justify-self:start">Cursed</span><h3>Deal with the Devil</h3><p>All your chips are doubled, but the opponent starts every round with an extra 10.</p><p class="why">Big numbers, nasty burns.</p></article>
+      <article class="card"><span class="pill cursed" style="justify-self:start">Cursed</span><h3>Butterfingers</h3><p>+1 mult for every card in your hand when you play, but you can't sort your hand.</p><p class="why">Rewards holding cards, punishes forgetting them.</p></article>
+
+      <article class="card old"><span class="pill have" style="justify-self:start">In game</span><h3>Fresh Bones · Switcheroo</h3><p>Redraw your whole hand, or trade one card for a deck card.</p></article>
+      <article class="card old"><span class="pill have" style="justify-self:start">In game</span><h3>Loaded Sleeves · Chain Reaction</h3><p>A bonus 2 and 10 each round; extra cards in a play add mult.</p></article>
+      <article class="card old"><span class="pill have" style="justify-self:start">In game</span><h3>Second Chance · Ash Collector</h3><p>Survive one failed blind flip; burned cards pay chips.</p></article>
+    </div>
+
+    <h3 style="margin-top:6px">Builds these make possible</h3>
+    <div class="builds">
+      <div class="build"><b>The Arsonist</b><span>Pyromaniac + Ash Collector + Loaded Sleeves. Burn early, burn often.</span></div>
+      <div class="build"><b>The Staircase</b><span>Loose Stairs + Chain Reaction + Deep Pockets. Long runs, stacking mult.</span></div>
+      <div class="build"><b>The Card Sharp</b><span>Snitch + Rigged Deck + Undertaker. Win on information.</span></div>
+      <div class="build"><b>The Martyr</b><span>Scavenger + Tax Collector. Profit from every pickup, yours or theirs.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Launch</div>
+    <h2>Three decisions first</h2>
+    <ol class="prio">
+      <li><div><h3>Check the name</h3><p>"Bonehead" is a common word. Search trademarks and the app stores before spending on a domain, logo or store pages.</p></div></li>
+      <li><div><h3>Own the Balatro comparison</h3><p>The look and chips × mult scoring are Balatro-inspired. That's legal, since game mechanics can't be copyrighted, but expect "Balatro clone" comments. Lead with what's yours: the backpacker card game everyone knows, the skull cast, and house rules.</p></div></li>
+      <li><div><h3>Decide what success means</h3><p>A portfolio or hobby project, a free web hit, or a paid game on Steam and mobile each need a different plan. The path below keeps all three open until the numbers decide.</p></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="eyebrow">How</div>
+    <h2>Three phases</h2>
+    <div class="phases">
+      <div class="phase"><div class="when"><b>Phase 0</b><span>1–2 weeks</span></div><div class="what">
+        <h3>Get ready</h3>
+        <p>Build the Daily Deal and share card, make the game installable, add analytics and a feedback link. Set up the domain and social preview image. Confirm iPad and low-end Android.</p>
+      </div></div>
+      <div class="phase"><div class="when"><b>Phase 1</b><span>2–4 weeks</span></div><div class="what">
+        <h3>Soft launch on the web</h3>
+        <ul class="tight">
+          <li><strong>itch.io and Newgrounds</strong> first: quick to publish, with players who give feedback.</li>
+          <li>Apply to <strong>CrazyGames</strong> and <strong>Poki</strong>, the biggest web-game sites, which share ad revenue. Poki is selective, and a finished, polished game has a real shot.</li>
+          <li>Go where Shithead is loved: the <strong>UK, Australia, New Zealand, the Nordics</strong> and backpackers. Post in r/playmygame, r/WebGames, r/roguelites and r/cardgames, plus UK uni and travel communities.</li>
+          <li>Post <strong>10–15 second clips</strong> to TikTok and Shorts: the 10 burning the pile, the slash, a Twins win. Hook: "the backpacker card game, but it's a roguelite."</li>
+        </ul>
+      </div></div>
+      <div class="phase"><div class="when"><b>Phase 2</b><span>If the numbers hold</span></div><div class="what">
+        <h3>Scale to stores</h3>
+        <ul class="tight">
+          <li>Open a <strong>Steam page</strong> early to collect wishlists, and bring a free demo to <strong>Steam Next Fest</strong>.</li>
+          <li>Ship to <strong>iOS and Android</strong> from the same code with a wrapper such as Capacitor.</li>
+          <li>Keep it <strong>free on the web</strong> to build an audience, and sell a <strong>premium version for $5–8</strong> with house rules, friends mode and all unlocks.</li>
+        </ul>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Measure</div>
+    <h2>How we'll know it's working</h2>
+    <p class="muted">Suggested targets for a casual web game. Treat them as starting benchmarks and adjust once real data comes in.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Signal</th><th>What it tells us</th><th>Target</th></tr></thead>
+      <tbody>
+        <tr><td>Finish round 1</td><td>Onboarding works and the core game lands</td><td class="num">70%+</td></tr>
+        <tr><td>Back next day (D1)</td><td>There's a reason to return</td><td class="num">25%+</td></tr>
+        <tr><td>Back after a week (D7)</td><td>It's becoming a habit</td><td class="num">8%+</td></tr>
+        <tr><td>Share a Daily Deal</td><td>Word of mouth is working</td><td class="num">5%+ of players</td></tr>
+        <tr><td>Finish a full run</td><td>The eight-table structure holds attention</td><td class="num">30%+ of starters</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Costs</div>
+    <h2>Cheap to try</h2>
+    <p class="muted">Approximate public prices; check before buying.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Item</th><th>When</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Hosting (GitHub Pages)</td><td>Now</td><td class="num">Free</td></tr>
+        <tr><td>Domain name</td><td>Phase 0</td><td class="num">~$15 / year</td></tr>
+        <tr><td>Analytics (e.g. Plausible)</td><td>Phase 0</td><td class="num">~$9 / month</td></tr>
+        <tr><td>itch.io, CrazyGames, Poki</td><td>Phase 1</td><td class="num">Free (revenue share)</td></tr>
+        <tr><td>Steam page</td><td>Phase 2</td><td class="num">$100 one-off</td></tr>
+        <tr><td>Apple developer account</td><td>Phase 2</td><td class="num">$99 / year</td></tr>
+        <tr><td>Google Play account</td><td>Phase 2</td><td class="num">$25 one-off</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="next">
+    <div class="eyebrow">Next</div>
+    <h2>Before any public push</h2>
+    <ol>
+      <li>Daily Deal with a shareable result card</li>
+      <li>Installable app plus analytics and a feedback link</li>
+      <li>House rules, then the first batch of new trick cards</li>
+    </ol>
+  </div>
+
+  <footer>Bonehead launch plan · first written September 2026, updated October 2026.</footer>
+</div>
+</body>
+</html>

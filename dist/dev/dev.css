@@ -1,0 +1,46 @@
+/* Shared look for the dev pages: the game's own palette (ink, bone, gold, blood). */
+:root {
+  color-scheme: dark;
+  --ink0: #07060d; --ink1: #110f1e; --ink2: #1b1830; --ink3: #2a2649; --ink5: #5a5390; --ink6: #8a82c0;
+  --bone0: #fff8ea; --bone1: #f1e5ca; --bone2: #d6c59f;
+  --gold: #ffd45e; --red: #ff5264; --red-deep: #931a3e; --teal: #5ff2d2; --teal-deep: #157275;
+  --display: 'Pixelify Sans', 'Courier New', monospace;
+  --body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ink1); color: var(--bone1); font: 16px/1.6 var(--body); padding-inline: 16px; }
+.wrap { max-width: 900px; margin: 0 auto; padding-block: 28px 72px; display: grid; gap: 48px; }
+.narrow { max-width: 780px; }
+nav.top { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 0.9rem; }
+nav.top a { color: var(--ink6); text-decoration: none; }
+nav.top a:hover, nav.top a[aria-current] { color: var(--gold); }
+nav.top .home { color: var(--bone0); font-family: var(--display); font-weight: 700; margin-right: auto; }
+h1, h2, h3 { font-family: var(--display); color: var(--bone0); text-wrap: balance; margin: 0; font-weight: 700; }
+h1 { font-size: clamp(2rem, 6vw, 3.1rem); line-height: 1.05; }
+h1 .head { color: var(--gold); }
+h2 { font-size: 1.5rem; line-height: 1.2; }
+h3 { font-size: 1.1rem; font-weight: 500; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--gold); }
+strong { color: var(--bone0); }
+section { display: grid; gap: 16px; }
+.eyebrow { font: 700 0.75rem/1 var(--body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink6); }
+.lede { font-size: 1.12rem; color: var(--bone0); }
+.muted { color: var(--ink6); }
+.panel { background: var(--ink2); border: 2px solid var(--ink0); box-shadow: 0 4px 0 var(--ink0); border-radius: 6px; padding: 18px 20px; display: grid; gap: 10px; }
+.stamp { justify-self: start; font: 700 0.8rem/1 var(--display); letter-spacing: 0.08em; color: var(--ink0); background: var(--gold); padding: 6px 10px 5px; border-radius: 3px; transform: rotate(-2deg); }
+ul.tight, ol.tight { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+ul.tight li::marker, ol.tight li::marker { color: var(--gold); }
+.pill { display: inline-block; font: 700 0.68rem/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 8px 4px; border-radius: 3px; }
+.pill.one { background: var(--teal-deep); color: var(--teal); }
+.pill.run { background: #6d2c15; color: var(--gold); }
+.pill.cursed { background: var(--red-deep); color: #ffc0c8; }
+.pill.have { background: var(--ink3); color: var(--bone2); }
+.pill.done { background: #206c3b; color: #dcffa6; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--ink3); vertical-align: top; }
+th { font: 700 0.72rem/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink6); }
+canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; max-width: 100%; height: auto; display: block; }
+footer { font-size: 0.85rem; color: var(--ink5); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

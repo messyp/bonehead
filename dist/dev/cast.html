@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Bonehead Cast</title>
+<link rel="icon" href="../assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="dev.css">
+</head>
+<body>
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+  .opp { background: var(--ink2); border: 2px solid var(--ink0); box-shadow: 0 4px 0 var(--ink0); border-radius: 6px; padding: 16px; display: grid; grid-template-columns: 132px 1fr; gap: 16px; align-items: start; border-top: 4px solid var(--accent); }
+  @media (max-width: 480px) { .opp { grid-template-columns: 1fr; } }
+  .por canvas { width: 132px; height: 132px; border-radius: 4px; }
+  .info { display: grid; gap: 7px; min-width: 0; }
+  .info h3 { color: var(--accent); font-size: 1.25rem; font-weight: 700; }
+  .short { font: 700 0.65rem/1 var(--body); letter-spacing: .12em; color: var(--ink6); border: 1px solid var(--ink3); padding: 3px 5px 2px; border-radius: 3px; vertical-align: middle; }
+  .venue { font-size: 0.9rem; color: var(--bone2); }
+  .venue em { color: var(--ink6); }
+  .pill.rule { background: var(--ink0); color: var(--accent); }
+  .rules { font-size: 0.9rem; color: var(--bone1); }
+  .said { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 0.88rem; color: var(--bone2); }
+  .said span { display: inline-block; width: 88px; color: var(--ink6); font-size: 0.72rem; letter-spacing: .1em; text-transform: uppercase; }
+</style>
+<div class="wrap">
+<nav class="top"><a class="home" href="index.html">BONE<span style="color:var(--gold)">HEAD</span> · dev</a><a href="plan.html">Plan</a><a href="progression.html">Progression</a><a href="cast.html" aria-current="page">Cast</a><a href="stylesheet.html">Stylesheet</a><a href="../">← Game</a></nav>
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Bible</div>
+  <h1>The cast</h1>
+  <p class="lede">Every opponent at the Midnight Circuit, drawn live from the game: who they are, where they sit, the rule they bring and how they talk.</p>
+</header>
+<div id="cast" style="display:grid;gap:44px"></div>
+<footer>Portraits, names, venues, rules and lines all come straight from the game code (sprites.js, rounds.js), so this page can't drift out of date.</footer>
+</div>
+<script type="module" src="cast.js"></script>
+</body>
+</html>
